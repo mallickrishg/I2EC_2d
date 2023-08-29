@@ -4,13 +4,12 @@
 %            S. Sathiakumar, EOS, August 2023
 %%
 clear all; close all;
-addpath '/Users/sharadha/Library/CloudStorage/OneDrive-NanyangTechnologicalUniversity/projects/postseismic/matlab/unicycle/matlab';
-addpath '/Users/sharadha/Library/CloudStorage/OneDrive-NanyangTechnologicalUniversity/projects/postseismic/matlab/greens';
-import unicycle.*
-%%
-% Poisson's ratio
+addpath functions/
+addpath meshing/
+% Elastic parameters (homogenous medium)
 nu=0.25;
-rig=30e3;
+mu=30e3;
+
 %% geometry
 
 % megathrust fault 
@@ -188,9 +187,9 @@ flt.KK=zeros(flt.N);
 for k=1:flt.N
  
     T=flt.W(k)/flt.N/1e3;
-    [s22,s23,s33]=unicycle.greens.computeStressPlaneStrainShearZone( ...
+    [s22,s23,s33]=computeStressPlaneStrainShearZone( ...
         flt.xc(:,1),flt.xc(:,2),flt.x(k,1),flt.x(k,2), ...
-        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,rig,nu);
+        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,mu,nu);
 
     t=[s22.*flt.nv(:,1)+s23.*flt.nv(:,2), ...
        s23.*flt.nv(:,1)+s33.*flt.nv(:,2) ];
@@ -216,7 +215,7 @@ for k=1:flt.N
     T=flt.W(k)/flt.N/1e3;
     [s22,s23,s33]=unicycle.greens.computeStressPlaneStrainShearZone( ...
         mantle.xc(:,1),mantle.xc(:,2),flt.x(k,1),flt.x(k,2), ...
-        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,rig,nu);
+        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,mu,nu);
         
     flt.KL{1}(:,k)=s22(:);
     flt.KL{2}(:,k)=s23(:);
@@ -239,7 +238,7 @@ for k=1:flt.N
     T=flt.W(k)/flt.N/1e3;
     [u2,u3]=unicycle.greens.computeDisplacementPlaneStrainShearZone( ...
         obs.x(:,1),obs.x(:,2),flt.x(k,1),flt.x(k,2), ...
-        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,rig,nu);
+        T,flt.W(k)/flt.N,flt.dip(k),0,-1/2/T,0,mu,nu);
         
     flt.KO{1}(:,k)=u2(:);
     flt.KO{2}(:,k)=u3(:);
@@ -269,7 +268,7 @@ for k=1:mantle.N
     
     for i=1:3
         [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-            mantle.xc(:,1),mantle.xc(:,2),M,N,P,I(i,1),I(i,2),I(i,3),rig,nu);
+            mantle.xc(:,1),mantle.xc(:,2),M,N,P,I(i,1),I(i,2),I(i,3),mu,nu);
         
         mantle.LL{1,i}(:,k)=s22(:);
         mantle.LL{2,i}(:,k)=s23(:);
@@ -302,7 +301,7 @@ for k=1:mantle.N
     
     for i=1:3
         [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-            flt.xc(:,1),flt.xc(:,2),M,N,P,I(i,1),I(i,2),I(i,3),rig,nu);
+            flt.xc(:,1),flt.xc(:,2),M,N,P,I(i,1),I(i,2),I(i,3),mu,nu);
         
         t=[s22.*flt.nv(:,1)+s23.*flt.nv(:,2), ...
            s23.*flt.nv(:,1)+s33.*flt.nv(:,2) ];
