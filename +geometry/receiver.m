@@ -2,21 +2,14 @@ classdef receiver < geometry.fpatch
     properties
         % friction properties
         Vo;a;b;l;
-        % shear wave speed
-        Vs;
         % initial confining pressure
         sigma;
-        % initial shear stress
-        tau;
         % friction coefficient at reference velocity
         mu0;
         % plate velocity
         Vpl;        
         % pinned patch positions (index)
         pinnedPosition;        
-        % viscosity variables
-        Ainverse;
-        n;
         % degrees of freedom (number of parameters solved in numerical integration)
         dgf;
     end
@@ -66,8 +59,6 @@ classdef receiver < geometry.fpatch
             obj.l=obj.W*0+1e-3;
             obj.sigma=obj.W*0+1e2;
             obj.mu0=obj.W*0+0.6;
-            obj.tau=obj.mu0.*obj.sigma;
-            obj.Vs=obj.W*0+3e3*3.1536e7; % (m/yr)
             
             % unit vectors in the dip direction
             obj.dv=[...
