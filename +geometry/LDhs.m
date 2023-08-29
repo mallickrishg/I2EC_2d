@@ -33,42 +33,6 @@ classdef LDhs < geometry.earthModel
             o.G=G;
             o.nu=nu;
         end
-        
-        function [varargout]=tractionKernels(obj,src,rcv)
-            % TRACTIONKERNELS computes the traction on receiver faults due
-            % to motion of rectangular dislocations in a half space.
-            %
-            % rcv - receiver fault
-            %
-            % SEE ALSO: unicycle
-            
-            
-            varargout = cell(1,nargout);
-            [varargout{:}]=computeTractionKernelsOkada92(src,rcv,obj.G,obj.nu);
-        end
-        
-        function [varargout]=stressKernels(obj,src,rcv)
-            % STRESSKERNELS computes the stress on receiver shear zone due
-            % to motion of rectangular dislocations in a half space.
-            %
-            % rcv - receiver fault
-            %
-                        
-            
-            varargout = cell(1,nargout);
-            [varargout{:}]=computeStressKernelsOkada92(src,rcv,obj.G,obj.nu);
-        end
-        
-        function [varargout]=displacementKernels(obj,src,x,vecsize)
-            % DISPLACEMENTKERNELS computes the stress on receiver faults due to
-            % motion of rectangular dislocations in a half space.
-            %
-            % src - source fault
-            %
-            
-            
-            varargout = cell(1,nargout);
-            [varargout{:}]=computeDisplacementKernelsOkada85(src,obj.nu,x,vecsize);
-        end
+       
     end % methods
 end % class definition
