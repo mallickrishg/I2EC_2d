@@ -5,9 +5,10 @@
 %               EOS, Caltech, August 2023
 
 clear  
-close all
 addpath functions/
 import geometry.*
+
+rng(42)
 
 % Elastic parameters (homogenous medium)
 nu=0.25;% Poisson's ratio
@@ -38,3 +39,20 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 %% compute stress interaction kernels
 
 evl = compute_all_stresskernels(rcv,shz);
+
+%% testing dummy
+figure(11),clf
+toplot = zeros(shz.N,1);
+toplot(randi(shz.N,[2,1])) = 1;
+
+plotshz2d(shz,evl.LL(:,:,1,1)*toplot)
+axis tight equal
+box on
+colorbar
+clim([-1 1]*max(abs(get(gca,'CLim'))))
+colormap("bluewhitered")
+
+
+
+
+
