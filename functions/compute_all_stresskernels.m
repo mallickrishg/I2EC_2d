@@ -98,7 +98,7 @@ evl.LL(:,:,1,2) = L_deviatoric_corrected(1:end/2,end/2+1:end);
 evl.LL(:,:,2,1) = L_deviatoric_corrected(end/2+1:end,1:end/2);
 evl.LL(:,:,2,2) = L_deviatoric_corrected(end/2+1:end,end/2+1:end);
 
-%% compute stress interactions from shear zones to fault
+%% compute stress interactions from shear zones to fault (LK kernels)
 
 % evaluate stress at fault center
 xc = rcv.xc; 
@@ -131,6 +131,8 @@ for i = 1:3
     LL(:,:,i) = LL1;
 end
 
+% due to deviatoric state, e22 = -e33. Incorporating this into the kernels
+evl.LK
 end
 
 
