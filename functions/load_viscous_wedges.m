@@ -1,7 +1,7 @@
-function shz = load_viscous_wedges(earthModel)
+function shz = load_viscous_wedges(filename,earthModel)
 
-p_filename = 'shearzone_vertices.dat';
-t_filename = 'shearzone_triangulation.dat';
+p_filename = [filename '_vertices.dat'];
+t_filename = [filename '_triangulation.dat'];
 
 p = readtable(p_filename);
 t = readtable(t_filename);

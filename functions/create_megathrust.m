@@ -1,7 +1,7 @@
 function rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault)
 
 % megathrust fault file
-patchfname = '../megathrust2d.seg';
+patchfname = 'megathrust2d.seg';
 
 % width of patch segments
 w = Fault_width/Nfault;

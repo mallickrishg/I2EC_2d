@@ -16,16 +16,23 @@ mu=30e3;% in MPa
 earthModel = geometry.LDhs(mu,nu);
 
 % megathrust fault
-Nfault = 50;
-Fault_x = 200e3;
-Fault_z = 50e3;
-x0 = 0;
-z0 = 0.01e3;
-dip = atand(Fault_z/Fault_x); % 
-Fault_width = sqrt(Fault_x^2 + Fault_z^2);
+% Nfault = 50;
+% Fault_x = 200e3;
+% Fault_z = 50e3;
+% x0 = 0;
+% z0 = 0.01e3;
+% dip = atand(Fault_z/Fault_x); % 
+% Fault_width = sqrt(Fault_x^2 + Fault_z^2);
+% create megathrust mesh
+% rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault);
 
-rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault);
-shz = load_viscous_wedges(earthModel);
+% directly load existing file
+rcv = geometry.receiver('inputs/megathrust2d.seg',earthModel);
+
+% provide shear zone mesh as 2 .dat files of the form
+% meshname_vertices.dat (contains x,z coordinates of vertices)
+% meshname_triangulation.dat (contains 3 columns of vertex linkage)
+shz = load_viscous_wedges('inputs/shearzone',earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
