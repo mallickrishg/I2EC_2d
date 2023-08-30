@@ -7,7 +7,6 @@
 clear  
 close all
 addpath functions/
-addpath meshing/
 import geometry.*
 
 % Elastic parameters (homogenous medium)

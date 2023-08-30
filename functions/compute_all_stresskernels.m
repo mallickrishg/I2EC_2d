@@ -12,27 +12,41 @@ evl.rcv.KK = K;
 
 %% compute shz-shz interaction kernels
 % initialize stress kernels
-S = [];
-for i=1:3
-    for j=1:3
-        S.LL{i,j}=zeros(shz.N);
-    end
-end
+LL1 = zeros(shz.N,shz.N);
+LL2 = zeros(shz.N,shz.N);
+LL3 = zeros(shz.N,shz.N);
+
 % source strain 100;010;001
 I=eye(3);
 tic
-for k=1:shz.N
-    for i=1:3
-        [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-            shz.xc(:,1),-shz.xc(:,2),...
-            shz.A(k,:),shz.B(k,:),shz.C(k,:),...
-            I(i,1),I(i,2),I(i,3),mu,nu);
-        
-        S.LL{1,i}(:,k)=s22(:);
-        S.LL{2,i}(:,k)=s23(:);
-        S.LL{3,i}(:,k)=s33(:);
+
+xc = shz.xc;
+A = shz.A;
+B = shz.B;
+C = shz.C;
+
+for i=1:3
+    for k=1:shz.N
+        [s22,s23,s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
+            xc(:,1),-xc(:,2),...
+            A(k,:),B(k,:),C(k,:),...
+            I(i,1),I(i,2),I(i,3),...
+            mu,nu);
+
+        LL1(:,k) = s22(:);
+        LL2(:,k) = s23(:);
+        LL3(:,k) = s33(:);
+
+        % LL(:,k,1,i)=s22(:);
+        % LL(:,k,2,i)=s23(:);
+        % LL(:,k,3,i)=s33(:);
+
     end
+    evl.LL(:,:,1,i) = LL1;
+    evl.LL(:,:,2,i) = LL2;
+    evl.LL(:,:,3,i) = LL3;
 end
+
 toc
 
 % construct deviatoric stress kernel and remove positive eigen values
