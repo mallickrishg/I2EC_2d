@@ -8,8 +8,6 @@ clear
 addpath functions/
 import geometry.*
 
-rng(42)
-
 % Elastic parameters (homogenous medium)
 nu=0.25;% Poisson's ratio
 mu=30e3;% in MPa

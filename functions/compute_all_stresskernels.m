@@ -1,7 +1,21 @@
 function evl = compute_all_stresskernels(rcv,shz)
-% for a given shear zone data structure 'shz', and fault 'rcv', compute all
-% relevant stress kernels
-% Rishav Mallick & Sharadha Sathiakumar, 2023
+% Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant stress kernels
+% 
+% INPUTS
+% rcv - object or data structure that contains fault geometry and Elastic parameters
+% shz - object or data structure that contains shear zone geometry and Elastic parameters
+% 
+% OUTPUTS
+% evl - data structure with the following kernels
+% KK  - rcv(source)-shz(receiver) traction kernel (only in fault-shear direction) [Nf x Nf]
+% KL  - rcv(source)-shz(receiver) deviatoric stress kernel [Nshz x Nf x 2]
+% LK  - shz(source)-rcv(receiver) traction kernel (sources are deviatoric
+%       eigen strains, receiver traction is only in shear component) [Nf x Nshz x 2]
+% LL  - shz(source)-shz(receiver) deviatoric strain source and 
+%       deviatoric receiver stress [Nshz x Nshz x 2 x 2]
+% 
+% Authors:
+% Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
 
 mu = rcv.earthModel.G;
 nu = rcv.earthModel.nu;
@@ -10,10 +24,35 @@ nu = rcv.earthModel.nu;
 evl = [];
 
 %% compute fault-fault interaction kernels
+disp('Computing fault - fault traction kernels')
+
 [K,~] = computetractionkernels(rcv,rcv);
 
 % store shear traction kernel in 'evl'
 evl.KK = K;
+
+%% compute fault-shz deviatoric interaction kernel
+% initialize stress kernels
+LL1 = zeros(shz.N,rcv.N);
+LL2 = zeros(shz.N,rcv.N);
+LL3 = zeros(shz.N,rcv.N);
+
+% here we don't need to flip the sign of z-coordinate
+xc = shz.xc;
+
+disp('Computing fault - shear zone traction kernels')
+for i = 1:rcv.N
+    m = [rcv.x(i,2) rcv.x(i,1) rcv.W(i) rcv.dip(i) 1];
+    [s22,s23,s33] = EdgeStress(m,xc(:,1),xc(:,2),nu,mu);
+    LL1(:,i) = s22;
+    LL2(:,i) = s23;
+    LL3(:,i) = s33;
+end
+
+% initialize deviatoric K-L kernel [Nshz x Nf x 2]
+evl.KL = zeros(shz.N,rcv.N,2);
+evl.KL(:,:,1) = (LL1-LL3)./2;
+evl.KL(:,:,2) = LL2;
 
 %% compute shz-shz interaction kernels
 % initialize stress kernels
@@ -29,8 +68,9 @@ evl.LL = zeros(shz.N,shz.N,2,2);
 
 % source strain 100;010;001
 I = eye(3);
-tic
 
+tic
+disp('Computing shear zone - shear zone stress kernels')
 % convert all depths to positive numbers
 xc = shz.xc; xc(:,2) = -xc(:,2);
 A = shz.A;A(:,2) = -A(:,2);
@@ -64,8 +104,6 @@ for i = 1:3
     LL(:,:,3,i) = LL3;
 end
 
-toc
-
 % construct deviatoric stress kernel and remove positive eigen values
 % here the first 2 indices are for eigen strain source
 %           last 2 indices are for the stress component
@@ -97,6 +135,7 @@ evl.LL(:,:,1,1) = L_deviatoric_corrected(1:end/2,1:end/2);
 evl.LL(:,:,1,2) = L_deviatoric_corrected(1:end/2,end/2+1:end);
 evl.LL(:,:,2,1) = L_deviatoric_corrected(end/2+1:end,1:end/2);
 evl.LL(:,:,2,2) = L_deviatoric_corrected(end/2+1:end,end/2+1:end);
+toc
 
 %% compute stress interactions from shear zones to fault (LK kernels)
 
@@ -110,6 +149,8 @@ LL1 = zeros(rcv.N,shz.N);
 % full stress kernels [N_fault x N_shz x 3]
 LL = zeros(rcv.N,shz.N,3);
 
+tic
+disp('Computing shear zone - fault traction kernels')
 for i = 1:3
     % each iteration of 'i' goes through each eigen strain source
     % i = 1 corresponds to e22 source
@@ -132,9 +173,11 @@ for i = 1:3
 end
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
+% shape of kernel: [Nf x Nshz x 2]
 evl.LK = zeros(rcv.N,shz.N,2);
 evl.LK(:,:,1) = LL(:,:,1) - LL(:,:,3);
 evl.LK(:,:,2) = LL(:,:,2);
+toc
 
 end
 
