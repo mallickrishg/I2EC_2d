@@ -13,7 +13,7 @@ import geometry.*
 nu=0.25;% Poisson's ratio
 mu=30e3;% in MPa
 
-%% geometry
+%% load fault and shear zone meshes
 earthModel = geometry.LDhs(mu,nu);
 
 % megathrust fault
