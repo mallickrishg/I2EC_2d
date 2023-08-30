@@ -20,15 +20,16 @@ LL3 = zeros(shz.N,shz.N);
 I=eye(3);
 tic
 
-xc = shz.xc;
-A = shz.A;
-B = shz.B;
-C = shz.C;
+% convert all depths to positive numbers
+xc = shz.xc; xc(:,2) = -xc(:,2);
+A = shz.A;A(:,2) = -A(:,2);
+B = shz.B;B(:,2) = -B(:,2);
+C = shz.C;C(:,2) = -C(:,2);
 
 for i=1:3
-    for k=1:shz.N
+    parfor k=1:shz.N
         [s22,s23,s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-            xc(:,1),-xc(:,2),...
+            xc(:,1),xc(:,2),...
             A(k,:),B(k,:),C(k,:),...
             I(i,1),I(i,2),I(i,3),...
             mu,nu);
