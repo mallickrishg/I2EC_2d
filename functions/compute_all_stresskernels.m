@@ -107,7 +107,7 @@ xc(:,2) = -xc(:,2);
 % only need 1 component of stress for faults
 LL1 = zeros(rcv.N,shz.N);
 
-% full stress kernels
+% full stress kernels [N_fault x N_shz x 3]
 LL = zeros(rcv.N,shz.N,3);
 
 for i = 1:3
@@ -121,7 +121,7 @@ for i = 1:3
             A(k,:),B(k,:),C(k,:),...
             I(i,1),I(i,2),I(i,3),...
             mu,nu);
-        % compute traction vector
+        % compute traction vector for fault plane orientation
         t=[s22.*rcv.nv(:,1)+s23.*rcv.nv(:,2), ...
             s23.*rcv.nv(:,1)+s33.*rcv.nv(:,2)];
         % rotate traction vector to fault-shear direction
@@ -132,7 +132,10 @@ for i = 1:3
 end
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
-evl.LK
+evl.LK = zeros(rcv.N,shz.N,2);
+evl.LK(:,:,1) = LL(:,:,1) - LL(:,:,3);
+evl.LK(:,:,2) = LL(:,:,2);
+
 end
 
 
