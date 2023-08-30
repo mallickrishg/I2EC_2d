@@ -1,4 +1,4 @@
-function shz = load_viscous_wedges()
+function shz = load_viscous_wedges(earthModel)
 
 p_filename = 'shearzone_vertices.dat';
 t_filename = 'shearzone_triangulation.dat';
@@ -34,5 +34,8 @@ shz.visco_n = zeros(shz.N,1);
 shz.e22pl = zeros(shz.N,1);
 shz.e23pl = zeros(shz.N,1);
 shz.e33pl = zeros(shz.N,1);
+
+% add elastic parameters
+shz.earthModel = earthModel;
 
 end

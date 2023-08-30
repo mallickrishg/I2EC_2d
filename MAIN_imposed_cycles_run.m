@@ -27,7 +27,7 @@ dip = atand(Fault_z/Fault_x); %
 Fault_width = sqrt(Fault_x^2 + Fault_z^2);
 
 rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault);
-shz = load_viscous_wedges();
+shz = load_viscous_wedges(earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
@@ -36,4 +36,6 @@ axis tight equal
 box on
 set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 
+%% compute stress interaction kernels
 
+evl = compute_all_stresskernels(rcv,shz);
