@@ -7,24 +7,11 @@
 node_modules/
 dist/
 
-# Compiled Java class files
-*.class
-
 # Compiled Python bytecode
 *.py[cod]
 
 # Log files
 *.log
-
-# Package files
-*.jar
-
-# Maven
-target/
-dist/
-
-# JetBrains IDE
-.idea/
 
 # Unit test reports
 TEST*.xml
@@ -40,7 +27,7 @@ Thumbs.db
 *.exe
 *.war
 
-# Large media files
+# media files and other files creates by the code
 *.mp4
 *.tiff
 *.avi
@@ -50,3 +37,5 @@ Thumbs.db
 *.dat
 *.asv
 *.asv
+*.seg
+
