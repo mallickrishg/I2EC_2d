@@ -64,8 +64,9 @@ shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity 
 shz.n = ones(shz.N,1);
 
 % define locked zone on megathrust
-locked = abs(rcv.xc(:,2)) > 10e3 & abs(rcv.xc(:,2))< 40e3;
-rcv.pinnedPosition(locked) = 1;
+locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
+rcv.pinnedPosition = false(shz.N,1);
+rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
 rcv.Vpl = Vpl;% m/s
@@ -74,7 +75,7 @@ shz.e23pl = 1e-14;% 1/s
 
 %% calculate coseismic stress change - imposed periodically
 slip_coseismic = zeros(rcv.N,1);
-slip_coseismic(logical(rcv.pinnedPosition)) = Trecur*Vpl;% in meters
+slip_coseismic(rcv.pinnedPosition) = Trecur*Vpl;% in meters
 
 delta_stress_rcv = evl.KK*slip_coseismic;
 delta_stress22_shz = evl.KL(:,:,1)*slip_coseismic;
@@ -84,6 +85,7 @@ delta_stress23_shz = evl.KL(:,:,2)*slip_coseismic;
 figure(2),clf
 subplot(3,1,1)
 plot(rcv.xc(:,1)./1e3,delta_stress_rcv,'LineWidth',2)
+grid on
 xlim([-100 350])
 xlabel('x (km)'), ylabel('\Delta\tau (MPa)')
 subplot(3,1,2)
