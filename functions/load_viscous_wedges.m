@@ -29,13 +29,15 @@ shz.xc = [x2c,x3c];
 shz.N = length(tria(:,1));
 
 % define rheological quantities
-shz.visco_A = zeros(shz.N,1);
-shz.visco_n = zeros(shz.N,1);
+shz.alpha = zeros(shz.N,1);
+shz.n = zeros(shz.N,1);
+
+% long-term deviatoric strain rates
 shz.e22pl = zeros(shz.N,1);
 shz.e23pl = zeros(shz.N,1);
-shz.e33pl = zeros(shz.N,1);
 
 % add elastic parameters
 shz.earthModel = earthModel;
+
 
 end
