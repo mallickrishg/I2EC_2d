@@ -15,6 +15,9 @@ mu=30e3;% in MPa
 % create megathrust (1) or load existing file (0)
 create_fault = 0;
 
+% Periodic earthquake recurrence time
+Trecur = 100*3.15e7;% in seconds
+Vpl = 1e-9;% m/s
 %% load fault and shear zone meshes
 earthModel = geometry.LDhs(mu,nu);
 
@@ -47,8 +50,55 @@ box on
 set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 
 %% compute stress interaction kernels
-
+% evl contains the following as N-d matrices
+% KK - fault-fault interactions [rcv.N x rcv.N]
+% KL - fault-shz interactions [shz.N x rcv.N x 2]
+% LK - shz-fault interactions [rcv.N x shz.N x 2]
+% LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 evl = compute_all_stresskernels(rcv,shz);
+
+%% assign rheological properties 
+% (assuming spatially constant values)
+rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
+shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.n = ones(shz.N,1);
+
+% define locked zone on megathrust
+locked = abs(rcv.xc(:,2)) > 10e3 & abs(rcv.xc(:,2))< 40e3;
+rcv.pinnedPosition(locked) = 1;
+
+% define long-term slip/strain rates
+rcv.Vpl = Vpl;% m/s
+shz.e22pl = 1e-15;% 1/s
+shz.e23pl = 1e-14;% 1/s
+
+%% calculate coseismic stress change - imposed periodically
+slip_coseismic = zeros(rcv.N,1);
+slip_coseismic(logical(rcv.pinnedPosition)) = Trecur*Vpl;% in meters
+
+delta_stress_rcv = evl.KK*slip_coseismic;
+delta_stress22_shz = evl.KL(:,:,1)*slip_coseismic;
+delta_stress23_shz = evl.KL(:,:,2)*slip_coseismic;
+
+% plot stress change
+figure(2),clf
+subplot(3,1,1)
+plot(rcv.xc(:,1)./1e3,delta_stress_rcv,'LineWidth',2)
+xlim([-100 350])
+xlabel('x (km)'), ylabel('\Delta\tau (MPa)')
+subplot(3,1,2)
+plotpatch2d(rcv)
+plotshz2d(shz,delta_stress22_shz)
+axis tight equal
+cb=colorbar;cb.Label.String = '\sigma_{xx}^{dev} (MPa)';
+clim([-1 1]*0.5)
+subplot(3,1,3)
+plotpatch2d(rcv)
+plotshz2d(shz,delta_stress23_shz)
+axis tight equal
+cb=colorbar;cb.Label.String = '\sigma_{xz} (MPa)';
+clim([-1 1]*0.5)
+colormap("bluewhitered")
 
 %% testing dummy
 figure(11),clf

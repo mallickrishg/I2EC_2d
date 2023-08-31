@@ -2,8 +2,10 @@ classdef receiver < geometry.fpatch
     properties
         % friction properties
         Vo;a;b;l;
-        % initial confining pressure
+        % confining pressure or fault-normal traction (MPa)
         sigma;
+        % combined rate-dependent friction parameter (a-b)sigma (MPa)
+        Asigma;
         % friction coefficient at reference velocity
         mu0;
         % plate velocity
@@ -58,7 +60,9 @@ classdef receiver < geometry.fpatch
             obj.Vo=obj.W*0+1e-1;
             obj.l=obj.W*0+1e-3;
             obj.sigma=obj.W*0+1e2;
+            obj.Asigma=obj.W*0+1;
             obj.mu0=obj.W*0+0.6;
+            obj.pinnedPosition=obj.W*0;
             
             % unit vectors in the dip direction
             obj.dv=[...
