@@ -2,7 +2,8 @@ classdef shearZoneReceiver < geometry.shzpatch
     properties
         % long-term deviatoric shear zone strain
         e22pl;e23pl
-        % rheological properties 
+        % rheological properties of the form dε/dt = ασ|σ|^(n-1) where 
+        % |σ| = sqrt(σxx'^2 + σxz^2), and σxx' is the deviatoric component
         n;alpha;
     end
   
