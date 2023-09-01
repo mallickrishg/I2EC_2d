@@ -40,7 +40,11 @@ end
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)
 % meshname_triangulation.dat (contains 3 columns of vertex linkage)
-shz = load_viscous_wedges('inputs/shearzone',earthModel);
+% This mesh can be created using CREATE_shearzone_mesh.m provided in the
+% folder 'meshing'
+shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
+% legacy function to construct the shear zone as a data structure 
+% shz = load_viscous_wedges('inputs/shearzone',earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
