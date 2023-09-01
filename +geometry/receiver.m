@@ -45,6 +45,8 @@ classdef receiver < geometry.fpatch
                 
             end
             
+            % set degrees of freedom by default
+            obj.dgf = 1;
             
             % patch properties     
             obj.N=size(fm,1);

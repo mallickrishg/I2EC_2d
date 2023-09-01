@@ -2,9 +2,12 @@ classdef shearZoneReceiver < geometry.shzpatch
     properties
         % long-term deviatoric shear zone strain
         e22pl;e23pl
+        
         % rheological properties of the form dε/dt = ασ|σ|^(n-1) where 
         % |σ| = sqrt(σxx'^2 + σxz^2), and σxx' is the deviatoric component
         n;alpha;
+        % degrees of freedom (number of parameters solved in numerical integration)
+        dgf;
     end
   
     methods
@@ -19,7 +22,7 @@ classdef shearZoneReceiver < geometry.shzpatch
             % (vertices and centers of the triangular mesh patches), area, and rheological properties.
             %
             % shz = geometry.shearZoneReceiver('filename', earthModel)
-
+            
 
             if ~iscell(filename)
                 filename={filename};
@@ -36,8 +39,13 @@ classdef shearZoneReceiver < geometry.shzpatch
                   assert(2==exist(p_filename,'file'),['patch:file not found ' filename{k}]);
                   [vert, tri]=obj.loadshztri(p_filename,t_filename);               
             end
-                     
+                
+            % set degrees of freedom by default
+            obj.dgf = 2;
+            
             % triangular mesh properties
+            obj.tri = tri;
+            obj.vert = vert;
             
             % define triangles as A,B,C - 3 vertices (x2,x3)
             obj.A = [vert(tri(:,1),1),vert(tri(:,1),2)];
