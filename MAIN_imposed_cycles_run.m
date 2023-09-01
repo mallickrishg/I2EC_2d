@@ -81,55 +81,47 @@ shz.e23pl = 1e-14;% 1/s
 slip_coseismic = zeros(rcv.N,1);
 slip_coseismic(rcv.pinnedPosition) = Trecur*Vpl;% in meters
 
-delta_stress_rcv = evl.KK*slip_coseismic;
-delta_stress22_shz = evl.KL(:,:,1)*slip_coseismic;
-delta_stress23_shz = evl.KL(:,:,2)*slip_coseismic;
+% initialise stress change data structure
+stress_change = [];
+stress_change.Nevents = 1;
+stress_change.Timing = [5*3.15e7];% provide earthquake timing (in seconds) as a vector
+
+stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
+stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
+stress_change.dsigma23 = zeros(shz.N,stress_change.Nevents);
+
+% stress change for each event stored as a matrix
+for i = 1:stress_change.Nevents
+    stress_change.dtau(:,i) = evl.KK*slip_coseismic(:,i);
+    stress_change.dsigma22(:,i) = evl.KL(:,:,1)*slip_coseismic(:,i);
+    stress_change.dsigma23(:,i) = evl.KL(:,:,2)*slip_coseismic(:,i);
+end
 
 % plot stress change
 figure(2),clf
 subplot(3,1,1)
-plot(rcv.xc(:,1)./1e3,delta_stress_rcv,'LineWidth',2)
+plot(rcv.xc(:,1)./1e3,stress_change.dtau(:,1),'LineWidth',2)
 grid on
 xlim([-100 350])
 xlabel('x (km)'), ylabel('\Delta\tau (MPa)')
 subplot(3,1,2)
 plotpatch2d(rcv)
-plotshz2d(shz,delta_stress22_shz)
+plotshz2d(shz,stress_change.dsigma22(:,1))
 axis tight equal
 cb=colorbar;cb.Label.String = '\sigma_{xx}^{dev} (MPa)';
 clim([-1 1]*0.5)
 subplot(3,1,3)
 plotpatch2d(rcv)
-plotshz2d(shz,delta_stress23_shz)
+plotshz2d(shz,stress_change.dsigma23(:,1))
 axis tight equal
 cb=colorbar;cb.Label.String = '\sigma_{xz} (MPa)';
 clim([-1 1]*0.5)
 colormap("bluewhitered")
 
-%% testing dummy
-figure(11),clf
-toplot = zeros(shz.N,1);
-x0 = 0e3;
-z0 = -30e3;
-r = 15e3;
-shzindex = sqrt((shz.xc(:,1)-x0).^2 + (shz.xc(:,2)-z0).^2)<=r;
-toplot(shzindex) = 1e-4;
+%% use rcv, evl, shz, stress_change to run earthquake cycles
+Ncycles = 5;% specify number of cycles (for spin up)
 
-subplot(2,1,1)
-plot(rcv.xc(:,1)./1e3,evl.LK(:,:,1)*toplot,'-','Linewidth',2)
-axis tight
-xlim([-100 350])
-
-subplot(2,1,2)
-plotpatch2d(rcv,evl.LK(:,:,1)*toplot)
-plotshz2d(shz,evl.LL(:,:,1,1)*toplot)
-axis tight equal
-box on
-% colorbar
-clim([-1 1]*max(abs(get(gca,'CLim'))))
-% colormap("jet")
-colormap("bluewhitered")
-
+[t,V,e22dot,e33dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles);
 
 
 
