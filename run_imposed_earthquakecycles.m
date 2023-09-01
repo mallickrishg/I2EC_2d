@@ -1,51 +1,40 @@
-function [t,V,e22dot,e33dot] = run_imposed_earthquakecycles(odefunc,rcv,shz,evl,stress_change,nreps)
+function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,nreps)
+% earthquake cycle function that solves a system of coupled ODEs to compute
+% time-dependent fault slip rate and deviatoric strain rates (in shear
+% zones) for a given 'rcv' and 'shz' objects.
+% 
+% INPUTS - 
+% rcv, shz      - geometry objects
+% evl           - data structure that contains all the necessary stress interaction
+%                 kernels
+% stress_change - data structure that constains coseismic stress changes
+%                 and timings of all events that repeat cyclically
+% nreps         - number of repeats of periodic cycles (needed to spin up)
+% AUTHORS:
+% Rishav Mallick (Caltech Seismolab), 2023
 
-[~,Y] = eqsequence_viscosims(@(t,y) ode_faultviscopower(t,y,ss,evl),ss,tau_cs,Y0,length(T_events),T_events,Teq);
+% create initial values as perturbations about steady-state values
+Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
+logV_0 = log(rcv.Vpl);
+e22dot_0 = shz.e22pl;
+e23dot_0 = shz.e23pl;
+
+Y0(1 : rcv.dgf : rcv.dgf*rcv.N) = logV_0;
+Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e22dot_0;
+Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e23dot_0;
+
+
+% start simulation (nrep-1 spin-up cycles)
+[~,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change);
 
 for i = 2:nreps-1
-    v0 = exp(Y(end,:)');v0(ss.pin) = 0;
-    Y0 = log(ss.A.*((v0./ss.A).^(1./ss.n) + tau_cs(:,1)).^ss.n);
-    [~,Y] = eqsequence_viscosims(@(t,y) ode_faultviscopower(t,y,ss,evl),ss,tau_cs,Y0,length(T_events),T_events,Teq);
+    Y0 = Y(end,:)';
+    [~,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change);
 end
+Y0 = Y(end,:)';
+[t,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change);
 
-v0 = exp(Y(end,:)');v0(ss.pin) = 0;
-Y0 = log(ss.A.*((v0./ss.A).^(1./ss.n) + tau_cs(:,1)).^ss.n);
-[tsim,Ysim] = eqsequence_viscosims(@(t,y) ode_faultviscopower(t,y,ss,evl),ss,tau_cs,Y0,length(T_events),T_events,tmodel(end));
+% extract important quantities from state vector
+[V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz);
 
-
-end
-
-function [tfull,Yfull] = eqsequence_viscosims(yp,rcv,tau_cs,Y0,Nevents,T_events,Tend)
-
-options=odeset('Refine',1,'AbsTol',1e-10,'RelTol',1e-10,'InitialStep',1e-6,'MaxStep',1e8);
-
-for count = 1:Nevents
-    
-    if count == 1
-        if length(T_events)>1
-            Tseqend = T_events(count+1);
-        else
-            Tseqend = Tend;
-        end
-        [t,Y]=ode45(yp,[0 Tseqend],Y0,options);
-        tfull = t;
-        Yfull = Y;
-        
-    elseif count>1 && count<Nevents
-        Yval = exp(Y(end,:)'); 
-        Y0 = log(rcv.A) + rcv.n.*(log(tau_cs(:,count) + (Yval./rcv.A).^(1./rcv.n)));
-        [t,Y]=ode45(yp,[0 T_events(count+1)-T_events(count)],Y0,options);
-        tfull = [tfull;t + T_events(count)];
-        Yfull = [Yfull;Y];
-    
-    else
-        Yval = exp(Y(end,:)'); 
-        Y0 = log(rcv.A) + rcv.n.*(log(tau_cs(:,count) + (Yval./rcv.A).^(1./rcv.n)));
-        [t,Y]=ode45(yp,[0 Tend-T_events(count)],Y0,options);
-        tfull = [tfull;t + T_events(count)];
-        Yfull = [Yfull;Y];
-    
-    end
-end
-        
 end

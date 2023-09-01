@@ -43,8 +43,6 @@ end
 % This mesh can be created using CREATE_shearzone_mesh.m provided in the
 % folder 'meshing'
 shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
-% legacy function to construct the shear zone as a data structure 
-% shz = load_viscous_wedges('inputs/shearzone',earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
@@ -69,7 +67,7 @@ shz.n = ones(shz.N,1);
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
-rcv.pinnedPosition = false(shz.N,1);
+rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
@@ -85,6 +83,7 @@ slip_coseismic(rcv.pinnedPosition) = Trecur*Vpl;% in meters
 stress_change = [];
 stress_change.Nevents = 1;
 stress_change.Timing = [5*3.15e7];% provide earthquake timing (in seconds) as a vector
+stress_change.Trecur = Trecur;
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -93,6 +92,8 @@ stress_change.dsigma23 = zeros(shz.N,stress_change.Nevents);
 % stress change for each event stored as a matrix
 for i = 1:stress_change.Nevents
     stress_change.dtau(:,i) = evl.KK*slip_coseismic(:,i);
+    stress_change.dtau(locked,i) = 0;% force stress change in coseismic region to 0
+
     stress_change.dsigma22(:,i) = evl.KL(:,:,1)*slip_coseismic(:,i);
     stress_change.dsigma23(:,i) = evl.KL(:,:,2)*slip_coseismic(:,i);
 end
@@ -121,7 +122,7 @@ colormap("bluewhitered")
 %% use rcv, evl, shz, stress_change to run earthquake cycles
 Ncycles = 5;% specify number of cycles (for spin up)
 
-[t,V,e22dot,e33dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles);
+% [t,V,e22dot,e33dot] = run_imposed_earthquakecyc les(rcv,shz,evl,stress_change,Ncycles);
 
 
 
