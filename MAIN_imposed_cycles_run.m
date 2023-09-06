@@ -166,7 +166,7 @@ for i = 1:length(t_plots)
     plotshz2d(shz,edot(tindex,:)'./edot_pl), hold on
     plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
     box on
-    cb=colorbar;cb.Label.String = 'v/v_0';
+    cb=colorbar;cb.Label.String = '\gamma/\gamma_0';
     clim(10.^[-1,1])
     colormap("copper")
     axis tight equal
