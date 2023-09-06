@@ -7,7 +7,16 @@ function [V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz)
 V = exp(Y(:,1 : rcv.dgf : rcv.dgf*rcv.N));
 V(:,rcv.pinnedPosition) = 0;% locked section of fault has v = 0
 
-% strain rates
-e22dot = Y(:,rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N);
-e23dot = Y(:,rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N);
+% stress
+s22 = Y(:,rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N);
+s23 = Y(:,rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N);
+
+% convert from stress to strain rate
+sigma = sqrt(s22.^2 + s23.^2);
+
+A_matrix = repmat(shz.alpha',length(V(:,1)),1);
+n_matrix = repmat(shz.n',length(V(:,1)),1);
+e22dot = A_matrix.*(sigma.^(n_matrix-1)).*s22;
+e23dot = A_matrix.*(sigma.^(n_matrix-1)).*s23;
+
 end
