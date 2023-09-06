@@ -1,15 +1,14 @@
-function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,stress_change)
+function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,stress_change,Trecur)
 
 options=odeset('Refine',1,'AbsTol',1e-10,'RelTol',1e-10,'InitialStep',1e-6,'MaxStep',1e8);
 
 Nevents = stress_change.Nevents;
 T_events = stress_change.Timing;
-Trecur = stress_change.Trecur;
 
 for count = 1:Nevents
     
     if count == 1
-        if length(T_events)>1 % for more than 1 earthquake
+        if Nevents > 1 % for more than 1 earthquake
             Tseqend = T_events(count+1) - T_events(count);
         else % if it is a characteristic event
             Tseqend = Trecur - T_events(count);
