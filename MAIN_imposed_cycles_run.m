@@ -67,7 +67,7 @@ evl = compute_all_stresskernels(rcv,shz);
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+0.5;
+shz.n = ones(shz.N,1)+1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -155,6 +155,28 @@ legend('slip rate','strain rate')
 xlabel('t/T_{eq}')
 set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5)
 ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Interpreter','latex','FontSize',25)
+
+
+%% create snapshots of normalized slip rate & strain rates
+t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
+figure(12),clf
+for i = 1:length(t_plots)
+    tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
+    subplot(3,2,i)
+    plotshz2d(shz,edot(tindex,:)'./edot_pl), hold on
+    plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
+    box on
+    cb=colorbar;cb.Label.String = 'v/v_0';
+    clim(10.^[-1,1])
+    colormap("copper")
+    axis tight equal
+    xlabel('x (km)'), ylabel('z (km)')
+    title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
+    set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
+end
+
+
+
 
 
 
