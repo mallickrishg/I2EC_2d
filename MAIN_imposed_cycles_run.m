@@ -7,6 +7,7 @@
 clear  
 addpath functions/
 import geometry.*
+rng(42)
 
 % Elastic parameters (homogenous medium)
 nu=0.25;% Poisson's ratio
@@ -18,6 +19,9 @@ create_fault = 0;
 % Periodic earthquake recurrence time
 Trecur = 100*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
+
+% max stress change on fault (MPa)
+tau_max = 5;
 %% load fault and shear zone meshes
 earthModel = geometry.LDhs(mu,nu);
 
@@ -63,7 +67,7 @@ evl = compute_all_stresskernels(rcv,shz);
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1);
+shz.n = ones(shz.N,1)+0.5;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -71,18 +75,23 @@ rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
-rcv.Vpl = Vpl;% m/s
-shz.e22pl = 1e-15;% 1/s
-shz.e23pl = 1e-14;% 1/s
+rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
+shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
+shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
 %% calculate coseismic stress change - imposed periodically
-slip_coseismic = zeros(rcv.N,1);
-slip_coseismic(rcv.pinnedPosition) = Trecur*Vpl;% in meters
+Nevents = 3;
+slip_coseismic = zeros(rcv.N,Nevents);
+slip_multipliers = drchrnd(ones(1,Nevents),1);% this is just to create random numbers that sum to 1
+
+for i = 1:Nevents
+    slip_coseismic(rcv.pinnedPosition,i) = Trecur*Vpl.*slip_multipliers(i);% in meters
+end
 
 % initialise stress change data structure
 stress_change = [];
-stress_change.Nevents = 1;
-stress_change.Timing = [5*3.15e7];% provide earthquake timing (in seconds) as a vector
+stress_change.Nevents = Nevents;
+stress_change.Timing = [5,20,25]*3.15e7;% provide earthquake timing (in seconds) as a vector
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -90,7 +99,9 @@ stress_change.dsigma23 = zeros(shz.N,stress_change.Nevents);
 
 % stress change for each event stored as a matrix
 for i = 1:stress_change.Nevents
-    stress_change.dtau(:,i) = evl.KK*slip_coseismic(:,i);
+    dtau = evl.KK*slip_coseismic(:,i);
+    dtau(dtau > tau_max) = tau_max;
+    stress_change.dtau(:,i) = dtau;
     stress_change.dtau(locked,i) = 0;% force stress change in coseismic region to 0
 
     stress_change.dsigma22(:,i) = evl.KL(:,:,1)*slip_coseismic(:,i);
@@ -119,9 +130,32 @@ clim([-1 1]*0.5)
 colormap("bluewhitered")
 
 %% use rcv, evl, shz, stress_change to run earthquake cycles
-Ncycles = 5;% specify number of cycles (for spin up)
+Ncycles = 10;% specify number of cycles (for spin up)
 
-[t,V,e22dot,e33dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
+[t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
+
+%% plot results
+edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
+edot = sqrt(e22dot.^2 + e23dot.^2);
+
+figure(10),clf
+pcolor(t./Trecur,rcv.xc(:,1)./1e3,V'./Vpl), shading interp
+xlabel('t/T_{eq}')
+ylabel('x (km)')
+colorbar
+clim(10.^[-1,2])
+colormap("turbo")
+set(gca,'ColorScale','log','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
+
+figure(11),clf
+plot(t./Trecur,V(:,43)./Vpl,'.-'), hold on
+plot(t./Trecur,edot(:,10)./edot_pl(10),'.-')
+axis tight
+legend('slip rate','strain rate')
+xlabel('t/T_{eq}')
+set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5)
+ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Interpreter','latex','FontSize',25)
+
 
 
 
