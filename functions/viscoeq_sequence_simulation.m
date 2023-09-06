@@ -29,21 +29,21 @@ for count = 1:Nevents
         Yfull = Y;
         
         % from event 1 to event 2 OR Trecur
-        Y0 = apply_initialconditions(Y,rcv,shz,stress_change);
+        Y0 = apply_initialconditions(Y,rcv,shz,stress_change,count);
 
         [t,Y]=ode45(y_odefunction,[0 Tseqend],Y0,options);
         tfull = [tfull;t + T_events(count)];
         Yfull = [Yfull;Y];
         
     elseif count>1 && count<Nevents
-        Y0 = apply_initialconditions(Y,rcv,shz,stress_change);
+        Y0 = apply_initialconditions(Y,rcv,shz,stress_change,count);
         
         [t,Y]=ode45(y_odefunction,[0 T_events(count+1)-T_events(count)],Y0,options);
         tfull = [tfull;t + T_events(count)];
         Yfull = [Yfull;Y];
     
     else % for last event solve till Trecur (end of cycle)
-        Y0 = apply_initialconditions(Y,rcv,shz,stress_change);
+        Y0 = apply_initialconditions(Y,rcv,shz,stress_change,count);
 
         [t,Y]=ode45(y_odefunction,[0 Trecur-T_events(count)],Y0,options);
         tfull = [tfull;t + T_events(count)];
@@ -54,7 +54,7 @@ end
         
 end
 
-function Y0 = apply_initialconditions(Y,rcv,shz,stress_change)
+function Y0 = apply_initialconditions(Y,rcv,shz,stress_change,count)
 % function to apply initial conditions for a given state vector
 
 Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
