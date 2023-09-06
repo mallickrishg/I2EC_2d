@@ -23,16 +23,12 @@ for count = 1:Nevents
         % from event 1 to event 2 OR Trecur
         Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
         logV_0 = Y(end,1 : rcv.dgf : rcv.dgf*rcv.N)' + stress_change.dtau(:,count)./rcv.Asigma;
-        e22dot = Y(end,rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N)';
-        e23dot = Y(end,rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N)';
-        
-        e22dot_0 =  log(shz.alpha.*((v0./ss.A).^(1./ss.n) + tau_cs(:,1)).^ss.n);
-        
-        e23dot_0 = shz.e23pl;
-
+        s22_0 = Y(end,rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N)' + stress_change.dsigma22(:,count);
+        s23_0 = Y(end,rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N)' + stress_change.dsigma23(:,count);
+                
         Y0(1 : rcv.dgf : rcv.dgf*rcv.N) = logV_0;
-        Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e22dot_0;
-        Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e23dot_0;
+        Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s22_0;
+        Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
 
         [t,Y]=ode45(y_odefunction,[0 Tseqend],Y0,options);
         tfull = [tfull;t + T_events(count)];

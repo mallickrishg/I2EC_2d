@@ -16,12 +16,14 @@ function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_c
 % create initial values as perturbations about steady-state values
 Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
 logV_0 = log(rcv.Vpl);
-e22dot_0 = shz.e22pl;
-e23dot_0 = shz.e23pl;
+
+% TODO - change from strain rate to stress
+s22_0 = shz.e22pl;
+s23_0 = shz.e23pl;
 
 Y0(1 : rcv.dgf : rcv.dgf*rcv.N) = logV_0;
-Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e22dot_0;
-Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = e23dot_0;
+Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s22_0;
+Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
 
 
 % start simulation (nrep-1 spin-up cycles)
