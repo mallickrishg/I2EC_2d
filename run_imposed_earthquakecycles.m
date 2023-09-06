@@ -1,4 +1,4 @@
-function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,nreps)
+function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,nreps,Trecur)
 % earthquake cycle function that solves a system of coupled ODEs to compute
 % time-dependent fault slip rate and deviatoric strain rates (in shear
 % zones) for a given 'rcv' and 'shz' objects.
@@ -10,6 +10,8 @@ function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_c
 % stress_change - data structure that constains coseismic stress changes
 %                 and timings of all events that repeat cyclically
 % nreps         - number of repeats of periodic cycles (needed to spin up)
+% Trecur        - recurrence interval for earthquake supercycle (in s)
+% 
 % AUTHORS:
 % Rishav Mallick (Caltech Seismolab), 2023
 

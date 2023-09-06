@@ -83,7 +83,6 @@ slip_coseismic(rcv.pinnedPosition) = Trecur*Vpl;% in meters
 stress_change = [];
 stress_change.Nevents = 1;
 stress_change.Timing = [5*3.15e7];% provide earthquake timing (in seconds) as a vector
-stress_change.Trecur = Trecur;
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -122,7 +121,7 @@ colormap("bluewhitered")
 %% use rcv, evl, shz, stress_change to run earthquake cycles
 Ncycles = 5;% specify number of cycles (for spin up)
 
-% [t,V,e22dot,e33dot] = run_imposed_earthquakecyc les(rcv,shz,evl,stress_change,Ncycles);
+[t,V,e22dot,e33dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
 
 
 
