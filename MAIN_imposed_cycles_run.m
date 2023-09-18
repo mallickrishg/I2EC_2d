@@ -158,7 +158,8 @@ ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Inte
 
 
 %% create snapshots of normalized slip rate & strain rates
-t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
+% t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
+t_plots = [5.01,7,10,19.5,20.01,21].*3.15e7;
 figure(12),clf
 for i = 1:length(t_plots)
     tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
@@ -167,8 +168,8 @@ for i = 1:length(t_plots)
     plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
     box on
     cb=colorbar;cb.Label.String = '\gamma/\gamma_0';
+    colormap("turbo")
     clim(10.^[-1,1])
-    colormap("copper")
     axis tight equal
     xlabel('x (km)'), ylabel('z (km)')
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
