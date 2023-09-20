@@ -176,10 +176,83 @@ for i = 1:length(t_plots)
     set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
 end
 
+%% observation points
+Nobs=400;
+obs=([1;0]*(linspace(-100,350,Nobs)))'*1e3;
+
+%% compute displacement kernels
+devl = compute_all_dispkernels(obs,rcv,shz);
+% surface velocity 
+gps = [];
+gps.rcv.vh = (devl.KO(:,:,1)*V')';
+gps.rcv.vz = (devl.KO(:,:,2)*V')';
+
+gps.shz.vh=(devl.LO(:,:,1,1)*e22dot' ...
+           +devl.LO(:,:,1,2)*e23dot');
+
+gps.shz.vz=(devl.LO(:,:,2,1)*e22dot' ...
+           +devl.LO(:,:,2,2)*e23dot');
+
+%% plotting surface displacements 
+figure();clf
+p = [];
+lgd = {};
+plotindex = [0,4.5,5.01,6,10,19.5].*3.15e7;
+cspec = cool(length(plotindex));
+
+subplot(4,1,1);hold on;
+toplot=gps.rcv.vh;
+toplot_pl=Vpl;
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+end
+% legend(p,lgd); 
+grid on;
+title("Horizontal component due to fault")
+
+subplot(4,1,2); hold on;
+toplot=gps.rcv.vz;
+toplot_pl=Vpl;
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+end
+% legend(p,lgd); 
+grid on;
+title("Vertical component due to fault")
+
+subplot(4,1,3); hold on;
+toplot=gps.shz.vh;
+toplot_pl=Vpl;
+plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    checkgps(:,i)=toplot(:,tindex);
+    p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+end
+% legend(p,lgd); 
+grid on;
+title("Horizontal component due to shear zones")
 
 
-
-
+subplot(4,1,4); hold on;
+toplot=gps.shz.vz;
+toplot_pl=Vpl;
+plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs']
+legend(p,lgd); 
+grid on;
+title("Vertical component due to shear zones")
+%%
 
 
 
