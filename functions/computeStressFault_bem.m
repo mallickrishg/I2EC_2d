@@ -27,6 +27,9 @@ tn = boundary.nv(:,1).*t(:,1) + boundary.nv(:,2).*t(:,2);
 kernel = [Kdd, Knd;...
           Kdn, Knn];
 bem_slip = -pinv(kernel)*[ts;tn];
-slip_d
+
+% TODO - need to implement appropriate disp,traction boundary conditions 
+% and create and arrange kernel accordingly
+
 
 end
