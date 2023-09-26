@@ -1,6 +1,16 @@
 function [Ktau,Ksigma] = computetractionkernels(src,rcv)
-% traction kernel computation
-% Rishav Mallick, 2020
+% traction kernel computation for a given source and receiver object pair
+% INPUTS
+% src,rcv - objects or data structures containing fault mesh 
+%           (end points and center nodes)
+% 
+% OUTPUTS 
+% 2 x [N x N] matrices containing fault-centric traction kernels
+% these kernels are for half-space only
+% Ktau - traction kernel in shear direction
+% Ksigma - traction kernel in fault-normal direction
+% 
+% Rishav Mallick, EOS, 2020
 
 Ktau = zeros(rcv.N,src.N);
 Ksigma = Ktau;
