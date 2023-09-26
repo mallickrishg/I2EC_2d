@@ -12,7 +12,7 @@ import geometry.*
 
 % Elastic parameters (homogenous medium)
 nu = 0.25;% Poisson's ratio
-mu = 1;% in MPa
+mu = 1e3;% in MPa
 
 earthModel = geometry.LDhs(mu,nu);
 rcv = geometry.receiver('inputs/testing2d.seg',earthModel);
@@ -48,13 +48,13 @@ ileft1 = boundary.xc(:,1) == -10e3 & boundary.xc(:,2) >= -4e3;
 ileft2 = boundary.xc(:,1) == -10e3 & boundary.xc(:,2) < -4e3;
 
 % right side
-BC([iright;iright]) = 0;
+BC([iright;iright]) = 0 - [ux(iright);uz(iright)];
 % bottom
-BC([ibot;ibot]) = 0;
+BC([ibot;ibot]) = 0 - [td(ibot);tn(ibot)];
 % left top half
-BC([ileft1;ileft1]) = [boundary.Vpl(ileft1);boundary.Vpl(ileft1).*0];
+BC([ileft1;ileft1]) = [boundary.Vpl(ileft1)-ux(ileft1); 0-uz(ileft1)];
 % left bot half
-BC([ileft2;ileft2]) = 0;
+BC([ileft2;ileft2]) = 0 - [td(ileft2);tn(ileft2)];
 
 %% compute displacement & traction kernels for boundary
 [Kdd,Kdn,Knd,Knn] = geometry.computeFullTractionKernels(boundary,boundary);
