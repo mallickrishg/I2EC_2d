@@ -17,7 +17,7 @@ mu=30e3;% in MPa
 create_fault = 0;
 
 % Periodic earthquake recurrence time
-Trecur = 100*3.15e7;% in seconds
+Trecur = 200*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
@@ -67,7 +67,7 @@ evl = compute_all_stresskernels(rcv,shz);
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+1;
+shz.n = ones(shz.N,1)+0.5;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -130,7 +130,7 @@ clim([-1 1]*0.5)
 colormap("bluewhitered")
 
 %% use rcv, evl, shz, stress_change to run earthquake cycles
-Ncycles = 10;% specify number of cycles (for spin up)
+Ncycles = 5;% specify number of cycles (for spin up)
 
 [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
 
@@ -159,7 +159,7 @@ ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Inte
 
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-t_plots = [5.01,7,10,19.5,20.01,21].*3.15e7;
+t_plots = [4.1,7,10,19.5,21,100].*3.15e7;
 figure(12),clf
 for i = 1:length(t_plots)
     tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
@@ -194,10 +194,10 @@ gps.shz.vz=(devl.LO(:,:,2,1)*e22dot' ...
            +devl.LO(:,:,2,2)*e23dot');
 
 %% plotting surface displacements 
-figure();clf
+figure(3);clf
 p = [];
 lgd = {};
-plotindex = [0,4.5,5.01,6,10,19.5].*3.15e7;
+plotindex = [0,4,5.01,6,10,19.5].*3.15e7;
 cspec = cool(length(plotindex));
 
 subplot(4,1,1);hold on;
@@ -207,7 +207,7 @@ plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
 grid on;
@@ -220,7 +220,7 @@ plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
 grid on;
@@ -234,7 +234,7 @@ for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     checkgps(:,i)=toplot(:,tindex);
     p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
 grid on;
@@ -248,7 +248,8 @@ plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs']
+    lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
+end
 legend(p,lgd); 
 grid on;
 title("Vertical component due to shear zones")
