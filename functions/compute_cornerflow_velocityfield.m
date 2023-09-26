@@ -1,4 +1,19 @@
 function [Vx,Vz] = compute_cornerflow_velocityfield(dip,x,z)
+% Newtonian fluid corner flow solutions subject to 2 different sets of
+% boundary conditions: 
+% (1) continental arc
+% (2) oceanic mantle
+% INPUTS:
+% dip - slab dip angle in radians
+% x,z - normalized distance from slab (z is negative inside the Earth)
+%       provide them as [Nx1] vectors
+% OUTPUTS:
+% Vx,Vz - corner flow velocity field as [Nx2] matrices for each component
+% Vx(:,1) - continental arc solution
+% Vx(:,2) - oceanic mantle solution
+% similarly for Vz
+% 
+% Rishav Mallick, JPL, 2023
 
 constants_arc = ...
     [0,...
