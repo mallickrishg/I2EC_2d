@@ -58,4 +58,64 @@ BC([ileft2;ileft2]) = 0 - [td(ileft2);tn(ileft2)];
 
 %% compute displacement & traction kernels for boundary
 [Kdd,Kdn,Knd,Knn] = geometry.computeFullTractionKernels(boundary,boundary);
-[Gdx,Gdz,Gnx,Gnz] = computeDisplacementKernels(boundary,boundary.xc);
+[Gdx,Gdz,Gnx,Gnz] = geometry.computeDisplacementKernels(boundary,boundary.xc);
+
+Ktraction = [Kdd,Knd;Kdn,Knn];
+Kdisp = [Gdx,Gnx;Gdz,Gnz];
+
+kernel = zeros(boundary.N*2,boundary.N*2);
+
+kernel([iright;iright],:) = Kdisp([iright;iright],:);
+kernel([ibot;ibot],:) = Ktraction([ibot;ibot],:);
+kernel([ileft1;ileft1],:) = Kdisp([ileft1;ileft1],:);
+kernel([ileft2;ileft2],:) = Ktraction([ileft2;ileft2],:);
+
+%% solve boundary value problem
+
+bem_sol = kernel\BC;
+
+%% plot internal displacements
+nx = 100;
+nz = nx/2;
+
+x = linspace(-9.99,9.99,nx).*1e3;
+z = linspace(-9.99,0,nz).*1e3;
+[X,Z] = meshgrid(x,z);
+obs_plot = [X(:), Z(:)];
+
+[Gdx,Gdz,Gnx,Gnz] = geometry.computeDisplacementKernels(boundary,obs_plot);
+
+ux = [Gdx,Gnx]*bem_sol;
+uz = [Gdz,Gnz]*bem_sol;
+
+figure(10),clf
+nskip = 8;
+toplot = sqrt(ux.^2 + uz.^2);
+pcolor(x,z,reshape(toplot,nz,nx)), shading interp, hold on
+quiver(X(1:nskip:end),Z(1:nskip:end),ux(1:nskip:end)',uz(1:nskip:end)','w-','LineWidth',1)
+axis tight equal
+cb=colorbar;cb.Label.String = 'Displacement';
+clim([0 1])
+colormap(ttscm('berlin',20))
+set(gca,'FontSize',20,'LineWidth',1.5,'TickDir','both')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
