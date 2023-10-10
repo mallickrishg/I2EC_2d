@@ -1,4 +1,4 @@
-function evl = compute_all_stresskernels(rcv,shz)
+function evl = compute_all_stresskernels(rcv,shz,boundary)
 % Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant stress kernels
 % 
 % INPUTS
@@ -26,7 +26,8 @@ evl = [];
 %% compute fault-fault interaction kernels
 disp('Computing fault - fault traction kernels')
 
-[K,~] = computetractionkernels(rcv,rcv);
+% [K,~] = computetractionkernels(rcv,rcv);
+[K,~] = computeFaultTractionKernelsBem(rcv,rcv,boundary);
 
 % store shear traction kernel in 'evl'
 evl.KK = K;
