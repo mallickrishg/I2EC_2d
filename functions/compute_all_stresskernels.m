@@ -4,6 +4,7 @@ function evl = compute_all_stresskernels(rcv,shz,boundary)
 % INPUTS
 % rcv - object or data structure that contains fault geometry and Elastic parameters
 % shz - object or data structure that contains shear zone geometry and Elastic parameters
+% boundary - object or data structure that contains the boundary mesh and Elastic parameters
 % 
 % OUTPUTS
 % evl - data structure with the following kernels
@@ -25,6 +26,7 @@ evl = [];
 
 %% compute fault-fault interaction kernels
 disp('Computing fault - fault traction kernels')
+
 [K,~] = computeFaultTractionKernelsBem(rcv,rcv,boundary);
 
 % store shear traction kernel in 'evl'
@@ -33,6 +35,7 @@ evl.KK = K;
 %% compute fault-shz deviatoric interaction kernel
 
 disp('Computing fault - shear zone traction kernels')
+
 [LL1,LL3,LL2] = computeFaultTractionKernelsBem(rcv,shz,boundary);
 
 % initialize deviatoric K-L kernel [Nshz x Nf x 2]
@@ -81,9 +84,6 @@ for i = 1:3
         LL2(:,k) = s23(:);
         LL3(:,k) = s33(:);
 
-        % LL(:,k,1,i)=s22(:);
-        % LL(:,k,2,i)=s23(:);
-        % LL(:,k,3,i)=s33(:);
     end
     LL(:,:,1,i) = LL1;
     LL(:,:,2,i) = LL2;
