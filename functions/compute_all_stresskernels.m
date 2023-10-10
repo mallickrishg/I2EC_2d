@@ -25,29 +25,14 @@ evl = [];
 
 %% compute fault-fault interaction kernels
 disp('Computing fault - fault traction kernels')
-
-% [K,~] = computetractionkernels(rcv,rcv);
 [K,~] = computeFaultTractionKernelsBem(rcv,rcv,boundary);
 
 % store shear traction kernel in 'evl'
 evl.KK = K;
 
 %% compute fault-shz deviatoric interaction kernel
-% initialize stress kernels
-LL1 = zeros(shz.N,rcv.N);
-LL2 = zeros(shz.N,rcv.N);
-LL3 = zeros(shz.N,rcv.N);
 
 disp('Computing fault - shear zone traction kernels')
-% xc = shz.xc;% here we don't need to flip the sign of z-coordinate
-% for i = 1:rcv.N
-%     m = [rcv.x(i,2) rcv.x(i,1) rcv.W(i) rcv.dip(i) 1];
-%     [s22,s23,s33] = EdgeStress(m,xc(:,1),xc(:,2),nu,mu);
-%     LL1(:,i) = s22;
-%     LL2(:,i) = s23;
-%     LL3(:,i) = s33;
-% end
-
 [LL1,LL3,LL2] = computeFaultTractionKernelsBem(rcv,shz,boundary);
 
 % initialize deviatoric K-L kernel [Nshz x Nf x 2]
