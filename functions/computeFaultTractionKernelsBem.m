@@ -50,8 +50,8 @@ for i = 1:src.N
     % boundary conditions (only 2 types)
     % rcv.Vpl = 0: dirichlet BC (u = 0)
     % rcv.Vpl = 1: Neumann BC (t = 0)
-    idirichlet = rcv.Vpl == 0;
-    ineumann = rcv.Vpl == 1;
+    idirichlet = boundary.Vpl == 0;
+    ineumann = boundary.Vpl == 1;
 
     % displacement BC
     BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
