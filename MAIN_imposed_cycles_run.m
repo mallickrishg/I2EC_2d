@@ -22,7 +22,7 @@ Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
 tau_max = 5;
-%% load fault and shear zone meshes
+%% load fault, boundary and shear zone meshes
 earthModel = geometry.LDhs(mu,nu);
 
 % megathrust fault
@@ -41,6 +41,9 @@ else
     rcv = geometry.receiver('inputs/megathrust2d.seg',earthModel);
 end
 
+% boundary mesh
+boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
+
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)
 % meshname_triangulation.dat (contains 3 columns of vertex linkage)
@@ -50,6 +53,7 @@ shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
+plotpatch2d(boundary,boundary.xc(:,2)./1e3)
 plotshz2d(shz,shz.xc(:,2)./1e3)
 axis tight equal
 box on
@@ -61,7 +65,7 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 % KL - fault-shz interactions [shz.N x rcv.N x 2]
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
-evl = compute_all_stresskernels(rcv,shz);
+evl = compute_all_stresskernels(rcv,shz,boundary);
 
 %% assign rheological properties 
 % (assuming spatially constant values)
@@ -76,6 +80,9 @@ rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
+
+% For Sharadha: this is where we need to incorporate the strain rates from
+% an external calculation
 shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
 shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
@@ -129,6 +136,7 @@ cb=colorbar;cb.Label.String = '\sigma_{xz} (MPa)';
 clim([-1 1]*0.5)
 colormap("bluewhitered")
 
+% return
 %% use rcv, evl, shz, stress_change to run earthquake cycles
 Ncycles = 5;% specify number of cycles (for spin up)
 
