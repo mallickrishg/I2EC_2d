@@ -45,6 +45,8 @@ evl.KL(:,:,2) = LL2;
 
 %% compute shz-shz interaction kernels
 
+LL = computeShzStressKernelsBem(shz,shz,boundary);
+
 % deviatoric stress kernels [2x2]
 evl.LL = zeros(shz.N,shz.N,2,2);
 
