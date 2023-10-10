@@ -1,5 +1,5 @@
 function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
-% traction kernel computation for a given source and receiver object pair
+% traction or shear kernel computation for a given source and receiver object pair
 % INPUTS
 % src,rcv - objects or data structures containing fault mesh 
 %           (end points and center nodes)
