@@ -20,6 +20,7 @@ function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
 % 
 % Author:
 % Rishav Mallick, JPL, 2023
+
 if nargout == 2
     Ktau = zeros(rcv.N,src.N);
     Ksigma = zeros(rcv.N,src.N);
