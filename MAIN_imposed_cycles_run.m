@@ -69,9 +69,9 @@ evl = compute_all_stresskernels(rcv,shz,boundary);
 
 %% assign rheological properties 
 % (assuming spatially constant values)
-rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
+rcv.Asigma = 0.25.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+0.5;
+shz.n = ones(shz.N,1)+0.1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -98,7 +98,7 @@ end
 % initialise stress change data structure
 stress_change = [];
 stress_change.Nevents = Nevents;
-stress_change.Timing = [5,20,25]*3.15e7;% provide earthquake timing (in seconds) as a vector
+stress_change.Timing = [4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -167,7 +167,7 @@ ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Inte
 
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-t_plots = [4.1,7,10,19.5,21,100].*3.15e7;
+t_plots = [5,9,11,49,51,100].*3.15e7;
 figure(12),clf
 for i = 1:length(t_plots)
     tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
@@ -184,6 +184,7 @@ for i = 1:length(t_plots)
     set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
 end
 
+return
 %% observation points
 Nobs=400;
 obs=([1;0]*(linspace(-100,350,Nobs)))'*1e3;
