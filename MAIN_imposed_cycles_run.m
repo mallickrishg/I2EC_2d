@@ -22,7 +22,7 @@ Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
 tau_max = 5;
-%% load fault and shear zone meshes
+%% load fault, boundary and shear zone meshes
 earthModel = geometry.LDhs(mu,nu);
 
 % megathrust fault
@@ -41,6 +41,9 @@ else
     rcv = geometry.receiver('inputs/megathrust2d.seg',earthModel);
 end
 
+% boundary mesh
+boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
+
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)
 % meshname_triangulation.dat (contains 3 columns of vertex linkage)
@@ -50,6 +53,7 @@ shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 
 figure(1),clf
 plotpatch2d(rcv,rcv.xc(:,2)./1e3), hold on
+plotpatch2d(boundary,boundary.xc(:,2)./1e3)
 plotshz2d(shz,shz.xc(:,2)./1e3)
 axis tight equal
 box on
@@ -61,13 +65,13 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 % KL - fault-shz interactions [shz.N x rcv.N x 2]
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
-evl = compute_all_stresskernels(rcv,shz);
+evl = compute_all_stresskernels(rcv,shz,boundary);
 
 %% assign rheological properties 
 % (assuming spatially constant values)
-rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
+rcv.Asigma = 0.25.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+0.5;
+shz.n = ones(shz.N,1)+0.1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -76,6 +80,9 @@ rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
+
+% For Sharadha: this is where we need to incorporate the strain rates from
+% an external calculation
 shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
 shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
@@ -91,7 +98,7 @@ end
 % initialise stress change data structure
 stress_change = [];
 stress_change.Nevents = Nevents;
-stress_change.Timing = [5,20,25]*3.15e7;% provide earthquake timing (in seconds) as a vector
+stress_change.Timing = [4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -129,6 +136,7 @@ cb=colorbar;cb.Label.String = '\sigma_{xz} (MPa)';
 clim([-1 1]*0.5)
 colormap("bluewhitered")
 
+% return
 %% use rcv, evl, shz, stress_change to run earthquake cycles
 Ncycles = 5;% specify number of cycles (for spin up)
 
@@ -159,7 +167,7 @@ ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Inte
 
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-t_plots = [4.1,7,10,19.5,21,100].*3.15e7;
+t_plots = [5,9,11,49,51,100].*3.15e7;
 figure(12),clf
 for i = 1:length(t_plots)
     tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
@@ -176,6 +184,7 @@ for i = 1:length(t_plots)
     set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
 end
 
+return
 %% observation points
 Nobs=400;
 obs=([1;0]*(linspace(-100,350,Nobs)))'*1e3;

@@ -1,4 +1,4 @@
-function [Kdd,Kdn,Knd,Knn] = computeFullTractionKernels(src,rcv)
+function [Kdd,Kdn,Knd,Knn] = computeFaultTractionKernels(src,rcv)
 % full traction kernel computation in 2-d plane strain
 % returns all 4 traction kernels 
 % Kdd,Kdn - for dip-slip coponent
