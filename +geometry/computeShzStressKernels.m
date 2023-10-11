@@ -26,6 +26,9 @@ function LL = computeShzStressKernels(src,shz)
 % Author:
 % Rishav Mallick, JPL, 2023
 
+mu = src.earthModel.G;
+nu = src.earthModel.nu;
+
 % initialize stress kernels
 LL1 = zeros(shz.N,src.N);
 LL2 = zeros(shz.N,src.N);
@@ -39,9 +42,10 @@ I = eye(3);
 
 % convert all depths to positive numbers
 xc = shz.xc; xc(:,2) = -xc(:,2);
-A = shz.A;A(:,2) = -A(:,2);
-B = shz.B;B(:,2) = -B(:,2);
-C = shz.C;C(:,2) = -C(:,2);
+
+A = src.A;A(:,2) = -A(:,2);
+B = src.B;B(:,2) = -B(:,2);
+C = src.C;C(:,2) = -C(:,2);
 
 for i = 1:3
     % each iteration of 'i' goes through each eigen strain source

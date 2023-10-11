@@ -18,9 +18,6 @@ function evl = compute_all_stresskernels(rcv,shz,boundary)
 % Authors:
 % Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
 
-mu = rcv.earthModel.G;
-nu = rcv.earthModel.nu;
-
 % create data structure to hold all kernels
 evl = [];
 
@@ -35,7 +32,7 @@ evl.KK = K;
 %% compute fault-shz deviatoric interaction kernel
 
 disp('Computing fault - shear zone traction kernels')
-
+% note the ordering of kernels here is [sxx,szz,sxz]
 [LL1,LL3,LL2] = computeFaultTractionKernelsBem(rcv,shz,boundary);
 
 % initialize deviatoric K-L kernel [Nshz x Nf x 2]
@@ -45,6 +42,8 @@ evl.KL(:,:,2) = LL2;
 
 %% compute shz-shz interaction kernels
 
+disp('Computing shear zone - shear zone stress kernels')
+tic
 LL = computeShzStressKernelsBem(shz,shz,boundary);
 
 % deviatoric stress kernels [2x2]
@@ -85,44 +84,51 @@ toc
 
 %% compute stress interactions from shear zones to fault (LK kernels)
 
-% evaluate stress at fault center
-xc = rcv.xc; 
-xc(:,2) = -xc(:,2);
-
-% only need 1 component of stress for faults
-LL1 = zeros(rcv.N,shz.N);
-
-% full stress kernels [N_fault x N_shz x 3]
-LL = zeros(rcv.N,shz.N,3);
-
-tic
 disp('Computing shear zone - fault traction kernels')
-for i = 1:3
-    % each iteration of 'i' goes through each eigen strain source
-    % i = 1 corresponds to e22 source
-    % i = 2 corresponds to e23 source
-    % i = 3 corresponds to e33 source
-    parfor k = 1:shz.N
-        [s22,s23,s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-            xc(:,1),xc(:,2),...
-            A(k,:),B(k,:),C(k,:),...
-            I(i,1),I(i,2),I(i,3),...
-            mu,nu);
-        % compute traction vector for fault plane orientation
-        t=[s22.*rcv.nv(:,1)+s23.*rcv.nv(:,2), ...
-            s23.*rcv.nv(:,1)+s33.*rcv.nv(:,2)];
-        % rotate traction vector to fault-shear direction
-        LL1(:,k) = rcv.dv(:,1).*t(:,1) + rcv.dv(:,2).*t(:,2);        
+tic
+LL = computeShzStressKernelsBem(shz,rcv,boundary);
 
-    end
-    LL(:,:,i) = LL1;
-end
+% % evaluate stress at fault center
+% xc = rcv.xc; 
+% xc(:,2) = -xc(:,2);
+% 
+% % only need 1 component of stress for faults
+% LL1 = zeros(rcv.N,shz.N);
+% 
+% % full stress kernels [N_fault x N_shz x 3]
+% LL = zeros(rcv.N,shz.N,3);
+% 
+% tic
+% disp('Computing shear zone - fault traction kernels')
+% for i = 1:3
+%     % each iteration of 'i' goes through each eigen strain source
+%     % i = 1 corresponds to e22 source
+%     % i = 2 corresponds to e23 source
+%     % i = 3 corresponds to e33 source
+%     parfor k = 1:shz.N
+%         [s22,s23,s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
+%             xc(:,1),xc(:,2),...
+%             A(k,:),B(k,:),C(k,:),...
+%             I(i,1),I(i,2),I(i,3),...
+%             mu,nu);
+%         % compute traction vector for fault plane orientation
+%         t=[s22.*rcv.nv(:,1)+s23.*rcv.nv(:,2), ...
+%             s23.*rcv.nv(:,1)+s33.*rcv.nv(:,2)];
+%         % rotate traction vector to fault-shear direction
+%         LL1(:,k) = rcv.dv(:,1).*t(:,1) + rcv.dv(:,2).*t(:,2);        
+% 
+%     end
+%     LL(:,:,i) = LL1;
+% end
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
 % shape of kernel: [Nf x Nshz x 2]
 evl.LK = zeros(rcv.N,shz.N,2);
-evl.LK(:,:,1) = LL(:,:,1) - LL(:,:,3);
-evl.LK(:,:,2) = LL(:,:,2);
+% evl.LK(:,:,1) = LL(:,:,1) - LL(:,:,3);
+% evl.LK(:,:,2) = LL(:,:,2);
+
+evl.LK(:,:,1) = LL(:,:,1,1) - LL(:,:,1,3);
+evl.LK(:,:,2) = LL(:,:,1,2);
 toc
 
 end

@@ -4,12 +4,15 @@ function LO = computeShzDisplacementKernels(shz,obs)
 % in response to applied strain components [exx,exz,ezz]
 % 
 % OUTPUTS:
-% Kdxx,Kdzz,Kdxz - for dip-slip source component
-% Knxx,Knzz,Knxz - for tensile-slip source component
+% LL is a [Nobs x Nshz x 2 x 3] matrix
+% if we want a kernel for ezz source resulting in ux displacements
+% this would be position [Nobs x Nshz x 1-row,3-column]
 % 
 % Author:
 % Rishav Mallick, JPL, 2023
+
 Nobs = length(obs(:,1));
+nu = shz.earthModel.nu;
 
 % initialize displacement kernels
 LO1 = zeros(Nobs,shz.N);
@@ -23,8 +26,9 @@ LO = zeros(Nobs,shz.N,2,3);
 I = eye(3);
 
 tic
-disp('Computing disp kernels for shear zones')
 % convert all depths to positive numbers
+obs(:,2) = -obs(:,2);
+
 A = shz.A;A(:,2) = -A(:,2);
 B = shz.B;B(:,2) = -B(:,2);
 C = shz.C;C(:,2) = -C(:,2);
