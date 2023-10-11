@@ -109,10 +109,11 @@ for i = 1:src.N
     end
 end
 
-if nargout == 2
+%  outputs
+if nargout == 2 % fault traction kernels
     varargout{1} = Ktau;
     varargout{2} = Ksigma;
-elseif nargout == 3
+elseif nargout == 3 % full stress kernels
     varargout{1} = Kxx;
     varargout{2} = Kzz;
     varargout{3} = Kxz;
