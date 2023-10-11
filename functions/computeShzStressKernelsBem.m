@@ -67,8 +67,7 @@ for component = 1:3
         % BEM solve
         bem_sol = kernel\BC;
         
-        % compute tractions or stress from bem solution
-
+        % compute tractions or stress from source term + bem solution on boundary
         if isa(shz,'geometry.shearZoneReceiver')
             sigma = ...
                 [LL_src_shz(:,:,1,component);...
