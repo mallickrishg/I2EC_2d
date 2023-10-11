@@ -28,7 +28,7 @@ elseif isa(shz,'geometry.receiver')
     [Kdd_boundary_shz,Kdn_boundary_shz,Knd_boundary_shz,Knn_boundary_shz] = ...
         geometry.computeFullTractionKernels(boundary,shz);
 else
-    
+    error('not a recognized geometry, provide either geometry.receiver or geometry.shearZoneReceiver')
 end
 
 
