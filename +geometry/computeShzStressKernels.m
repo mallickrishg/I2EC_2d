@@ -5,13 +5,18 @@ function LL = computeShzStressKernels(src,shz)
 % (note: this ordering is different from the fault kernels)
 % 
 % OUTPUTS:
-% LL is a [Nshz x Nsrc x 3 x 3] matrix
-% here the 4th index is for eigen strain source
+% LL is a [Nshz x Nsrc x 3 x 3] matrix (when shz is shearZoneReceiver)
+% LL is a [Nshz x Nsrc x 3] matrix (when shz is receiver)
+% for shearZoneReceiver: 
+%          4th index is for eigen strain source
 %          3rd index is for the stress component
 % if we want a kernel for - 
 % exz source resulting in szz
 % in the N x M X 3 x 3 matrix this would be
 % position [N x M x 3-row,2-column]
+% for receiver:
+%         [N x M X 3] provides the response in fault-shear direction from
+%         [exx,exz,ezz] sources
 % 
 % Author:
 % Rishav Mallick, JPL, 2023
@@ -26,7 +31,6 @@ LL = zeros(shz.N,shz.N,3,3);
 
 % source strain 100;010;001
 I = eye(3);
-
 
 % convert all depths to positive numbers
 xc = shz.xc; xc(:,2) = -xc(:,2);
@@ -48,14 +52,31 @@ for i = 1:3
         
         % need to work with 2-d matrices because MATLAB doesn't like 3-d or
         % 4-d matrices inside parfor
-        LL1(:,k) = s22(:);
-        LL2(:,k) = s23(:);
-        LL3(:,k) = s33(:);
+        if isa(shz,'geometry.shearZoneReceiver')
+            LL1(:,k) = s22(:);
+            LL2(:,k) = s23(:);
+            LL3(:,k) = s33(:);
+        elseif isa(shz,'geometry.receiver')
+            % compute traction vector for fault plane orientation
+            t=[s22.*shz.nv(:,1) + s23.*shz.nv(:,2), ...
+                s23.*shz.nv(:,1) + s33.*shz.nv(:,2)];
+            % rotate traction vector to fault-shear & fault-normal direction
+            LL1(:,k) = shz.dv(:,1).*t(:,1) + shz.dv(:,2).*t(:,2);
+            LL2(:,k) = shz.nv(:,1).*t(:,1) + shz.nv(:,2).*t(:,2);
+        else
+            error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
+        end
 
     end
-    LL(:,:,1,i) = LL1;
-    LL(:,:,2,i) = LL2;
-    LL(:,:,3,i) = LL3;
+    if isa(shz,'geometry.shearZoneReceiver')
+        LL(:,:,1,i) = LL1;
+        LL(:,:,2,i) = LL2;
+        LL(:,:,3,i) = LL3;
+    elseif isa(shz,'geometry.receiver')
+        LL(:,:,i) = LL1;
+    else
+        error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
+    end
 end
 
 end
