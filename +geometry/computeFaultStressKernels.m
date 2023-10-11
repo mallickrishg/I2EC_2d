@@ -1,4 +1,4 @@
-function [Kdxx,Kdzz,Kdxz,Knxx,Knzz,Knxz] = computeFullStressKernels(src,rcv)
+function [Kdxx,Kdzz,Kdxz,Knxx,Knzz,Knxz] = computeFaultStressKernels(src,rcv)
 % full stress kernel computation in 2-d plane strain
 % returns all 6 stress kernels where
 % each kernel is a component of the full 2-d stress tensor [sxx,szz,sxz]
