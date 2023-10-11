@@ -16,8 +16,12 @@ function LL = computeShzStressKernels(src,shz)
 % in the N x M X 3 x 3 matrix this would be
 % position [N x M x 3-row,2-column]
 % for receiver:
-%         [N x M X 3] provides the response ONLY in fault-shear direction from
-%         [exx,exz,ezz] sources
+%          4th index is for eigen strain source
+%          3rd index is for the traction component
+% if we want a kernel for - 
+% ezz source resulting in tau_n
+% in the N x M X 2 x 3 matrix this would be 
+% position [N x M x 2-row,3-column]
 % 
 % Author:
 % Rishav Mallick, JPL, 2023
@@ -28,7 +32,7 @@ LL2 = zeros(shz.N,src.N);
 LL3 = zeros(shz.N,src.N);
 
 % this are 3x3 stress kernels
-LL = zeros(shz.N,shz.N,3,3);
+LL = zeros(shz.N,src.N,3,3);
 
 % source strain 100;010;001
 I = eye(3);
@@ -41,9 +45,9 @@ C = shz.C;C(:,2) = -C(:,2);
 
 for i = 1:3
     % each iteration of 'i' goes through each eigen strain source
-    % i = 1 corresponds to e22 source
-    % i = 2 corresponds to e23 source
-    % i = 3 corresponds to e33 source
+    % i = 1 corresponds to exx source
+    % i = 2 corresponds to exz source
+    % i = 3 corresponds to ezz source
     parfor k = 1:src.N
         [s22,s23,s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
             xc(:,1),xc(:,2),...
@@ -70,11 +74,12 @@ for i = 1:3
 
     end
     if isa(shz,'geometry.shearZoneReceiver')
-        LL(:,:,1,i) = LL1;
-        LL(:,:,2,i) = LL2;
-        LL(:,:,3,i) = LL3;
+        LL(:,:,1,i) = LL1; % sxx
+        LL(:,:,2,i) = LL2; % sxz
+        LL(:,:,3,i) = LL3; % szz
     elseif isa(shz,'geometry.receiver')
-        LL(:,:,i) = LL1;
+        LL(:,:,1,i) = LL1; % tau_shear
+        LL(:,:,2,i) = LL2; % tau_normal
     else
         error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
     end
