@@ -34,11 +34,11 @@ else
 end
 
 % compute kernels relating unit shear slip from src to boundary
-[Kdd_src_boundary,Kdn_src_boundary,~,~] = geometry.computeFullTractionKernels(src,boundary);
+[Kdd_src_boundary,Kdn_src_boundary,~,~] = geometry.computeFaultTractionKernels(src,boundary);
 [Gdx_src_boundary,Gdz_src_boundary,~,~] = geometry.computeDisplacementKernels(src,boundary.xc);
 
 % compute displacement & traction kernels for boundary on itself
-[Kdd,Kdn,Knd,Knn] = geometry.computeFullTractionKernels(boundary,boundary);
+[Kdd,Kdn,Knd,Knn] = geometry.computeFaultTractionKernels(boundary,boundary);
 [Gdx,Gdz,Gnx,Gnz] = geometry.computeDisplacementKernels(boundary,boundary.xc);
 Ktraction = [Kdd,Knd;Kdn,Knn];
 Kdisp = [Gdx,Gnx;Gdz,Gnz];
@@ -46,12 +46,12 @@ Kdisp = [Gdx,Gnx;Gdz,Gnz];
 % src to rcv kernels
 % and boundary to rcv kernels
 if nargout == 2
-    [Kdd_src_rcv,Kdn_src_rcv,~,~] = geometry.computeFullTractionKernels(src,rcv);
+    [Kdd_src_rcv,Kdn_src_rcv,~,~] = geometry.computeFaultTractionKernels(src,rcv);
     [Kdd_boundary_rcv,Kdn_boundary_rcv,Knd_boundary_rcv,Knn_boundary_rcv] = ...
-        geometry.computeFullTractionKernels(boundary,rcv);
+        geometry.computeFaultTractionKernels(boundary,rcv);
 elseif nargout == 3
-    [Kdxx_src_rcv,Kdzz_src_rcv,Kdxz_src_rcv,~,~,~] = geometry.computeFullStressKernels(src,rcv);
-    [Kdxx_boundary_rcv,Kdzz_boundary_rcv,Kdxz_boundary_rcv,Knxx_boundary_rcv,Knzz_boundary_rcv,Knxz_boundary_rcv] = geometry.computeFullStressKernels(boundary,rcv);
+    [Kdxx_src_rcv,Kdzz_src_rcv,Kdxz_src_rcv,~,~,~] = geometry.computeFaultStressKernels(src,rcv);
+    [Kdxx_boundary_rcv,Kdzz_boundary_rcv,Kdxz_boundary_rcv,Knxx_boundary_rcv,Knzz_boundary_rcv,Knxz_boundary_rcv] = geometry.computeFaultStressKernels(boundary,rcv);
 else
 end
 
