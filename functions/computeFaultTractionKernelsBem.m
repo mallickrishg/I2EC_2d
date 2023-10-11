@@ -16,7 +16,8 @@ function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
 %   Ksigma - traction kernel in fault-normal direction
 % if varargout == 3 (full stress kernel)
 %   3 x [N x N] matrices containing stress kernels
-%   Kxx,Kzz,Kxz
+%   [Kxx,Kzz,Kxz]
+%   (note: this ordering of components is different from  computeShzStressKernels)
 % 
 % Author:
 % Rishav Mallick, JPL, 2023

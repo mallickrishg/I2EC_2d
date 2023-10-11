@@ -1,8 +1,9 @@
 function LL = computeShzStressKernels(src,shz)
-% half-space stress kernel computation in 2-d plane strain returns all 9 stress kernels: 
-% each kernel is a component of the full 2-d stress tensor [sxx,sxz,szz]
-% in response to each strain component [exx,exz,ezz] 
-% (note: this ordering is different from the fault kernels)
+% half-space stress kernel computation in 2-d plane strain returns stress/traction kernels: 
+% each kernel is a component of the full 2-d stress tensor [sxx,sxz,szz] 
+%                                 or fault-shear tractions [tau_s]
+% in response to each non-elastic strain component [exx,exz,ezz] 
+% (note: this ordering of components is different from  computeFaultTractionKernels)
 % 
 % OUTPUTS:
 % LL is a [Nshz x Nsrc x 3 x 3] matrix (when shz is shearZoneReceiver)
@@ -15,7 +16,7 @@ function LL = computeShzStressKernels(src,shz)
 % in the N x M X 3 x 3 matrix this would be
 % position [N x M x 3-row,2-column]
 % for receiver:
-%         [N x M X 3] provides the response in fault-shear direction from
+%         [N x M X 3] provides the response ONLY in fault-shear direction from
 %         [exx,exz,ezz] sources
 % 
 % Author:
