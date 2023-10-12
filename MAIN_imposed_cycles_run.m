@@ -81,10 +81,12 @@ rcv.pinnedPosition(locked) = true;
 % define long-term slip/strain rates
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
 
-% For Sharadha: this is where we need to incorporate the strain rates from
-% an external calculation
-shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
-shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
+% Long-term strain rate calculation
+[e22_dev, e23] = edotlongtermsol(shz,rcv.dip(1)*pi/180);
+shz.e22pl=e22_dev;
+shz.e23pl=e23;
+% shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
+% shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
 %% calculate coseismic stress change - imposed periodically
 Nevents = 3;
