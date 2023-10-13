@@ -1,8 +1,9 @@
-function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,rcv,boundary)
+function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,obs,boundary)
 % traction or shear kernel computation for a given source and receiver object pair
 % INPUTS
-% src,rcv - objects or data structures containing fault mesh 
+% src - object or data structure containing fault mesh 
 %           (end points and center nodes)
+% obs - observation points as [x,z] coordinates
 % boundary - object or data structure containing boundary mesh for BEM
 % 
 % OUTPUTS 
@@ -13,8 +14,10 @@ function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,rcv,boundary)
 % Author:
 % Rishav Mallick, JPL, 2023
 
-Gx = zeros(rcv.N,src.N);
-Gz = zeros(rcv.N,src.N);
+Nobs = length(obs(:,1));
+
+Gx = zeros(Nobs,src.N);
+Gz = zeros(Nobs,src.N);
 
 % compute kernels relating unit shear slip from src to boundary
 [Kdd_src_boundary,Kdn_src_boundary,~,~] = geometry.computeFaultTractionKernels(src,boundary);
@@ -28,9 +31,9 @@ Kdisp = [Gdx,Gnx;Gdz,Gnz];
 
 % src to rcv kernels
 % and boundary to rcv kernels
-[Gdx_src_rcv,Gdz_src_rcv,~,~] = geometry.computeFaultDisplacementKernels(src,rcv);
+[Gdx_src_rcv,Gdz_src_rcv,~,~] = geometry.computeFaultDisplacementKernels(src,obs);
 [Gdx_boundary_rcv,Gdz_boundary_rcv,Gnx_boundary_rcv,Gnz_boundary_rcv] = ...
-    geometry.computeFaultDisplacementKernels(boundary,rcv);
+    geometry.computeFaultDisplacementKernels(boundary,obs);
 
 % boundary to rcv kernels
 
@@ -55,7 +58,8 @@ for i = 1:src.N
     ineumann = boundary.Vpl == 1;
 
     % displacement BC
-    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
+    BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
+                                  [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     
