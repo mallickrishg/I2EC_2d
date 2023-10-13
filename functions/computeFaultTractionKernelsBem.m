@@ -78,7 +78,8 @@ for i = 1:src.N
     ineumann = boundary.Vpl == 1;
 
     % displacement BC
-    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
+    BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
+                                  [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     

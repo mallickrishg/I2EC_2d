@@ -4,7 +4,6 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 LL_bem = zeros(shz.N,src.N,3,3);
 
 % compute kernels relating unit shear from src to boundary
-% TODO - create function to compute displacement kernel in half-space
 LL_src_boundary = geometry.computeShzStressKernels(src,boundary);
 G_src_boundary = geometry.computeShzDisplacementKernels(src,boundary.xc);
 
@@ -55,7 +54,8 @@ for component = 1:3
         ineumann = boundary.Vpl == 1;
 
         % displacement BC
-        BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
+        BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
+                                      [ux_source(idirichlet);uz_source(idirichlet)];
         % traction BC
         BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
 
