@@ -1,4 +1,4 @@
-function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,obs,boundary)
+function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,obs,boundary,scalar_value)
 % traction or shear kernel computation for a given source and receiver object pair
 % INPUTS
 % src - object or data structure containing fault mesh 
@@ -35,12 +35,12 @@ Kdisp = [Gdx,Gnx;Gdz,Gnz];
 [Gdx_boundary_rcv,Gdz_boundary_rcv,Gnx_boundary_rcv,Gnz_boundary_rcv] = ...
     geometry.computeFaultDisplacementKernels(boundary,obs);
 
-% boundary to rcv kernels
+% scalar_value = mean(rcv.Vpl);
 
 for i = 1:src.N
     % we only consider shear sources
     source = zeros(src.N,1);
-    source(i) = 1;
+    source(i) = scalar_value;
 
     % calculate source tractions
     td_source = Kdd_src_boundary*source;

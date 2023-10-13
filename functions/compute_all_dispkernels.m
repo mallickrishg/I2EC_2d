@@ -1,10 +1,11 @@
-function devl = compute_all_dispkernels(obs,rcv,shz,boundary)
+function devl = compute_all_dispkernels(obs,rcv,shz,boundary,scalar_value)
 % Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant displacement kernels
 % 
 % INPUTS
 % obs - array containing the x2,x3 coordinates of the observation points 
 % rcv - object or data structure that contains fault geometry and Elastic parameters
 % shz - object or data structure that contains shear zone geometry and Elastic parameters
+% scalar_value - rescale BEM problem (typically the plate velocity)
 % 
 % OUTPUTS
 % devl - data structure with the following kernels
@@ -28,7 +29,7 @@ Nobs=length(obs(:,1));
 %% compute fault displacement kernels
 
 % Gf_d = computedisplacementGFs(rcv,obs);
-[Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(rcv,obs,boundary);
+[Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(rcv,obs,boundary,scalar_value);
 
 % Nobs x shz.N x 2 corresponding to the horizontal and vertical kernels
 devl.KO = zeros(Nobs,rcv.N,2);
@@ -43,7 +44,7 @@ devl.KO(:,:,2) = Gz_d;
 % displacement kernels after incorporating deviatoric stress constraints [2x2]
 devl.LO = zeros(Nobs,shz.N,2,2);
 
-LO = computeShzDisplacementKernelsBem(shz,obs,boundary);
+LO = computeShzDisplacementKernelsBem(shz,obs,boundary,scalar_value);
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
 % shape of kernel: [Nobs x Nshz x 2 x 2]

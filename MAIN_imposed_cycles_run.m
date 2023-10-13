@@ -180,7 +180,8 @@ plotshz2d(shz,edot_pl.*((1:shz.N)' == shzindex))
 axis tight equal
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-plotindex = [5,9,11,49,51,99].*3.15e7;
+% plotindex = [5,9,11,49,51,99].*3.15e7;
+plotindex = [10,20,50,80].*3.15e7;
 figure(12),clf
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
@@ -199,21 +200,21 @@ end
 
 % return
 %% observation points
-Nobs=100;
-obs=([1;0]*(linspace(-100,350,Nobs)))'*1e3;
+Nobs=1000;
+obs=([1;0]*(linspace(-199,350,Nobs)))'*1e3;
 
 % compute displacement kernels
-devl = compute_all_dispkernels(obs,rcv,shz,boundary);
+devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);
 %% surface velocity 
 gps = [];
-gps.rcv.vh = (devl.KO(:,:,1)*V')';
-gps.rcv.vz = (devl.KO(:,:,2)*V')';
+gps.rcv.vh = (devl.KO(:,:,1)*V')'./Vpl;
+gps.rcv.vz = (devl.KO(:,:,2)*V')'./Vpl;
 
 gps.shz.vh=(devl.LO(:,:,1,1)*e22dot' ...
-           +devl.LO(:,:,1,2)*e23dot');
+           +devl.LO(:,:,1,2)*e23dot')./Vpl;
 
 gps.shz.vz=(devl.LO(:,:,2,1)*e22dot' ...
-           +devl.LO(:,:,2,2)*e23dot');
+           +devl.LO(:,:,2,2)*e23dot')./Vpl;
 
 %% plotting surface displacements 
 figure(3);clf
@@ -225,27 +226,27 @@ cspec = cool(length(plotindex));
 subplot(4,1,1);hold on;
 toplot=gps.rcv.vh;
 toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
     % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
-grid on;
+grid on;box on
 title("Horizontal component due to fault")
 
 subplot(4,1,2); hold on;
 toplot=gps.rcv.vz;
 toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'r-','LineWidth',3), hold on
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
     % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
-grid on;
+grid on;box on
 title("Vertical component due to fault")
 
 subplot(4,1,3); hold on;
@@ -254,12 +255,12 @@ toplot_pl=Vpl;
 plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    checkgps(:,i)=toplot(:,tindex);
+    % checkgps(:,i)=toplot(:,tindex);
     p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
     % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 % legend(p,lgd); 
-grid on;
+grid on;box on
 title("Horizontal component due to shear zones")
 
 
@@ -273,9 +274,10 @@ for i = 1:length(plotindex)
     lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 legend(p,lgd); 
-grid on;
+grid on;box on
 title("Vertical component due to shear zones")
-%%
+
+set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
 
 

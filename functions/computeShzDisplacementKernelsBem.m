@@ -1,4 +1,4 @@
-function LL_bem = computeShzDisplacementKernelsBem(src,obs,boundary)
+function LL_bem = computeShzDisplacementKernelsBem(src,obs,boundary,scalar_value)
 
 % these are [2 x 3] stress kernels
 Nobs = length(obs(:,1));
@@ -28,7 +28,7 @@ for component = 1:3
     for i = 1:src.N
         % we only consider shear sources
         source = zeros(src.N,1);
-        source(i) = 1;
+        source(i) = scalar_value;
 
         % calculate source tractions
         td_source = LL_src_boundary(:,:,1,component)*source;
