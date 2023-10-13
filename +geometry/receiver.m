@@ -9,7 +9,9 @@ classdef receiver < geometry.fpatch
         % friction coefficient at reference velocity
         mu0;
         % plate velocity
-        Vpl;        
+        Vpl;  
+        Vx;
+        Vz;
         % pinned patch positions (index)
         pinnedPosition;        
         % degrees of freedom (number of parameters solved in numerical integration)
@@ -55,6 +57,8 @@ classdef receiver < geometry.fpatch
             obj.W=fm(:,3);
             obj.dip=fm(:,4);
             obj.Vpl=fm(:,5);
+            obj.Vx=fm(:,6);
+            obj.Vz=fm(:,7);
                                     
             % default friction properties (velocity strengthening)
             obj.a=obj.W*0+1e-2;

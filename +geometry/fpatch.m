@@ -55,8 +55,8 @@ classdef fpatch < handle
             end
             fclose(fid);
             
-            [~,Vpl,x1,x3,width,d,wo,alphaw]=...
-                textread(filename,'%u %f %f %f %f %f %f %f',...
+            [~,Vpl,x1,x3,width,d,wo,alphaw,Vx,Vz]=...
+                textread(filename,'%u %f %f %f %f %f %f %f %f %f',...
                 'commentstyle','shell');
                       
             fm=[];
@@ -64,7 +64,7 @@ classdef fpatch < handle
                 % list of patches for current segment
                 flt=geometry.flt2flt([x1(k);x3(k)],width(k),d(k),wo(k),alphaw(k));                                                   
                 % list of patches for all segments
-                fm=[fm;[flt,Vpl(k).*ones(size(flt,1),1)]];
+                fm=[fm;[flt,Vpl(k).*ones(size(flt,1),1),Vx(k).*ones(size(flt,1),1),Vz(k).*ones(size(flt,1),1)]];
             end
                        
         end
