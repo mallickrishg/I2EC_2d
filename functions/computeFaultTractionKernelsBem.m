@@ -35,11 +35,11 @@ end
 
 % compute kernels relating unit shear slip from src to boundary
 [Kdd_src_boundary,Kdn_src_boundary,~,~] = geometry.computeFaultTractionKernels(src,boundary);
-[Gdx_src_boundary,Gdz_src_boundary,~,~] = geometry.computeDisplacementKernels(src,boundary.xc);
+[Gdx_src_boundary,Gdz_src_boundary,~,~] = geometry.computeFaultDisplacementKernels(src,boundary.xc);
 
 % compute displacement & traction kernels for boundary on itself
 [Kdd,Kdn,Knd,Knn] = geometry.computeFaultTractionKernels(boundary,boundary);
-[Gdx,Gdz,Gnx,Gnz] = geometry.computeDisplacementKernels(boundary,boundary.xc);
+[Gdx,Gdz,Gnx,Gnz] = geometry.computeFaultDisplacementKernels(boundary,boundary.xc);
 Ktraction = [Kdd,Knd;Kdn,Knn];
 Kdisp = [Gdx,Gnx;Gdz,Gnz];
 

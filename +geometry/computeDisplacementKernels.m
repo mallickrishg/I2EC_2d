@@ -1,4 +1,4 @@
-function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
+function [Gdx,Gdz,Gnx,Gnz] = computeDisplacementKernels(rcv,ox)
 
 delta = 1e-9;
 xobs = ox(:,1);
