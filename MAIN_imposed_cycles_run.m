@@ -17,7 +17,7 @@ mu=30e3;% in MPa
 create_fault = 0;
 
 % Periodic earthquake recurrence time
-Trecur = 200*3.15e7;% in seconds
+Trecur = 100*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
@@ -43,6 +43,8 @@ end
 
 % boundary mesh
 boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
+boundary.Vx = boundary.Vx.*Vpl;
+boundary.Vz = boundary.Vz.*Vpl;
 
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)
@@ -70,8 +72,8 @@ evl = compute_all_stresskernels(rcv,shz,boundary);
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(5e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+2;
+shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.n = ones(shz.N,1)+0.0;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
@@ -89,7 +91,7 @@ shz.e23pl = e23.*Vpl;
 % shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
 %% calculate coseismic stress change - imposed periodically
-Nevents = 3;
+Nevents = 1;
 slip_coseismic = zeros(rcv.N,Nevents);
 slip_multipliers = drchrnd(ones(1,Nevents),1);% this is just to create random numbers that sum to 1
 
@@ -100,7 +102,9 @@ end
 % initialise stress change data structure
 stress_change = [];
 stress_change.Nevents = Nevents;
-stress_change.Timing = [4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
+stress_change.Timing = 4*3.15e7;%[4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
+
+assert(length(stress_change.Timing) == Nevents)
 
 stress_change.dtau = zeros(rcv.N,stress_change.Nevents);
 stress_change.dsigma22 = zeros(shz.N,stress_change.Nevents);
@@ -141,11 +145,13 @@ colormap("bluewhitered")
 % return
 %% use rcv, evl, shz, stress_change to run earthquake cycles
 Ncycles = 5;% specify number of cycles (for spin up)
-
+tic
+disp('running imposed earthquake sequence simulations')
 [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
-
+toc
 %% plot results
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
+edot_pl = mean(edot_pl).*ones(shz.N,1);
 edot = sqrt(e22dot.^2 + e23dot.^2);
 
 figure(10),clf
@@ -158,21 +164,26 @@ colormap("turbo")
 set(gca,'ColorScale','log','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
 
 figure(11),clf
+shzindex = 28;
 plot(t./Trecur,V(:,43)./Vpl,'.-'), hold on
-plot(t./Trecur,edot(:,10)./edot_pl(10),'.-')
+for i = 1:length(shzindex)
+    plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'.-')
+end
 axis tight
 legend('slip rate','strain rate')
 xlabel('t/T_{eq}')
 set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5)
 ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Interpreter','latex','FontSize',25)
 
-
+figure(100),clf
+plotshz2d(shz,edot_pl.*((1:shz.N)' == shzindex))
+axis tight equal
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-t_plots = [5,9,11,49,51,100].*3.15e7;
+plotindex = [5,9,11,49,51,99].*3.15e7;
 figure(12),clf
-for i = 1:length(t_plots)
-    tindex = find(abs(t-t_plots(i))==min(abs(t-t_plots(i))),1);
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     subplot(3,2,i)
     plotshz2d(shz,edot(tindex,:)'./edot_pl), hold on
     plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
@@ -186,14 +197,14 @@ for i = 1:length(t_plots)
     set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
 end
 
-return
+% return
 %% observation points
-Nobs=400;
+Nobs=100;
 obs=([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 
-%% compute displacement kernels
-devl = compute_all_dispkernels(obs,rcv,shz);
-% surface velocity 
+% compute displacement kernels
+devl = compute_all_dispkernels(obs,rcv,shz,boundary);
+%% surface velocity 
 gps = [];
 gps.rcv.vh = (devl.KO(:,:,1)*V')';
 gps.rcv.vz = (devl.KO(:,:,2)*V')';
@@ -208,7 +219,7 @@ gps.shz.vz=(devl.LO(:,:,2,1)*e22dot' ...
 figure(3);clf
 p = [];
 lgd = {};
-plotindex = [0,4,5.01,6,10,19.5].*3.15e7;
+% plotindex = [0,4,5.01,6,10,19.5].*3.15e7;
 cspec = cool(length(plotindex));
 
 subplot(4,1,1);hold on;
