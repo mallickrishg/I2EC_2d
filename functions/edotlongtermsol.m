@@ -1,19 +1,28 @@
-function [e22_dev, e23] = edotlongtermsol(shz,dip)
+function [e22_dev, e23] = edotlongtermsol(shz,dip,ocean_translate_params,continental_translate_params)
 % Function edotlongtermsol calculates the long-term strain rate 
 % given the shear zone data structure and the angle of suduction 
 % This function uses compute_cornerflow_velocityfield to compute velocity field 
 % in continental & oceanic mantle
-
+% INPUTS:
+% shz - data structure containing shear zone mesh coordinates
+% dip - slab dip in radians
+% oceanic & continental translation parameters - provide as [x,z] translations
+% 
+% OUTPUTS:
+% e22,e23 - strain rate in deviatoric xx and xz components
+% 
 % Authors:
 % Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
 
 % rescale parameters: move the shz the x and z coordinates because corner flow solutions are at (0,0)
 % Note: Don't move to 0 because solutions are not well defined at 0,0. These
 % parameters have to be adjusted based on how the mesh is created. 
-oceanic_z_translate =19.9e3; % plate thickness
-oceanic_x_translate =0;
-continental_x_translate = -140e3; % note: move to wedge (and not to 0,0)
-continental_z_translate = 34.9e3;
+
+oceanic_x_translate = ocean_translate_params(1); % x translation (relative to trench)
+oceanic_z_translate = ocean_translate_params(2) - 1;% plate thickness ~ 20e3 (shift slightly)
+
+continental_x_translate = continental_translate_params(1);%-140e3; % note: move to wedge (and not to 0,0)
+continental_z_translate = continental_translate_params(2) - 1;% continental plate thickness ~ 35e3 (shift slightly)
 
 % to calculate velocity gradient using finite difference method 
 epsilonx=1e-6;

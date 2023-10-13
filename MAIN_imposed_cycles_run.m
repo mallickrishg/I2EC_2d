@@ -82,9 +82,9 @@ rcv.pinnedPosition(locked) = true;
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
 
 % Long-term strain rate calculation
-[e22_dev, e23] = edotlongtermsol(shz,rcv.dip(1)*pi/180);
-shz.e22pl=e22_dev;
-shz.e23pl=e23;
+[e22_dev, e23] = edotlongtermsol(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
+shz.e22pl = e22_dev.*Vpl;
+shz.e23pl = e23.*Vpl;
 % shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
 % shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
