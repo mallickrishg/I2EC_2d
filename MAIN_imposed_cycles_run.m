@@ -199,13 +199,14 @@ for i = 1:length(plotindex)
 end
 
 % return
-%% observation points
+%% calculate velocity time series at select observation points
 Nobs=1000;
 obs=([1;0]*(linspace(-199,350,Nobs)))'*1e3;
 
 % compute displacement kernels
 devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);
-%% surface velocity 
+
+% surface velocity 
 gps = [];
 gps.rcv.vh = (devl.KO(:,:,1)*V')'./Vpl;
 gps.rcv.vz = (devl.KO(:,:,2)*V')'./Vpl;
