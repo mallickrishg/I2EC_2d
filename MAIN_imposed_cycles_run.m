@@ -164,10 +164,10 @@ colormap("turbo")
 set(gca,'ColorScale','log','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
 
 figure(11),clf
-shzindex = 28;
+shzindex = find(sqrt((shz.xc(:,1)-50e3).^2 + (shz.xc(:,2)+40e3).^2) < 10e3);
 plot(t./Trecur,V(:,43)./Vpl,'.-'), hold on
 for i = 1:length(shzindex)
-    plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'.-')
+    plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'r.-')
 end
 axis tight
 legend('slip rate','strain rate')
@@ -176,12 +176,14 @@ set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5)
 ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Interpreter','latex','FontSize',25)
 
 figure(100),clf
-plotshz2d(shz,edot_pl.*((1:shz.N)' == shzindex))
+toplot = zeros(shz.N,1);
+toplot(shzindex) = 1;
+plotshz2d(shz,toplot)
 axis tight equal
 %% create snapshots of normalized slip rate & strain rates
 % t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
 % plotindex = [5,9,11,49,51,99].*3.15e7;
-plotindex = [10,20,50,80].*3.15e7;
+plotindex = [7,10,15,20,50,80].*3.15e7;
 figure(12),clf
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
@@ -191,7 +193,7 @@ for i = 1:length(plotindex)
     box on
     cb=colorbar;cb.Label.String = '\gamma/\gamma_0';
     colormap("turbo")
-    clim(10.^[-1,1])
+    clim(10.^[-1.5,1.5])
     axis tight equal
     xlabel('x (km)'), ylabel('z (km)')
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
@@ -200,7 +202,7 @@ end
 
 % return
 %% calculate velocity time series at select observation points
-Nobs = 400;
+Nobs = 1000;
 obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 % x = linspace(-100,350,30).*1e3;
 % z = linspace(-80,0,15).*1e3;
@@ -227,6 +229,7 @@ for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
 end
+axis tight
 grid on;box on
 xlabel('distance from trench (km)'), ylabel('v_x/v_{pl}')
 title("Horizontal component")
@@ -241,6 +244,7 @@ for i = 1:length(plotindex)
     lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 legend(p,lgd); 
+axis tight
 grid on;box on
 xlabel('distance from trench (km)'), ylabel('v_z/v_{pl}')
 title("Vertical component")
