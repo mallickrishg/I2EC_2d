@@ -48,10 +48,10 @@ LO = computeShzDisplacementKernelsBem(shz,obs,boundary,scalar_value);
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
 % shape of kernel: [Nobs x Nshz x 2 x 2]
-devl.LO(:,:,1,1) = LO(:,:,1,1) - LO(:,:,1,3); 
-devl.LO(:,:,2,1) = LO(:,:,2,1) - LO(:,:,2,3);
-devl.LO(:,:,1,2)=  LO(:,:,1,2);
-devl.LO(:,:,2,2)=  LO(:,:,2,2);
+devl.LO(:,:,1,1) = LO(:,:,1,1) - LO(:,:,1,3); % ux
+devl.LO(:,:,2,1) = LO(:,:,2,1) - LO(:,:,2,3); % uz
+devl.LO(:,:,1,2)=  LO(:,:,1,2); % ux
+devl.LO(:,:,2,2)=  LO(:,:,2,2); % uz
 
 %%
 
