@@ -1,6 +1,6 @@
 function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
 
-delta = 1e-9;
+delta = 1e-9.*mean(ox(:,1));
 xobs = ox(:,1);
 zobs = ox(:,2);
 
