@@ -200,22 +200,17 @@ end
 
 % return
 %% calculate velocity time series at select observation points
-Nobs=1000;
-obs=([1;0]*(linspace(-199,350,Nobs)))'*1e3;
+Nobs = 400;
+obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
+% x = linspace(-100,350,30).*1e3;
+% z = linspace(-80,0,15).*1e3;
+% [X,Z] = meshgrid(x,z);
+% obs = [X(:),Z(:)];
 
 % compute displacement kernels
-devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);
+% devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);
 
-% surface velocity 
-gps = [];
-gps.rcv.vh = (devl.KO(:,:,1)*V')'./Vpl;
-gps.rcv.vz = (devl.KO(:,:,2)*V')'./Vpl;
-
-gps.shz.vh=(devl.LO(:,:,1,1)*e22dot' ...
-           +devl.LO(:,:,1,2)*e23dot')./Vpl;
-
-gps.shz.vz=(devl.LO(:,:,2,1)*e22dot' ...
-           +devl.LO(:,:,2,2)*e23dot')./Vpl;
+gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
 %% plotting surface displacements 
 figure(3);clf
@@ -224,59 +219,31 @@ lgd = {};
 % plotindex = [0,4,5.01,6,10,19.5].*3.15e7;
 cspec = cool(length(plotindex));
 
-subplot(4,1,1);hold on;
-toplot=gps.rcv.vh;
+subplot(2,1,1);hold on;
+toplot=gps.vx;
+toplot_pl=Vpl;
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+end
+grid on;box on
+xlabel('distance from trench (km)'), ylabel('v_x/v_{pl}')
+title("Horizontal component")
+
+subplot(2,1,2); hold on;
+toplot=gps.vz;
 toplot_pl=Vpl;
 plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
-end
-% legend(p,lgd); 
-grid on;box on
-title("Horizontal component due to fault")
-
-subplot(4,1,2); hold on;
-toplot=gps.rcv.vz;
-toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
-for i = 1:length(plotindex)
-    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    p(i) = plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
-end
-% legend(p,lgd); 
-grid on;box on
-title("Vertical component due to fault")
-
-subplot(4,1,3); hold on;
-toplot=gps.shz.vh;
-toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
-for i = 1:length(plotindex)
-    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    % checkgps(:,i)=toplot(:,tindex);
-    p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
-    % lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
-end
-% legend(p,lgd); 
-grid on;box on
-title("Horizontal component due to shear zones")
-
-
-subplot(4,1,4); hold on;
-toplot=gps.shz.vz;
-toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(:,end))./toplot_pl,'r-','LineWidth',3), hold on
-for i = 1:length(plotindex)
-    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    p(i) = plot(obs(:,1)./1e3,(toplot(:,tindex))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
     lgd{i} = [num2str(round(plotindex(i)./3.15e7)) ' yrs'];
 end
 legend(p,lgd); 
 grid on;box on
-title("Vertical component due to shear zones")
+xlabel('distance from trench (km)'), ylabel('v_z/v_{pl}')
+title("Vertical component")
 
 set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
