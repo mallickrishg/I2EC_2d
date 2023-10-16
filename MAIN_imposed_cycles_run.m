@@ -42,7 +42,7 @@ else
 end
 
 % boundary mesh
-boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
+boundary = geometry.receiver('inputs/boundarytight2d.seg',earthModel);
 boundary.Vx = boundary.Vx.*Vpl;
 boundary.Vz = boundary.Vz.*Vpl;
 
@@ -249,7 +249,7 @@ set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
 %% plot velocity cross-sections as snapshots
 x = linspace(-100,349,40).*1e3;
-z = linspace(-79,0,10).*1e3;
+z = linspace(-89,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
 gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
@@ -276,3 +276,31 @@ for i = 1:length(plotindex)
     set(gca,'Fontsize',15,'ColorScale','lin','Linewidth',1.5,'TickDir','out')
 end
 
+figure(14),clf
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    vtot = reshape(gps.vz(tindex,:),length(z),length(x));
+    
+    subplot(3,2,i)
+    pcolor(x./1e3,z./1e3,vtot./Vpl), shading interp
+    hold on
+    plotshz2d(shz)
+    plotpatch2d(rcv)
+    quiver(obs(:,1)./1e3,obs(:,2)./1e3,gps.vx(tindex,:)'./Vpl,gps.vz(tindex,:)'./Vpl,'k','LineWidth',1)
+    axis tight equal
+    cb=colorbar;cb.Label.String = 'v_z/v_{pl}';
+    clim([-1 1])
+    colormap(bluewhitered(20))
+    xlabel('x (km)'), ylabel('z (km)')
+    title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
+    set(gca,'Fontsize',15,'ColorScale','lin','Linewidth',1.5,'TickDir','out')
+end
+%% steady state motion
+
+gps_ss = computeSiteVelocitiesBem(obs,rcv,shz,boundary,rcv.Vpl',shz.e22pl',shz.e23pl');
+%%
+toplot = reshape(gps_ss.vx(1,:),length(z),length(x))./Vpl;
+
+figure(4),clf
+plot(x./1e3,toplot(10,:),'-','Linewidth',2)
+axis tight, grid on
