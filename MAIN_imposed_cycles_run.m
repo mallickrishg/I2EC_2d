@@ -67,13 +67,13 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 % KL - fault-shz interactions [shz.N x rcv.N x 2]
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
-evl = compute_all_stresskernels(rcv,shz,boundary);
+evl = computeAllStressKernelsBem(rcv,shz,boundary);
 
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(2e20*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+1.0;
+shz.n = ones(shz.N,1)+0.1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 10e3 & abs(rcv.xc(:,2))< 40e3;
@@ -84,7 +84,7 @@ rcv.pinnedPosition(locked) = true;
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
 
 % Long-term strain rate calculation
-[e22_dev, e23] = edotlongtermsol(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
+[e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
 shz.e22pl = e22_dev.*Vpl;
 shz.e23pl = e23.*Vpl;
 % shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
@@ -147,7 +147,7 @@ colormap("bluewhitered")
 Ncycles = 5;% specify number of cycles (for spin up)
 tic
 disp('running imposed earthquake sequence simulations')
-[t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
+[t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
 toc
 %% plot results
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
@@ -204,10 +204,6 @@ end
 %% calculate velocity time series at select observation points
 Nobs = 1000;
 obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
-% x = linspace(-100,350,30).*1e3;
-% z = linspace(-80,0,15).*1e3;
-% [X,Z] = meshgrid(x,z);
-% obs = [X(:),Z(:)];
 
 % compute displacement kernels
 % devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);

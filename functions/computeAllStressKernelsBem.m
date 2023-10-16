@@ -1,4 +1,4 @@
-function evl = compute_all_stresskernels(rcv,shz,boundary)
+function evl = computeAllStressKernelsBem(rcv,shz,boundary)
 % Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant stress kernels
 % 
 % INPUTS

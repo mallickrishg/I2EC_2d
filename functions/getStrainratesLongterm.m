@@ -1,4 +1,4 @@
-function [e22_dev, e23] = edotlongtermsol(shz,dip,ocean_translate_params,continental_translate_params)
+function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,continental_translate_params)
 % Function edotlongtermsol calculates the long-term strain rate 
 % given the shear zone data structure and the angle of suduction 
 % This function uses compute_cornerflow_velocityfield to compute velocity field 

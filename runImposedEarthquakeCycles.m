@@ -1,4 +1,4 @@
-function [t,V,e22dot,e23dot] = run_imposed_earthquakecycles(rcv,shz,evl,stress_change,nreps,Trecur)
+function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_change,nreps,Trecur)
 % earthquake cycle function that solves a system of coupled ODEs to compute
 % time-dependent fault slip rate and deviatoric strain rates (in shear
 % zones) for a given 'rcv' and 'shz' objects.
