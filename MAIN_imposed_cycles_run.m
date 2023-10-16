@@ -73,7 +73,7 @@ evl = compute_all_stresskernels(rcv,shz,boundary);
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(2e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+0.0;
+shz.n = ones(shz.N,1)+1.0;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 5e3 & abs(rcv.xc(:,2))< 35e3;
@@ -251,5 +251,32 @@ title("Vertical component")
 
 set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
+%% plot velocity cross-sections as snapshots
+x = linspace(-100,349,40).*1e3;
+z = linspace(-79,0,10).*1e3;
+[X,Z] = meshgrid(x,z);
+obs = [X(:),Z(:)];
+gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
+figure(13),clf
+for i = 1:length(plotindex)
+    tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
+    vtot = reshape(sqrt(gps.vx(tindex,:).^2 + gps.vz(tindex,:).^2),length(z),length(x));
+    
+    subplot(3,2,i)
+    pcolor(x./1e3,z./1e3,vtot./Vpl), shading interp
+    alpha(0.5)
+    hold on
+    plotshz2d(shz)
+    plotpatch2d(rcv)
+    quiver(obs(:,1)./1e3,obs(:,2)./1e3,gps.vx(tindex,:)'./Vpl,gps.vz(tindex,:)'./Vpl,'k','LineWidth',1)
+    axis tight equal
+    cb=colorbar;cb.Label.String = 'v/v_{pl}';
+    colormap("turbo")
+    clim([0 1.2])
+    colormap(parula(12))
+    xlabel('x (km)'), ylabel('z (km)')
+    title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
+    set(gca,'Fontsize',15,'ColorScale','lin','Linewidth',1.5,'TickDir','out')
+end
 
