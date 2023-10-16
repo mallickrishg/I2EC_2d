@@ -72,11 +72,11 @@ evl = compute_all_stresskernels(rcv,shz,boundary);
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(1e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.alpha = 1/(2e18*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
 shz.n = ones(shz.N,1)+0.0;
 
 % define locked zone on megathrust
-locked = abs(rcv.xc(:,2)) > 15e3 & abs(rcv.xc(:,2))< 40e3;
+locked = abs(rcv.xc(:,2)) > 5e3 & abs(rcv.xc(:,2))< 35e3;
 rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
