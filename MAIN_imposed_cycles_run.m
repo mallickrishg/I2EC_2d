@@ -249,7 +249,7 @@ set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
 %% plot velocity cross-sections as snapshots
 x = linspace(-100,349,40).*1e3;
-z = linspace(-89,0,10).*1e3;
+z = linspace(-79,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
 gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
