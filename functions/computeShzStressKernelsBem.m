@@ -1,4 +1,23 @@
 function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
+% traction or shear kernel computation for a given source and receiver object pair
+% INPUTS
+% src,shz - objects or data structures containing shear zone source (src) 
+%           and either a shear zone receiver or fault mesh (shz)
+% boundary - object or data structure containing boundary mesh for BEM
+% 
+% OUTPUTS 
+% returns half-space kernels 
+% 
+% if shz is a receiver (fault) provide traction kernels
+%   [Nshz x Nsrc x 2 x 3] matrices containing fault-centric traction kernels
+%   LL(:,:,1,:) - traction kernel in shear direction due to [exx,exz,ezz]
+%   LL(:,:,2,:) - traction kernel in fault-normal direction
+% if shz is a shearZoneReceiver provide full stress kernel
+%   [Nshz x Nsrc x 3 x 3] matrices containing stress kernels
+%   3rd index is stress component, 4th index is strain source
+% 
+% Author:
+% Rishav Mallick, JPL, 2023
 
 % these are [3 x 3] or [2 x 3] stress kernels
 LL_bem = zeros(shz.N,src.N,3,3);
