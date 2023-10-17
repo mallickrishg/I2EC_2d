@@ -46,7 +46,7 @@ for component = 1:3
         ineumann = boundary.Vpl == 1;
 
         % displacement BC
-        BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
+        BC([idirichlet;idirichlet]) = 0.*[boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
                                       [ux_source(idirichlet);uz_source(idirichlet)];
         % traction BC
         BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
