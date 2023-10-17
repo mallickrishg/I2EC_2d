@@ -42,7 +42,7 @@ else
 end
 
 % boundary mesh
-boundary = geometry.receiver('inputs/boundarytight2d.seg',earthModel);
+boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
 boundary.Vx = boundary.Vx.*Vpl;
 boundary.Vz = boundary.Vz.*Vpl;
 
@@ -206,9 +206,12 @@ Nobs = 1000;
 obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 
 % compute displacement kernels
-% devl = compute_all_dispkernels(obs,rcv,shz,boundary,Vpl);
+devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
 
-gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
+gps = [];
+gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
+gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
+% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
 %% plotting surface displacements 
 figure(3);clf
@@ -252,7 +255,10 @@ x = linspace(-100,349,40).*1e3;
 z = linspace(-79,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
-gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
+% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
+devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
+gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
+gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
 
 figure(13),clf
 for i = 1:length(plotindex)
@@ -295,12 +301,3 @@ for i = 1:length(plotindex)
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
     set(gca,'Fontsize',15,'ColorScale','lin','Linewidth',1.5,'TickDir','out')
 end
-%% steady state motion
-
-gps_ss = computeSiteVelocitiesBem(obs,rcv,shz,boundary,rcv.Vpl',shz.e22pl',shz.e23pl');
-%%
-toplot = reshape(gps_ss.vx(1,:),length(z),length(x))./Vpl;
-
-figure(4),clf
-plot(x./1e3,toplot(10,:),'-','Linewidth',2)
-axis tight, grid on
