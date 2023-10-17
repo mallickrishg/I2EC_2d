@@ -72,11 +72,11 @@ evl = computeAllStressKernelsBem(rcv,shz,boundary);
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(2e20*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.alpha = 1/(2e25*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
 shz.n = ones(shz.N,1)+0.1;
 
 % define locked zone on megathrust
-locked = abs(rcv.xc(:,2)) > 10e3 & abs(rcv.xc(:,2))< 40e3;
+locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
 rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
@@ -181,19 +181,22 @@ toplot(shzindex) = 1;
 plotshz2d(shz,toplot)
 axis tight equal
 %% create snapshots of normalized slip rate & strain rates
-% t_plots = [0,4.5,5.01,6,10,19.5].*3.15e7;
-% plotindex = [5,9,11,49,51,99].*3.15e7;
+
+edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
+% edot_pl = mean(edot_pl).*ones(shz.N,1);
+
 plotindex = [7,10,15,20,50,80].*3.15e7;
 figure(12),clf
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     subplot(3,2,i)
+    % plotshz2d(shz,abs(edot(tindex,:)'-edot_pl)./edot_pl), hold on
     plotshz2d(shz,edot(tindex,:)'./edot_pl), hold on
     plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
     box on
     cb=colorbar;cb.Label.String = '\gamma/\gamma_0';
     colormap("turbo")
-    clim(10.^[-1.5,1.5])
+    clim(10.^[-1,1])
     axis tight equal
     xlabel('x (km)'), ylabel('z (km)')
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
@@ -202,7 +205,7 @@ end
 
 % return
 %% calculate velocity time series at select observation points
-Nobs = 1000;
+Nobs = 1001;
 obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 
 % compute displacement kernels
