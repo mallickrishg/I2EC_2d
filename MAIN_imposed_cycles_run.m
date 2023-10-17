@@ -214,7 +214,8 @@ devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
 gps = [];
 gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
 gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
-% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
+
+% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot-0.*shz.e22pl',e23dot-0.*shz.e23pl');
 
 %% plotting surface displacements 
 figure(3);clf
@@ -226,10 +227,10 @@ cspec = cool(length(plotindex));
 subplot(2,1,1);hold on;
 toplot=gps.vx;
 toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl,'k-','LineWidth',3), hold on
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl + cosd(rcv.dip(1))*1.*(obs(:,1)<=0)','k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl,'-','LineWidth',2,'Color',cspec(i,:));
+    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl + cosd(rcv.dip(1))*1.*(obs(:,1)<=0)','-','LineWidth',2,'Color',cspec(i,:));
 end
 axis tight
 grid on;box on
@@ -259,6 +260,7 @@ z = linspace(-79,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
 % gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
+
 devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
 gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
 gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
