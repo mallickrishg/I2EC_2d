@@ -1,4 +1,4 @@
-function devl = compute_all_dispkernels(obs,rcv,shz,boundary,scalar_value)
+function devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,scalar_value)
 % Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant displacement kernels
 % 
 % INPUTS
