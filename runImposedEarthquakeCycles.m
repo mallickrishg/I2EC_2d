@@ -21,8 +21,8 @@ logV_0 = log(rcv.Vpl);
 
 % TODO - change from strain rate to stress
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
-s22_0 = (edot_pl./shz.alpha).^(1./shz.n-1).*shz.e22pl;
-s23_0 = (edot_pl./shz.alpha).^(1./shz.n-1).*shz.e23pl;
+s22_0 = (edot_pl./shz.alpha).^(1./shz.n-1).*shz.e22pl./shz.alpha;
+s23_0 = (edot_pl./shz.alpha).^(1./shz.n-1).*shz.e23pl./shz.alpha;
 
 Y0(1 : rcv.dgf : rcv.dgf*rcv.N) = logV_0;
 Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s22_0;
