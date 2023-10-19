@@ -17,7 +17,7 @@ mu=30e3;% in MPa
 create_fault = 0;
 
 % Periodic earthquake recurrence time
-Trecur = 200*3.15e7;% in seconds
+Trecur = 100*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
@@ -74,8 +74,8 @@ evl = computeAllStressKernelsBem(rcv,shz,boundary);
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
 shz.alpha = 1/(5e21*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
 shz.n = ones(shz.N,1)+0.1;
-shz.alpha(shz.xc(:,1)>200e3) = 1/(1e18*1e-6);
-shz.n(shz.xc(:,1)>200e3) = 3;
+shz.alpha(shz.xc(:,1)>200e3) = 1/(1e21*1e-6);
+shz.n(shz.xc(:,1)>200e3) = 1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
@@ -230,7 +230,7 @@ xlabel('t/T_{eq}')
 ylabel('x (km)')
 cb=colorbar;cb.Label.String='v_x/v_{pl}';
 % clim(10.^[-1,2])
-clim([0 2])
+clim([0 1])
 set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
 
 subplot(2,1,2)
@@ -239,8 +239,8 @@ xlabel('t/T_{eq}')
 ylabel('x (km)')
 cb=colorbar;cb.Label.String='v_z/v_{pl}';
 % clim(10.^[-1,2])
-clim([-1 1])
-colormap("turbo(20)")
+clim([-1 1]*0.5)
+colormap("turbo(10)")
 set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
 
 
