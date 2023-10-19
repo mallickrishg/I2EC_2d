@@ -72,12 +72,13 @@ evl = computeAllStressKernelsBem(rcv,shz,boundary);
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(5e19*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.alpha = 1/(5e21*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.n = ones(shz.N,1)+0.1;
 shz.alpha(shz.xc(:,1)>200e3) = 1/(1e18*1e-6);
-shz.n = ones(shz.N,1)+1.5;
+shz.n(shz.xc(:,1)>200e3) = 3;
 
 % define locked zone on megathrust
-locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 30e3;
+locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
 rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
@@ -92,7 +93,7 @@ shz.e23pl = e23.*Vpl;
 % shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
 %% calculate coseismic stress change - imposed periodically
-Nevents = 2;
+Nevents = 1;
 slip_coseismic = zeros(rcv.N,Nevents);
 slip_multipliers = drchrnd(ones(1,Nevents),1);% this is just to create random numbers that sum to 1
 
@@ -103,7 +104,7 @@ end
 % initialise stress change data structure
 stress_change = [];
 stress_change.Nevents = Nevents;
-stress_change.Timing = [4,7.5]*3.15e7;%[4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
+stress_change.Timing = [4]*3.15e7;%[4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
 
 assert(length(stress_change.Timing) == Nevents)
 
@@ -152,7 +153,6 @@ disp('running imposed earthquake sequence simulations')
 toc
 %% plot results
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
-% edot_pl = mean(edot_pl).*ones(shz.N,1);
 edot = sqrt(e22dot.^2 + e23dot.^2);
 
 figure(10),clf
@@ -166,7 +166,8 @@ set(gca,'ColorScale','log','YDir','reverse','FontSize',15,'TickDir','out','LineW
 
 figure(11),clf
 % shzindex = find(sqrt((shz.xc(:,1)-150e3).^2 + (shz.xc(:,2)+60e3).^2) < 10e3);
-shzindex = find(sqrt((shz.xc(:,1)-200e3).^2 + (shz.xc(:,2)+40e3).^2) < 10e3);
+shzindex = find(sqrt((shz.xc(:,1)-200e3).^2 + (shz.xc(:,2)+40e3).^2) < 20e3);
+edot_pl = mean(edot_pl(shzindex)).*ones(shz.N,1);
 plot(t./Trecur,V(:,43)./Vpl,'.-'), hold on
 for i = 1:length(shzindex)
     plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'r.-')
@@ -222,6 +223,27 @@ gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + d
 % gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
 %% plotting surface displacements 
+figure(30),clf
+subplot(2,1,1)
+pcolor(t./Trecur,obs(:,1)./1e3,gps.vx'./Vpl), shading interp
+xlabel('t/T_{eq}')
+ylabel('x (km)')
+cb=colorbar;cb.Label.String='v_x/v_{pl}';
+% clim(10.^[-1,2])
+clim([0 2])
+set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
+
+subplot(2,1,2)
+pcolor(t./Trecur,obs(:,1)./1e3,gps.vz'./Vpl), shading interp
+xlabel('t/T_{eq}')
+ylabel('x (km)')
+cb=colorbar;cb.Label.String='v_z/v_{pl}';
+% clim(10.^[-1,2])
+clim([-1 1])
+colormap("turbo(20)")
+set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
+
+
 figure(3);clf
 p = [];
 lgd = {};
