@@ -72,16 +72,16 @@ evl = computeAllStressKernelsBem(rcv,shz,boundary);
 %% assign rheological properties 
 % (assuming spatially constant values)
 rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(2e25*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.alpha = 1/(1e20*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
 shz.n = ones(shz.N,1)+0.1;
 
 % define locked zone on megathrust
-locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
+locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3 & rcv.Vpl == 1;
 rcv.pinnedPosition = false(rcv.N,1);
 rcv.pinnedPosition(locked) = true;
 
 % define long-term slip/strain rates
-rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
+rcv.Vpl(rcv.Vpl == 1) = Vpl;% m/s
 
 % Long-term strain rate calculation
 [e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
@@ -205,17 +205,19 @@ end
 
 % return
 %% calculate velocity time series at select observation points
-Nobs = 1001;
+Nobs = 401;
 obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 
 % compute displacement kernels
 devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
+hinge = geometry.receiver('inputs/hinge2d.seg',earthModel);
+[Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(hinge,obs,boundary,1);
 
 gps = [];
-gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
-gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
+gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl) - Gx_d * hinge.Vpl.*Vpl)';
+gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl) - Gz_d * hinge.Vpl.*Vpl)';
 
-% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot-0.*shz.e22pl',e23dot-0.*shz.e23pl');
+% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
 %% plotting surface displacements 
 figure(3);clf
@@ -227,10 +229,10 @@ cspec = cool(length(plotindex));
 subplot(2,1,1);hold on;
 toplot=gps.vx;
 toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl + cosd(rcv.dip(1))*1.*(obs(:,1)<=0)','k-','LineWidth',3), hold on
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl + 0.*(obs(:,1)<=0)','k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl + cosd(rcv.dip(1))*1.*(obs(:,1)<=0)','-','LineWidth',2,'Color',cspec(i,:));
+    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl + 0.*(obs(:,1)<=0)','-','LineWidth',2,'Color',cspec(i,:));
 end
 axis tight
 grid on;box on
@@ -255,15 +257,16 @@ title("Vertical component")
 set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
 
 %% plot velocity cross-sections as snapshots
-x = linspace(-100,349,40).*1e3;
+x = linspace(-100,350,40).*1e3;
 z = linspace(-79,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
-% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
 
 devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
-gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl))';
-gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl))';
+hinge = geometry.receiver('inputs/hinge2d.seg',earthModel);
+[Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(hinge,obs,boundary,1);
+gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl) - Gx_d * hinge.Vpl.*Vpl)';
+gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl) - Gz_d * hinge.Vpl.*Vpl)';
 
 figure(13),clf
 for i = 1:length(plotindex)
