@@ -39,4 +39,4 @@ Thumbs.db
 *.asv
 *.seg
 inputs/megathrust2d.seg
-experiments/MAIN_imposed_cycles_run.m
+experiments/*
