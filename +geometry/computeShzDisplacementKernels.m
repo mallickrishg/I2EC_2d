@@ -48,7 +48,7 @@ for i = 1:3
         % need to work with 2-d matrices because MATLAB doesn't like 3-d or
         % 4-d matrices inside parfor
         LO1(:,k) = u2(:);
-        LO2(:,k) = u3(:);
+        LO2(:,k) = -u3(:);
       
     end
     LO(:,:,1,i) = LO1; % horizontal component of displacement 

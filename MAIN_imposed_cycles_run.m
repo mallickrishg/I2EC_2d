@@ -17,7 +17,7 @@ mu=30e3;% in MPa
 create_fault = 0;
 
 % Periodic earthquake recurrence time
-Trecur = 100*3.15e7;% in seconds
+Trecur = 200*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
@@ -71,11 +71,11 @@ evl = computeAllStressKernelsBem(rcv,shz,boundary);
 
 %% assign rheological properties 
 % (assuming spatially constant values)
-rcv.Asigma = 0.5.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(5e21*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+rcv.Asigma = 1.*ones(rcv.N,1);% (a-b)sigma
+shz.alpha = 1/(1e21*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
 shz.n = ones(shz.N,1)+0.1;
-shz.alpha(shz.xc(:,1)>200e3) = 1/(1e21*1e-6);
-shz.n(shz.xc(:,1)>200e3) = 1;
+shz.alpha(shz.xc(:,1)>200e3) = 1/(1e18*1e-6);
+shz.n(shz.xc(:,1)>200e3) = 1.1;
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
@@ -87,8 +87,8 @@ rcv.Vpl(rcv.Vpl == 1) = Vpl;% m/s
 
 % Long-term strain rate calculation
 [e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
-shz.e22pl = e22_dev.*Vpl;
-shz.e23pl = e23.*Vpl;
+shz.e22pl = -e22_dev.*Vpl;
+shz.e23pl = -e23.*Vpl;
 % shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
 % shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
 
@@ -253,10 +253,10 @@ cspec = cool(length(plotindex));
 subplot(2,1,1);hold on;
 toplot=gps.vx;
 toplot_pl=Vpl;
-plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl + 0.*(obs(:,1)<=0)','k-','LineWidth',3), hold on
+plot(obs(:,1)./1e3,(toplot(end,:))./toplot_pl + 1.*(obs(:,1)<=0)','k-','LineWidth',3), hold on
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
-    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl + 0.*(obs(:,1)<=0)','-','LineWidth',2,'Color',cspec(i,:));
+    plot(obs(:,1)./1e3,(toplot(tindex,:))./toplot_pl + 1.*(obs(:,1)<=0)','-','LineWidth',2,'Color',cspec(i,:));
 end
 axis tight
 grid on;box on
@@ -328,7 +328,7 @@ for i = 1:length(plotindex)
     axis tight equal
     cb=colorbar;cb.Label.String = 'v_z/v_{pl}';
     clim([-1 1])
-    colormap(bluewhitered(20))
+    colormap(bluewhitered(100))
     xlabel('x (km)'), ylabel('z (km)')
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
     set(gca,'Fontsize',15,'ColorScale','lin','Linewidth',1.5,'TickDir','out')
