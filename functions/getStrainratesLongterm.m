@@ -47,9 +47,10 @@ kk=Cz+Cx.*tan(dip);
         [Vxdx,Vzdx] = compute_cornerflow_velocityfield(dip,Cx+epsilonx,Cz);
         [Vxdz,Vzdz] = compute_cornerflow_velocityfield(dip,Cx,Cz+epsilonz);
         
-        e22_dev(i) = 0.5*((Vxdx(1,1)-Vx(1,1))/(epsilonx)-(Vzdz(1,1)-Vz(1,1))/(epsilonz));
+        e22_dev(i) = 0.5*((Vxdx(1,1)-Vx(1,1))/(epsilonx)-(Vzdz(1,1)-Vz(1,1))/(epsilonz));        
         e23(i) = 0.5*((Vxdz(1,1)-Vx(1,1))/(epsilonz)+(Vzdx(1,1)-Vz(1,1))/(epsilonx));
-
+        % e22_dev(i) = 0.5*((Vxdx(1,1)-Vx(1,1))/(epsilonx) + (Vzdz(1,1)-Vz(1,1))/(epsilonz));
+        % e23(i) = 0.5*((Vxdz(1,1)-Vx(1,1))/(epsilonz)-(Vzdx(1,1)-Vz(1,1))/(epsilonx));
 
         else  
 
@@ -61,6 +62,8 @@ kk=Cz+Cx.*tan(dip);
         
         e22_dev(i) = 0.5*((Vxdx(1,2)-Vx(1,2))/(epsilonx)-(Vzdz(1,2)-Vz(1,2))/(epsilonz));
         e23(i) = 0.5*((Vxdz(1,2)-Vx(1,2))/(epsilonz)+(Vzdx(1,2)-Vz(1,2))/(epsilonx));
+        % e22_dev(i) = 0.5*((Vxdx(1,2)-Vx(1,2))/(epsilonx) - (Vzdz(1,2)-Vz(1,2))/(epsilonz));
+        % e23(i) = 0.5*((Vxdz(1,2)-Vx(1,2))/(epsilonz) + (Vzdx(1,2)-Vz(1,2))/(epsilonx));
 
         end 
 
