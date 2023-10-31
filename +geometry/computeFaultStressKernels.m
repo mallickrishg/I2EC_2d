@@ -32,7 +32,7 @@ parfor i = 1:src.N
     
     Kdxx(:,i) = Sxx;
     Kdzz(:,i) = Szz;
-    Kdxz(:,i) = Sxz;
+    Kdxz(:,i) = -Sxz;
     
     % for tensile component
     [Stress] = geometry.LDstressHS(x,z,src.xc(i,1),src.xc(i,2),src.W(i)/2,-deg2rad(src.dip(i)),...
@@ -43,7 +43,7 @@ parfor i = 1:src.N
     
     Knxx(:,i) = Sxx;
     Knzz(:,i) = Szz;
-    Knxz(:,i) = Sxz;
+    Knxz(:,i) = -Sxz;
 end
 
 
