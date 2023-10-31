@@ -73,7 +73,10 @@ for i = 1:3
             LL1(:,k) = shz.dv(:,1).*t(:,1) + shz.dv(:,2).*t(:,2);
             LL2(:,k) = shz.nv(:,1).*t(:,1) + shz.nv(:,2).*t(:,2);
         else
-            error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
+            % LL1(:,k) = s22(:);
+            % LL2(:,k) = s23(:);
+            % LL3(:,k) = s33(:);
+            % error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
         end
 
     end
@@ -85,7 +88,10 @@ for i = 1:3
         LL(:,:,1,i) = LL1; % tau_shear
         LL(:,:,2,i) = LL2; % tau_normal
     else
-        error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
+        % LL(:,:,1,i) = LL1; % sxx
+        % LL(:,:,2,i) = LL2; % sxz
+        % LL(:,:,3,i) = LL3; % szz
+        % error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
     end
 end
 
