@@ -6,12 +6,11 @@
 
 clear  
 addpath functions/
-import geometry.*
-rng(42)
+import('geometry.*')
 
 % Elastic parameters (homogenous medium)
-nu=0.25;% Poisson's ratio
-mu=30e3;% in MPa
+nu = 0.25;% Poisson's ratio
+mu = 30e3;% in MPa
 
 % create megathrust (1) or load existing file (0)
 create_fault = 0;
@@ -42,7 +41,7 @@ else
 end
 
 % boundary mesh
-boundary = geometry.receiver('inputs/boundarytight2d.seg',earthModel);
+boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
 boundary.Vx = boundary.Vx.*Vpl;
 boundary.Vz = boundary.Vz.*Vpl;
 
@@ -51,6 +50,7 @@ boundary.Vz = boundary.Vz.*Vpl;
 % meshname_triangulation.dat (contains 3 columns of vertex linkage)
 % This mesh can be created using CREATE_shearzone_mesh.m provided in the
 % folder 'meshing'
+
 shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 
 figure(1),clf
@@ -61,7 +61,7 @@ axis tight equal
 box on
 set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 
-%% compute stress interaction kernels
+%% compute stress interaction and displacement kernels
 % evl contains the following as N-d matrices
 % KK - fault-fault interactions [rcv.N x rcv.N]
 % KL - fault-shz interactions [shz.N x rcv.N x 2]
@@ -69,13 +69,21 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 evl = computeAllStressKernelsBem(rcv,shz,boundary);
 
+Nobs = 401;
+obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
+
+% compute displacement kernels
+devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
+
 %% assign rheological properties 
 % (assuming spatially constant values)
-rcv.Asigma = 1.*ones(rcv.N,1);% (a-b)sigma
-shz.alpha = 1/(1e21*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
-shz.n = ones(shz.N,1)+0.1;
-shz.alpha(shz.xc(:,1)>200e3) = 1/(1e18*1e-6);
-shz.n(shz.xc(:,1)>200e3) = 1.1;
+rcv.Asigma = 0.2.*ones(rcv.N,1);% (a-b)sigma
+shz.alpha = 1/(5e19*1e-6).*ones(shz.N,1); % alpha = 1/viscosity where viscosity is in MPa-s
+shz.n = ones(shz.N,1);
+oceanic_mantle = (shz.xc(:,1) < -shz.xc(:,2)/tand(rcv.dip(1)));
+rcorner = sqrt((shz.xc(:,1)-200e3).^2 + (shz.xc(:,2)+50e3).^2);
+shz.alpha(~oceanic_mantle) = 1/(1e20*1e-6);
+shz.n(~oceanic_mantle) = 4 - 3.*(rcorner(~oceanic_mantle)./max(rcorner(~oceanic_mantle)));
 
 % define locked zone on megathrust
 locked = abs(rcv.xc(:,2)) > 0e3 & abs(rcv.xc(:,2))< 40e3;
@@ -87,10 +95,10 @@ rcv.Vpl(rcv.Vpl == 1) = Vpl;% m/s
 
 % Long-term strain rate calculation
 [e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
-shz.e22pl = -e22_dev.*Vpl;
-shz.e23pl = -e23.*Vpl;
-% shz.e22pl = 1e-15.*ones(shz.N,1);% 1/s
-% shz.e23pl = 1e-14.*ones(shz.N,1);% 1/s
+shz.e22pl = e22_dev.*Vpl;% 1/s
+shz.e23pl = -e23.*Vpl;% 1/s
+% shz.e22pl = -1e-15.*ones(shz.N,1);
+% shz.e23pl = 1e-14.*ones(shz.N,1);
 
 %% calculate coseismic stress change - imposed periodically
 Nevents = 1;
@@ -104,7 +112,8 @@ end
 % initialise stress change data structure
 stress_change = [];
 stress_change.Nevents = Nevents;
-stress_change.Timing = [4]*3.15e7;%[4,10,50]*3.15e7;% provide earthquake timing (in seconds) as a vector
+stress_change.Timing = 1;% provide earthquake timing (in seconds) as a vector
+%[0]*3.15e7;%[4,10,50]*3.15e7;
 
 assert(length(stress_change.Timing) == Nevents)
 
@@ -146,7 +155,7 @@ colormap("bluewhitered")
 
 % return
 %% use rcv, evl, shz, stress_change to run earthquake cycles
-Ncycles = 10;% specify number of cycles (for spin up)
+Ncycles = 5;% specify number of cycles (for spin up)
 tic
 disp('running imposed earthquake sequence simulations')
 [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_change,Ncycles,Trecur);
@@ -156,6 +165,7 @@ edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
 edot = sqrt(e22dot.^2 + e23dot.^2);
 
 figure(10),clf
+set(gcf,'Color','w')
 pcolor(t./Trecur,rcv.xc(:,1)./1e3,V'./Vpl), shading interp
 xlabel('t/T_{eq}')
 ylabel('x (km)')
@@ -166,16 +176,18 @@ set(gca,'ColorScale','log','YDir','reverse','FontSize',15,'TickDir','out','LineW
 
 figure(11),clf
 % shzindex = find(sqrt((shz.xc(:,1)-150e3).^2 + (shz.xc(:,2)+60e3).^2) < 10e3);
-shzindex = find(sqrt((shz.xc(:,1)-200e3).^2 + (shz.xc(:,2)+40e3).^2) < 20e3);
+shzindex = find(sqrt((shz.xc(:,1)-205e3).^2 + (shz.xc(:,2)+53e3).^2) < 10e3);
+
 edot_pl = mean(edot_pl(shzindex)).*ones(shz.N,1);
-plot(t./Trecur,V(:,43)./Vpl,'.-'), hold on
+plot(t./Trecur,V(:,40:2:end)./Vpl,'b-','LineWidth',2), hold on
 for i = 1:length(shzindex)
-    plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'r.-')
+    plot(t./Trecur,edot(:,shzindex(i))./edot_pl(shzindex(i)),'r-','LineWidth',1)
 end
 axis tight
-legend('slip rate','strain rate')
 xlabel('t/T_{eq}')
-set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5)
+xlim(10.^[-5 0])
+ylim(10.^[-1 3])
+set(gca,'YScale','log','FontSize',15,'TickDir','out','LineWidth',1.5,'XScale','log')
 ylabel('$\frac{v}{v_{pl}}$ , $\frac{\dot{\epsilon}}{\dot{\epsilon}_{pl}}$','Interpreter','latex','FontSize',25)
 
 figure(100),clf
@@ -187,13 +199,14 @@ axis tight equal
 
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
 % edot_pl = mean(edot_pl).*ones(shz.N,1);
+% edot_pl = 1e-14.*ones(shz.N,1);
 
-plotindex = [7,10,15,20,50,80].*3.15e7;
+plotindex = [2,5,10,20,50,80].*3.15e7;
 figure(12),clf
+set(gcf,'Color','w')
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     subplot(3,2,i)
-    % plotshz2d(shz,abs(edot(tindex,:)'-edot_pl)./edot_pl), hold on
     plotshz2d(shz,edot(tindex,:)'./edot_pl), hold on
     plotpatch2d(rcv,V(tindex,:)'./rcv.Vpl)
     box on
@@ -205,14 +218,10 @@ for i = 1:length(plotindex)
     title(['t = ' num2str(t(tindex)./3.15e7,'%.1f') ' yrs'])
     set(gca,'Fontsize',15,'ColorScale','log','Linewidth',1.5,'TickDir','out')
 end
-
+% print('Figures/strainrate_snapshots','-djpeg','-r100')
 % return
 %% calculate velocity time series at select observation points
-Nobs = 401;
-obs = ([1;0]*(linspace(-100,350,Nobs)))'*1e3;
 
-% compute displacement kernels
-devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
 hinge = geometry.receiver('inputs/hinge2d.seg',earthModel);
 [Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(hinge,obs,boundary,1);
 
@@ -220,18 +229,18 @@ gps = [];
 gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,1,2)*(e23dot'-shz.e23pl) - Gx_d * hinge.Vpl.*Vpl)';
 gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl) - Gz_d * hinge.Vpl.*Vpl)';
 
-% gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot);
-
 %% plotting surface displacements 
 figure(30),clf
+set(gcf,'Color','w')
 subplot(2,1,1)
-pcolor(t./Trecur,obs(:,1)./1e3,gps.vx'./Vpl), shading interp
+pcolor(t./Trecur,obs(:,1)./1e3,gps.vx'./Vpl + 1.*(obs(:,1)<=0)), shading interp
 xlabel('t/T_{eq}')
 ylabel('x (km)')
 cb=colorbar;cb.Label.String='v_x/v_{pl}';
 % clim(10.^[-1,2])
-clim([0 1])
-set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
+clim([-1 1])
+xlim(10.^[-4 0])
+set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5,'XScale','log')
 
 subplot(2,1,2)
 pcolor(t./Trecur,obs(:,1)./1e3,gps.vz'./Vpl), shading interp
@@ -240,11 +249,14 @@ ylabel('x (km)')
 cb=colorbar;cb.Label.String='v_z/v_{pl}';
 % clim(10.^[-1,2])
 clim([-1 1]*0.5)
-colormap("turbo(10)")
-set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5)
+colormap("bluewhitered(10)")
+xlim(10.^[-4 0])
+set(gca,'ColorScale','lin','YDir','reverse','FontSize',15,'TickDir','out','LineWidth',1.5,'XScale','log')
 
+% print('Figures/surfacevel_snapshots','-djpeg','-r100')
 
 figure(3);clf
+set(gcf,'Color','w')
 p = [];
 lgd = {};
 % plotindex = [0,4,5.01,6,10,19.5].*3.15e7;
@@ -260,6 +272,7 @@ for i = 1:length(plotindex)
 end
 axis tight
 grid on;box on
+ylim([-1 1])
 xlabel('distance from trench (km)'), ylabel('v_x/v_{pl}')
 title("Horizontal component")
 
@@ -275,14 +288,17 @@ end
 legend(p,lgd); 
 axis tight
 grid on;box on
+ylim([-1 1]*0.9)
 xlabel('distance from trench (km)'), ylabel('v_z/v_{pl}')
 title("Vertical component")
 
 set(findobj(gcf,'type','axes'),'FontSize',15,'LineWidth', 1);
+% print('Figures/surfacevel_spacetimeseries','-djpeg','-r100')
 
+% return
 %% plot velocity cross-sections as snapshots
-x = linspace(-100,350,40).*1e3;
-z = linspace(-79,0,10).*1e3;
+x = linspace(-101,351,40).*1e3;
+z = linspace(-121,0,10).*1e3;
 [X,Z] = meshgrid(x,z);
 obs = [X(:),Z(:)];
 
@@ -293,6 +309,7 @@ gps.vx = (devl.KO(:,:,1)*(V'-rcv.Vpl) + devl.LO(:,:,1,1)*(e22dot'-shz.e22pl) + d
 gps.vz = (devl.KO(:,:,2)*(V'-rcv.Vpl) + devl.LO(:,:,2,1)*(e22dot'-shz.e22pl) + devl.LO(:,:,2,2)*(e23dot'-shz.e23pl) - Gz_d * hinge.Vpl.*Vpl)';
 
 figure(13),clf
+set(gcf,'Color','w')
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     vtot = reshape(sqrt(gps.vx(tindex,:).^2 + gps.vz(tindex,:).^2),length(z),length(x));
@@ -315,6 +332,7 @@ for i = 1:length(plotindex)
 end
 
 figure(14),clf
+set(gcf,'Color','w')
 for i = 1:length(plotindex)
     tindex = find(abs(t-plotindex(i))==min(abs(t-plotindex(i))),1);
     vtot = reshape(gps.vz(tindex,:),length(z),length(x));
@@ -322,7 +340,7 @@ for i = 1:length(plotindex)
     subplot(3,2,i)
     pcolor(x./1e3,z./1e3,vtot./Vpl), shading interp
     hold on
-    plotshz2d(shz)
+    % plotshz2d(shz)
     plotpatch2d(rcv)
     quiver(obs(:,1)./1e3,obs(:,2)./1e3,gps.vx(tindex,:)'./Vpl,gps.vz(tindex,:)'./Vpl,'k','LineWidth',1)
     axis tight equal
