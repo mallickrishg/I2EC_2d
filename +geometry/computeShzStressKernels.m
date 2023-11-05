@@ -67,8 +67,8 @@ for i = 1:3
             LL3(:,k) = s33(:);
         elseif isa(shz,'geometry.receiver')
             % compute traction vector for fault plane orientation
-            t=[s22.*shz.nv(:,1) + s23.*shz.nv(:,2), ...
-                s23.*shz.nv(:,1) + s33.*shz.nv(:,2)];
+            t=[s22.*shz.nv(:,1) - s23.*shz.nv(:,2), ...
+                -s23.*shz.nv(:,1) + s33.*shz.nv(:,2)];
             % rotate traction vector to fault-shear & fault-normal direction
             LL1(:,k) = shz.dv(:,1).*t(:,1) + shz.dv(:,2).*t(:,2);
             LL2(:,k) = shz.nv(:,1).*t(:,1) + shz.nv(:,2).*t(:,2);
