@@ -1,4 +1,4 @@
-function evl = computeAllStressKernelsBem(rcv,shz,boundary)
+function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 % Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant stress kernels
 % 
 % INPUTS
@@ -17,6 +17,23 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary)
 % 
 % Authors:
 % Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
+
+% Check the number of optional arguments
+numOptionalArgs = nargin - 3; % Subtract the three required arguments
+
+% Parse name-value pairs
+for i = 1:2:numOptionalArgs
+    argname = varargin{i};
+    argvalue = varargin{i + 1};
+
+    % Check the name and assign the value accordingly
+    switch lower(argname)
+        case 'kernelmodify'
+            modifykernel = argvalue;        
+        otherwise
+            error(['Unknown parameter: ', argname]);
+    end
+end
 
 % create data structure to hold all kernels
 evl = [];
@@ -70,7 +87,10 @@ L_deviatoric = [L11 L12;...
 [Evectors,Evals] = eig(L_deviatoric);
 % remove eigen values that cause instabilities 
 Evals_corrected = diag(Evals);
-Evals_corrected(real(Evals_corrected)>0) = 0;
+
+if modifykernel == 1
+    Evals_corrected(real(Evals_corrected)>0) = 0;
+end
 
 % reconstruct deviatoric stress kernel
 L_deviatoric_corrected = real(Evectors*diag(Evals_corrected)/Evectors);
