@@ -21,6 +21,8 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 % Check the number of optional arguments
 numOptionalArgs = nargin - 3; % Subtract the three required arguments
 
+% default is to modify kernels
+modifykernel = 1;
 % Parse name-value pairs
 for i = 1:2:numOptionalArgs
     argname = varargin{i};
