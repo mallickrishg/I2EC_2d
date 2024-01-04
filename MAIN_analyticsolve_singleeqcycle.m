@@ -83,7 +83,7 @@ rcv.pinnedPosition = locked;
 rcv.Vpl = Vpl.*ones(rcv.N,1);% m/s
 
 % compute steady state interseismic slip rate & strain rates
-[v_ss,e22_ss,e23_ss] = computeInterseismicSteadystate(rcv,shz,Vpl,10);
+[v_ss,e22_ss,e23_ss] = computeInterseismicSteadystate(rcv,shz,evl_orig,Vpl,10);
 
 % Long-term strain rate calculation
 [e22_dev_lt, e23_lt] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
@@ -122,14 +122,14 @@ for i = 1:stress_change.Nevents
 end
 
 %% construct stress interaction kernel (use unmodified stress kernel for interseismic calculation)
-stresskernel_orig = [evl_orig.KK(~locked,~locked),  evl_orig.LK(~locked,:,1),   evl_orig.LK(~locked,:,2);...
+stresskernel = [evl_orig.KK(~locked,~locked),  evl_orig.LK(~locked,:,1),   evl_orig.LK(~locked,:,2);...
                      evl_orig.KL(:,~locked,1),      evl_orig.LL(:,:,1,1),       evl_orig.LL(:,:,1,2);...
                      evl_orig.KL(:,~locked,2),      evl_orig.LL(:,:,2,1),       evl_orig.LL(:,:,2,2)];
 
 viscosityvector = [rcv.Asigma(~locked);1./shz.alpha;1./shz.alpha];
 Nvec = length(viscosityvector);
 
-rheoparam = stresskernel_orig./repmat(viscosityvector,1,Nvec);
+rheoparam = stresskernel./repmat(viscosityvector,1,Nvec);
 
 % eigenvector decomposition
 [Evector,Evals] = eig(rheoparam);

@@ -1,8 +1,9 @@
-function [sol_f,sol_22,sol_23] = computeInterseismicSteadystate(rcv,shz,Vpl,lambda)
+function [sol_f,sol_22,sol_23] = computeInterseismicSteadystate(rcv,shz,evl_orig,Vpl,lambda)
 % Earthquake cycle calculation using semi-analytical solutions to elastic
 % boundary value problem
 % INPUTS:
 % rcv,shz - geometry objects for fault & shear zone
+% evl - full stress interaction kernels
 % Vpl - relative plate convergence velocity
 % lambda - regularization parameter (typically in the range 0.1 to 10,
 %                                    default value if 10)
@@ -28,7 +29,7 @@ shz.e23pl = -e23.*Vpl;% 1/s
 
 % evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
 % evl = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',1);
-load('kernels/evl_orig.mat','evl_orig');
+% load('kernels/evl_orig.mat','evl_orig');
 
 %% compute quasi-steady rates for 
 
