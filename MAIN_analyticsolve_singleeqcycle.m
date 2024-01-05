@@ -6,7 +6,7 @@
 % Rishav Mallick, JPL 2024
 
 clear  
-addpath functions/
+addpath ../functions/
 import('geometry.*')
 
 % Elastic parameters (homogenous medium)
@@ -14,7 +14,7 @@ nu=0.25;% Poisson's ratio
 mu=30e3;% in MPa
 
 % Periodic earthquake recurrence time
-Trecur = 100*3.15e7;% in seconds
+Trecur = 500*3.15e7;% in seconds
 Vpl = 1e-9;% m/s
 
 % max stress change on fault (MPa)
@@ -45,26 +45,26 @@ shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
 % use original unmodified kernels for this solve
-evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
-% load('kernels/evl_orig.mat','evl_orig');
+% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
+load('kernels/evl_orig.mat','evl_orig');
 
 % compute displacement kernels
 Nobs = 401;
 obs = ([1;0]*(linspace(-100,500,Nobs)))'*1e3;
-devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
-% load('kernels/devl.mat','devl');
+% devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
+load('kernels/devl.mat','devl');
 
 %% assign rheological properties 
 
 %%%%%%% approximate fault by a viscous shear zone %%%%%%%
 % (a-b)sigma in terms of viscosity
 % eta' = viscosity/L_fault
-rcv.Asigma = 1e-6.*(1e19/(sum(~rcv.pinnedPosition.*rcv.W))).*ones(rcv.N,1);
+rcv.Asigma = 1e-6.*(1e21/(sum(~rcv.pinnedPosition.*rcv.W))).*ones(rcv.N,1);
 
 %%%%%%% oceanic mantle viscosity structure %%%%%%%
 r = abs(tand(rcv.dip(1)).*shz.xc(:,1) + shz.xc(:,2) + 20e3)./sqrt(tand(rcv.dip(1))^2 + 1);
 r = r./max(r);% normalize to 0->1
-viscostructure = 10.^(19 + r.*3);
+viscostructure = 10.^(19 + r.*0);
 shz.n = 1.*ones(shz.N,1);
 shz.alpha = 1./(viscostructure.*1e-6);
 oceanic_mantle = (shz.xc(:,1) < -shz.xc(:,2)/tand(rcv.dip(1)));
@@ -72,7 +72,7 @@ oceanic_mantle = (shz.xc(:,1) < -shz.xc(:,2)/tand(rcv.dip(1)));
 %%%%%%% continental mantle viscosity structure %%%%%%%
 r = sqrt((shz.xc(~oceanic_mantle,1)-200e3).^2);
 r = r./max(r);% normalize to 0->1
-viscostructure = 10.^(18 + r.*3);
+viscostructure = 10.^(18 + r.*0);
 shz.alpha(~oceanic_mantle) = 1./(viscostructure.*1e-6);
 
 % define locked zone on megathrust
@@ -152,14 +152,29 @@ sol_initial = sol_interseismic + deltastrainrate;
 
 %% evaluate slip/strain at various times
 
-tvec = [7,30,180,365,2*365,5*365,10*365].*86400;% seconds
+% tvec = [30,365,5*365].*86400;% seconds
+% tvec = [5,10,15,20,50,100].*3.15e7;
+tvec = [10,60,180,365,1500].*86400;
 
 slip = zeros(rcv.N,length(tvec));
 e22 = zeros(shz.N,length(tvec));
 e23 = zeros(shz.N,length(tvec));
 
+V = zeros(rcv.N,length(tvec));
+e22dot = zeros(shz.N,length(tvec));
+e23dot = zeros(shz.N,length(tvec));
+
 for i = 1:length(tvec)
     tval = tvec(i);
+    % time-integrate dynammics
+    sol = real(Evector*diag(exp(lambda.*tval))/Evector*(sol_initial-sol_interseismic)) + ...
+               sol_interseismic;
+    % extract solution to velocity & strainrate components
+    V(~locked,i) = sol(1:length(find(~locked)));
+    e22dot(:,i) = sol(length(find(~locked))+1:length(find(~locked))+shz.N);
+    e23dot(:,i) = sol(length(find(~locked))+shz.N+1:end);
+
+    % souble integrated
     sol = real(Evector*diag((exp(lambda.*tval) - ones(Nvec,1))./lambda)/Evector*(sol_initial-sol_interseismic)) + ...
                sol_interseismic.*tval;
     
@@ -169,14 +184,36 @@ for i = 1:length(tvec)
     e23(:,i) = sol(length(find(~locked))+shz.N+1:end);
 end
 
-%% surface displacements
-% calculate velocity time series at select observation points (interseismic removed)
+%% surface displacements and velocities
+% calculate displacement time series at select observation points
 
 hinge = geometry.receiver('inputs/hinge2d.seg',earthModel);
 [Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(hinge,obs,boundary,1);
 
+fullsol_interseismic = [zeros(length(find(locked)),1);sol_interseismic] - [rcv.Vpl;shz.e22pl;shz.e23pl];
+vx_int = [devl.KO(:,:,1),devl.LO(:,:,1,1),devl.LO(:,:,1,2)]*fullsol_interseismic - Gx_d * (hinge.Vpl.*Vpl); 
+vz_int = [devl.KO(:,:,2),devl.LO(:,:,2,1),devl.LO(:,:,2,2)]*fullsol_interseismic - Gz_d * (hinge.Vpl.*Vpl); 
+
+figure(12),clf
+plot(obs(:,1)./1e3,vx_int./Vpl,'LineWidth',2), hold on
+plot(obs(:,1)./1e3,vz_int./Vpl,'LineWidth',2)
+axis tight,grid on
+ylim([-1 1])
+legend('horizontal','vertical','Box','off','Location','best')
+xlabel('distance from trench (km)'), ylabel('v/v_{pl}')
+set(gca,'FontSize',20,'LineWidth', 1,'TickDir','both')
+
 gps = [];
 gps.obs = obs;
+gps.vx = (devl.KO(:,:,1)*(V-rcv.Vpl) + ...
+          devl.LO(:,:,1,1)*(e22dot-shz.e22pl) + ... 
+          devl.LO(:,:,1,2)*(e23dot-shz.e23pl) - ...
+          Gx_d*(hinge.Vpl.*Vpl))';
+gps.vz = (devl.KO(:,:,2)*(V-rcv.Vpl) + ...
+          devl.LO(:,:,2,1)*(e22dot-shz.e22pl) + ...
+          devl.LO(:,:,2,2)*(e23dot-shz.e23pl) - ...
+          Gz_d*(hinge.Vpl.*Vpl))';
+
 gps.ux = (devl.KO(:,:,1)*(slip-rcv.Vpl*tvec) + ...
           devl.LO(:,:,1,1)*(e22-shz.e22pl*tvec) + ... 
           devl.LO(:,:,1,2)*(e23-shz.e23pl*tvec) - ...
@@ -186,13 +223,27 @@ gps.uz = (devl.KO(:,:,2)*(slip-rcv.Vpl*tvec) + ...
           devl.LO(:,:,2,2)*(e23-shz.e23pl*tvec) - ...
           1.*Gz_d * (hinge.Vpl.*Vpl)*tvec)';
 
-figure(3),clf
+figure(13),clf
 subplot(2,1,1)
-plot(obs(:,1)./1e3,gps.ux)
-axis tight
-
+plot(obs(:,1)./1e3,gps.ux,'LineWidth',2)
+axis tight, grid on
+ylim([-1 1]*1.5)
+set(gca,'FontSize',15,'LineWidth',1.5)
 subplot(2,1,2)
-plot(obs(:,1)./1e3,gps.uz)
-axis tight
+plot(obs(:,1)./1e3,gps.uz,'LineWidth',2)
+axis tight, grid on
+ylim([-1 1]*2)
+set(gca,'FontSize',15,'LineWidth',1.5)
 
+figure(14),clf
+subplot(2,1,1)
+plot(obs(:,1)./1e3,gps.vx./Vpl,'LineWidth',2)
+axis tight, grid on
+ylim([-1 1]*2)
+set(gca,'FontSize',15,'LineWidth',1.5)
+subplot(2,1,2)
+plot(obs(:,1)./1e3,gps.vz./Vpl,'LineWidth',2)
+axis tight, grid on
+ylim([-1 1]*1)
+set(gca,'FontSize',15,'LineWidth',1.5)
 
