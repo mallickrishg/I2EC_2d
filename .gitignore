@@ -40,3 +40,4 @@ Thumbs.db
 *.seg
 inputs/megathrust2d.seg
 experiments/*
+expt*
