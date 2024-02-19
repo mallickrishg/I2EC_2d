@@ -154,7 +154,10 @@ else
     lambda_multiplier = Evector*diag(lambda_vals)/Evector;
     % spin-up cycles (weird issues with spin up when Ncycles >> 1)
     % the solution converges but to some weird number which looks like it
-    % is pick
+    % is picking up on the noise structure in longterm_ss
+    % Ncycles = 2 seems to be closest ro the semi-analytical solve
+    % the postseismic displacements (after interseismic correction) are
+    % unaffected
     Ncycles = 2;
     sol_interseismic = 1*longterm_ss; % just guess the initial value
     for icycle = 1:Ncycles
