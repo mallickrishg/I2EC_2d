@@ -145,8 +145,24 @@ longterm_ss = [v_ss(~locked);e22_ss;e23_ss];
 
 %% compute late interseismic strain rates and initial conditions
 % compute late-interseismic strain rate
-sol_interseismic = real((eye(Nvec) - Evector*diag(exp(lambda.*Trecur))/Evector)\...
-    (Evector*diag(exp(lambda.*Trecur))/Evector*(deltastrainrate-longterm_ss) + longterm_ss));
+if false
+    % analytical solve (seems to diverge for cases where Trecur >> Trelax)
+    sol_interseismic = real((eye(Nvec) - Evector*diag(exp(diag(Evals).*Trecur))/Evector)\...
+        (Evector*diag(exp(diag(Evals).*Trecur))/Evector*(deltastrainrate-longterm_ss) + longterm_ss));
+else
+    lambda_vals = exp(real(lambda).*Trecur);
+    lambda_multiplier = Evector*diag(lambda_vals)/Evector;
+    % spin-up cycles (weird issues with spin up when Ncycles >> 1)
+    % the solution converges but to some weird number which looks like it
+    % is pick
+    Ncycles = 2;
+    sol_interseismic = 1*longterm_ss; % just guess the initial value
+    for icycle = 1:Ncycles
+        sol_initial = sol_interseismic + deltastrainrate;
+        sol_dummy = sol_interseismic;
+        sol_interseismic = real(lambda_multiplier*(sol_initial-sol_dummy) + sol_dummy);
+    end
+end
 
 sol_initial = sol_interseismic + deltastrainrate;
 
