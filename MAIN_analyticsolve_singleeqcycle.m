@@ -6,7 +6,7 @@
 % Rishav Mallick, JPL 2024
 
 clear  
-addpath ../functions/
+addpath functions/
 import('geometry.*')
 
 % Elastic parameters (homogenous medium)
@@ -64,7 +64,7 @@ rcv.Asigma = 1e-6.*(1e21/(sum(~rcv.pinnedPosition.*rcv.W))).*ones(rcv.N,1);
 %%%%%%% oceanic mantle viscosity structure %%%%%%%
 r = abs(tand(rcv.dip(1)).*shz.xc(:,1) + shz.xc(:,2) + 20e3)./sqrt(tand(rcv.dip(1))^2 + 1);
 r = r./max(r);% normalize to 0->1
-viscostructure = 10.^(19 + r.*0);
+viscostructure = 10.^(18 + r.*0);
 shz.n = 1.*ones(shz.N,1);
 shz.alpha = 1./(viscostructure.*1e-6);
 oceanic_mantle = (shz.xc(:,1) < -shz.xc(:,2)/tand(rcv.dip(1)));
@@ -175,7 +175,7 @@ sol_initial = sol_interseismic + deltastrainrate;
 
 % tvec = [30,365,5*365].*86400;% seconds
 % tvec = [5,10,15,20,50,100].*3.15e7;
-tvec = [10,60,180,365,1500].*86400;
+tvec = [[10,365,1500].*86400, Trecur];
 
 slip = zeros(rcv.N,length(tvec));
 e22 = zeros(shz.N,length(tvec));
@@ -224,7 +224,7 @@ axis tight,grid on
 ylim([-1 1])
 legend('horizontal','vertical','Box','off','Location','best')
 xlabel('distance from trench (km)'), ylabel('v/v_{pl}')
-set(gca,'FontSize',20,'LineWidth', 1,'TickDir','both')
+set(gca,'FontSize',15,'LineWidth', 1,'TickDir','both')
 
 gps = [];
 gps.obs = obs;
@@ -246,27 +246,37 @@ gps.uz = (devl.KO(:,:,2)*(slip-rcv.Vpl*tvec) + ...
           devl.LO(:,:,2,2)*(e23-shz.e23pl*tvec) - ...
           1.*Gz_d * (hinge.Vpl.*Vpl)*tvec)';
 
+% postseismic displacements (interseismic corrected)
 figure(13),clf
 subplot(2,1,1)
-plot(obs(:,1)./1e3,gps.ux,'LineWidth',2)
+plot(obs(:,1)./1e3,nthroot(gps.ux' - vx_int*tvec,1),'LineWidth',2)
 axis tight, grid on
-ylim([-1 1]*1.5)
+ylim([-1 1]*5)
+xlabel('distance from trench (km)')
+ylabel('u_x (m)')
 set(gca,'FontSize',15,'LineWidth',1.5)
 subplot(2,1,2)
-plot(obs(:,1)./1e3,gps.uz,'LineWidth',2)
+plot(obs(:,1)./1e3,nthroot(gps.uz' - vz_int*tvec,1),'LineWidth',2)
 axis tight, grid on
-ylim([-1 1]*2)
+ylim([-1 1]*5)
+xlabel('distance from trench (km)')
+ylabel('u_z (m)')
 set(gca,'FontSize',15,'LineWidth',1.5)
 
+% postseismic velocity snapshots (plotted as cube root to retain sign and compress the axes - like log plots)
 figure(14),clf
 subplot(2,1,1)
-plot(obs(:,1)./1e3,gps.vx./Vpl,'LineWidth',2)
+plot(obs(:,1)./1e3,nthroot(gps.vx./Vpl,3),'LineWidth',2)
 axis tight, grid on
-ylim([-1 1]*2)
+ylim([-1 1]*5)
+xlabel('distance from trench (km)')
+ylabel('(v_x/v_{pl})^{1/3}')
 set(gca,'FontSize',15,'LineWidth',1.5)
 subplot(2,1,2)
-plot(obs(:,1)./1e3,gps.vz./Vpl,'LineWidth',2)
+plot(obs(:,1)./1e3,nthroot(gps.vz./Vpl,3),'LineWidth',2)
 axis tight, grid on
-ylim([-1 1]*1)
+ylim([-1 1]*5)
+xlabel('distance from trench (km)')
+ylabel('(v_z/v_{pl})^{1/3}')
 set(gca,'FontSize',15,'LineWidth',1.5)
 
