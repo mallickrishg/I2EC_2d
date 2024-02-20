@@ -135,6 +135,8 @@ rheoparam = stresskernel./repmat(viscosityvector,1,Nvec);
 [Evector,Evals] = eig(rheoparam);
 % store eigenvalues in a vector
 lambda = diag(Evals);
+lambda_positive = (real(lambda) >= 0);
+lambda(lambda_positive) = -Inf;
 
 % combine all stress change into a single vector that captures coseismic
 % strain rate change
@@ -193,8 +195,10 @@ for i = 1:length(tvec)
     e22dot(:,i) = sol(length(find(~locked))+1:length(find(~locked))+shz.N);
     e23dot(:,i) = sol(length(find(~locked))+shz.N+1:end);
 
-    % souble integrated
-    sol = real(Evector*diag((exp(lambda.*tval) - ones(Nvec,1))./lambda)/Evector*(sol_initial-sol_interseismic)) + ...
+    % double integrated
+    lambda_integrated = (exp(lambda.*tval) - ones(Nvec,1))./lambda;
+    lambda_integrated(lambda_positive) = 0;
+    sol = real(Evector*diag(lambda_integrated)/Evector*(sol_initial-sol_interseismic)) + ...
                sol_interseismic.*tval;
     
     % extract solution to slip & strain components
