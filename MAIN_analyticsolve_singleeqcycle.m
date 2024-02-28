@@ -147,10 +147,10 @@ longterm_ss = [v_ss(~locked);e22_ss;e23_ss];
 
 %% compute late interseismic strain rates and initial conditions
 % compute late-interseismic strain rate
-if false
+if true
     % analytical solve (seems to diverge for cases where Trecur >> Trelax)
-    sol_interseismic = real((eye(Nvec) - Evector*diag(exp(diag(Evals).*Trecur))/Evector)\...
-        (Evector*diag(exp(diag(Evals).*Trecur))/Evector*(deltastrainrate-longterm_ss) + longterm_ss));
+    sol_interseismic = real((eye(Nvec) - Evector*diag(exp(lambda.*Trecur))/Evector)\...
+        (Evector*diag(exp(lambda.*Trecur))/Evector*(deltastrainrate-longterm_ss) + longterm_ss));
 else
     lambda_vals = exp(real(lambda).*Trecur);
     lambda_multiplier = Evector*diag(lambda_vals)/Evector;
