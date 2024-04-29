@@ -41,3 +41,5 @@ Thumbs.db
 inputs/megathrust2d.seg
 experiments/*
 expt*
+.ipynb_checkpoints/MAIN_analyticsolve_singleeqcycle-checkpoint.m
+.ipynb_checkpoints/I2EC_linearVEcycles-checkpoint.ipynb
