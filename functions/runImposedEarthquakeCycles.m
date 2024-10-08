@@ -30,9 +30,11 @@ Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
 
 
 % start simulation (nrep-1 spin-up cycles)
+disp(['Cycle number 1/' num2str(nreps)])
 [~,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change,Trecur);
 
 for i = 2:nreps
+    disp(['Cycle number' num2str(i) '/' num2str(nreps)])
     Y0 = Y(end,:)';
     [t,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change,Trecur);
 end
