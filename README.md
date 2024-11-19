@@ -2,7 +2,7 @@
 
 # Integral Imposed Earthquake Cycles for 2-d subduction zones
 
-Authors: Rishav Mallick (Caltech Seismological Laboratory) & Sharadha Sathiakumar (Earth Observatory of Singapore)
+Authors: Rishav Mallick (Jet Propulsion Laboratory) & Sharadha Sathiakumar (Earth Observatory of Singapore)
 
 MATLAB code to simulate post- and inter-seismic evolution of fault velocity and strain rate in a visco-elasto medium with a frictional fault. The long-term strain-rates need to be provided by geodynamic solutions or with known solutions to corner flow problems, while the short-term evolution is solved using an integral scheme. We use RK-4th order integration to solve the governing system of coupled ODEs (IVP).
 
