@@ -99,7 +99,9 @@ E = expm(M * T);
 Phi = E(1:n,1:n);
 eta = E(1:n,end);
 rhs = eta + b;
+
 I_minus_Phi = eye(n) - Phi;
+% use SVD for pseudo-inverse
 [U,S,V] = svd(I_minus_Phi);
 svals = diag(S);
 tol = max(1e-12, eps * max(svals));
