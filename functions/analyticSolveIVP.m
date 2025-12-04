@@ -15,6 +15,17 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   Y(:,j) = y(tvec(j))
 %   U(:,j) = ∫_0^{tvec(j)} y(τ) dτ
 
+% compute Eigenvalues
+[Evectors,Evals] = eig(A);
+% remove eigen values that cause instabilities 
+Evals_corrected = diag(Evals);
+if any(real(Evals_corrected) >= 0) 
+    warning('Reconditioning ODE matrix due to positive eigen values')
+    Evals_corrected(real(Evals_corrected) >= 0) = -eps;
+    % reconstruct stress kernel
+    A = real(Evectors * diag(Evals_corrected) / Evectors);
+end
+
 n = size(A,1);
 tvec = tvec(:).';
 m = numel(tvec);
@@ -34,7 +45,7 @@ M(n+1:2*n,1:n) = eye(n);
 % Initial augmented vector: [y0; u0; 1]
 aug0 = [y0(:); zeros(n,1); 1];
 
-for j = 1:m
+parfor j = 1:m
     t = tvec(j);
 
     if t == 0

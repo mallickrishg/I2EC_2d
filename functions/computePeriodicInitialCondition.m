@@ -58,7 +58,7 @@ I_minus_Phi = eye(n) - Phi;
 % ---- Step 2: Try direct solve when reasonably conditioned
 cond_est = cond(I_minus_Phi);
 disp(['Condition number = ' num2str(cond_est)])
-if cond_est < 1e12   % moderate threshold
+if cond_est < 1e15   % moderate threshold
     y0 = I_minus_Phi \ rhs;
     return
 end
