@@ -2,7 +2,7 @@ clear
 addpath functions/
 
 % specify subduction zone dip angle
-dip = 20*pi/180;
+dip = 30*pi/180;
 
 % mesh points to plot
 nx = 1000;
@@ -16,7 +16,11 @@ z = linspace(-4*tan(dip),-0.001,ny)';
 % Vx(:,1) - continental arc solution
 % Vx(:,2) - oceanic mantle solution
 % similarly for Vz
-[Vx,Vz] = compute_cornerflow_velocityfield(dip,X(:),Z(:));
+
+n_powerlaw = 1;
+% [Vx,Vz] = compute_cornerflow_velocityfield(dip,X(:),Z(:));
+% function that computes velocity field for n=1 or n=3 rheologies 
+[Vx,Vz] = computeCornerflowVelocityfield(dip,X(:),Z(:),n_powerlaw);
 
 % Plot velocity field
 figure(1),clf
@@ -43,5 +47,7 @@ pcolor(x,z,reshape(sqrt(toplotx.^2 + toplotz.^2),ny,nx)), shading interp, hold o
 quiver(X(1:nskip:end)',Z(1:nskip:end)',toplotx(1:nskip:end),toplotz(1:nskip:end),'w-','Linewidth',1)
 axis tight equal
 colormap turbo(10)
-colorbar
+cb=colorbar; cb.Label.String = 'velocity';
 clim([0 1])
+ylim([-1.5 0.1]), xlim([-2,4])
+xlabel('x'), ylabel('z')
