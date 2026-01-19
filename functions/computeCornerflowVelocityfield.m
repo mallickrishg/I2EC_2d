@@ -1,192 +1,241 @@
-function [Vx,Vz] = computeCornerflowVelocityfield(dip,x,z,n)
-%COMPUTE_CORNERFLOW_VELOCITYFIELD Analytic corner flow for subduction zones.
+function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
+% COMPUTECORNERFLOWVELOCITYFIELD Analytic corner flow for subduction zones
 %
-%   [Vx,Vz] = COMPUTE_CORNERFLOW_VELOCITYFIELD(dip,x,z)
+%   [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 %
-%   Computes the isoviscous corner flow velocity field for:
-%   1. Continental Arc (Mantle Wedge): Fixed top, moving slab.
-%   2. Oceanic Mantle (Sub-slab): Moving slab, incoming plate.
+%   Computes the isoviscous corner flow velocity field for two regions:
+%   1. Continental Arc (Mantle Wedge): Fixed upper boundary, moving slab
+%   2. Oceanic Mantle (Sub-slab): Moving slab with incoming plate
 %
-%   INPUTS:
-%       dip - Slab dip angle in radians (e.g., pi/4)
-%       x,z - Normalized coordinates [Nx1]. z is negative inside Earth.
-%       n - Power law exponent (solutions only provided for: n = 1
-%           Newtonian, n = 3)
+% INPUTS:
+%   dip - Slab dip angle in radians (e.g., pi/4 for 45°)
+%   x   - Horizontal coordinates [Nx1 vector], z negative inside Earth
+%   z   - Vertical coordinates [Nx1 vector]
+%   n   - Power law exponent: 1 (Newtonian) or 3 (power-law)
 %
-%   OUTPUTS:
-%       Vx, Vz - [Nx2] matrices. 
-%                Column 1: Continental Arc (Wedge)
-%                Column 2: Oceanic Mantle (Sub-slab)
+% OUTPUTS:
+%   Vx  - [Nx2] horizontal velocities (Column 1: Arc, Column 2: Oceanic)
+%   Vz  - [Nx2] vertical velocities (Column 1: Arc, Column 2: Oceanic)
+%
+% EXAMPLE:
+%   dip = pi/4;
+%   [x, z] = meshgrid(linspace(0, 2, 50), linspace(-2, 0, 50));
+%   [Vx, Vz] = computeCornerflowVelocityfield(dip, x(:), z(:), 1);
 
-% --- Setup Geometry ---
+%% Input validation
+if ~ismember(n, [1, 3])
+    error('Power law exponent n must be 1 (Newtonian) or 3 (power-law)');
+end
+
+% Ensure column vectors
 x = x(:);
 z = z(:);
 
-% Precompute polar coordinates for all points
-% Note: atan2 returns values in (-pi, pi]
-theta = atan2(z, x);
-r2    = x.^2 + z.^2;
+%% Compute polar coordinates
+[theta, r2] = computePolarCoordinates(x, z);
 
-% Handle singularity at r=0 (trench) to avoid NaNs
-r2(r2==0) = inf;
-
+%% Calculate velocity fields based on rheology
 if n == 1
-    % --- Continental Arc Coefficients ---
-    % Domain: Wedge corner angle = dip
-    % BCs: Fixed top (v=0), Slab moves down-dip (v=U)
-
-    denom_arc = dip^2 - sin(dip)^2;
-
-    % Analytical coefficients for Wedge (Standard Corner Flow)
-    C_arc = (dip * sin(dip)) / denom_arc;
-    D_arc = (dip * cos(dip) - sin(dip)) / denom_arc;
-
-    % Integration constants for velocity form (A=0 for fixed top, B = -C)
-    A_arc = 0;
-    B_arc = -C_arc;
-
-    % --- Oceanic Mantle Coefficients ---
-    % Domain: Sub-slab corner angle beta = pi - dip
-    % BCs: Plate moves in (v_r = -1), Slab moves out (v_r = 1)
-
-    alpha = pi - dip;
-
-    % Final Constants
-    C_ocean = -sin(dip) / (alpha + sin(dip));
-    A_ocean = pi * C_ocean;
-    D_ocean = 2*(sin(dip/2))^2 / (alpha + sin(dip));
-    B_ocean = (dip - pi*cos(dip)) / (alpha + sin(dip));
-
-    % --- Compute Velocity Fields ---
-
-    % Vectorized function for velocity components
-    calc_vx = @(A,B,C,D) -B - (C.*x.^2 + D.*x.*z)./r2 - D.*theta;
-    calc_vz = @(A,B,C,D)  A - (C.*x.*z + D.*z.^2)./r2 + C.*theta;
-
-    % Evaluate Arc
-    vx_arc = calc_vx(A_arc, B_arc, C_arc, D_arc);
-    vz_arc = calc_vz(A_arc, B_arc, C_arc, D_arc);
-
-    % Evaluate Ocean
-    vx_ocn = calc_vx(A_ocean, B_ocean, C_ocean, D_ocean);
-    vz_ocn = calc_vz(A_ocean, B_ocean, C_ocean, D_ocean);
-
-    % --- Output ---
-    Vx = [vx_arc, vx_ocn];
-    Vz = [vz_arc, vz_ocn];
-
-% For power-law rheology
-elseif n == 3
-    % --- Power-law (n = 3) Corner Flow ---        
-
-    % === Continental arc coefficients ===
-    % Unknowns: [A, B, C, D]
-
-    coeff_arc = solve_coefficients_arc(dip);
-
-    A_arc = coeff_arc(1);
-    B_arc = coeff_arc(2);
-    C_arc = coeff_arc(3);
-    D_arc = coeff_arc(4);
-
-    % === Oceanic mantle coefficients ===
-    coeff_ocean = solve_coefficients_ocean(dip);
-
-    A_ocean = coeff_ocean(1);
-    B_ocean = coeff_ocean(2);
-    C_ocean = coeff_ocean(3);
-    D_ocean = coeff_ocean(4);
-    
-
-    % Evaluate Arc
-    [vx_arc, vz_arc] = calc_powerlaw_velocity(A_arc,B_arc,C_arc,D_arc,theta,x,z);
-
-    % Evaluate Ocean
-    [vx_ocn, vz_ocn] = calc_powerlaw_velocity(A_ocean,B_ocean,C_ocean,D_ocean,theta,x,z);
-
-    % --- Output ---
-    Vx = [vx_arc, vx_ocn];
-    Vz = [vz_arc, vz_ocn];
-
+    % Newtonian fluid (analytical solution)
+    [Vx, Vz] = computeNewtonianVelocity(dip, x, z, theta, r2);
 else
-    error('Choose n = 1 or n = 3. Other analytical solutions are not yet implemented.')
+    % Power-law fluid (n = 3, numerical solution)
+    [Vx, Vz] = computePowerLawVelocity(dip, x, z, theta);
 end
 
 end
 
-%%%%%% Solve mantle wedge coefficients using fsolve %%%%%%%%
-function coeff = solve_coefficients_arc(dip)
+%% ========================================================================
+%                         COORDINATE TRANSFORMATIONS
+% =========================================================================
 
-opts = optimoptions('fsolve','Display','final-detailed','MaxFunctionEvaluations',1e3,'FunctionTolerance',1e-6);
+function [theta, r2] = computePolarCoordinates(x, z)
+% Convert Cartesian to polar coordinates
+% Note: atan2 returns angles in (-pi, pi]
 
-x0 = [1 1 1 0.1];
+theta = atan2(z, x);
+r2 = x.^2 + z.^2;
 
-coeff = fsolve(@residual, x0, opts);
+% Avoid singularity at origin (r = 0)
+r2(r2 == 0) = inf;
 
-    function R = residual(p)
-        A = p(1);
-        B = p(2);
-        C = p(3);
-        D = p(4);
+end
 
-        % Arc surface (phi = 0, z = 0, x = 1)
-        [vx1, vz1] = calc_powerlaw_velocity(A,B,C,D,0,1,0);
+%% ========================================================================
+%                      NEWTONIAN VELOCITY FIELD (n = 1)
+% =========================================================================
 
-        % Slab surface (phi = -dip, z = -tan(dip), x = 1)
-        [vx2, vz2] = calc_powerlaw_velocity(A,B,C,D,-dip,1,-tan(dip));
+function [Vx, Vz] = computeNewtonianVelocity(dip, x, z, theta, r2)
+% Analytical solution for Newtonian corner flow
 
-        R = [vx1, vz1, vx2 - cos(dip), vz2 + sin(dip)];
+% Compute coefficients for both regions
+[A_arc, B_arc, C_arc, D_arc] = getArcCoefficients(dip);
+[A_ocn, B_ocn, C_ocn, D_ocn] = getOceanCoefficients(dip);
+
+% Calculate velocities using stream function derivatives
+vx_arc = calcNewtonianVx(A_arc, B_arc, C_arc, D_arc, x, z, theta, r2);
+vz_arc = calcNewtonianVz(A_arc, B_arc, C_arc, D_arc, x, z, theta, r2);
+
+vx_ocn = calcNewtonianVx(A_ocn, B_ocn, C_ocn, D_ocn, x, z, theta, r2);
+vz_ocn = calcNewtonianVz(A_ocn, B_ocn, C_ocn, D_ocn, x, z, theta, r2);
+
+% Combine results
+Vx = [vx_arc, vx_ocn];
+Vz = [vz_arc, vz_ocn];
+
+end
+
+function [A, B, C, D] = getArcCoefficients(dip)
+% Continental arc (mantle wedge) coefficients
+% Boundary conditions: Fixed top (v=0), Slab moves down-dip (v=U)
+
+denom = dip^2 - sin(dip)^2;
+
+C = (dip * sin(dip)) / denom;
+D = (dip * cos(dip) - sin(dip)) / denom;
+
+A = 0;        % Fixed top boundary
+B = -C;       % Integration constant
+
+end
+
+function [A, B, C, D] = getOceanCoefficients(dip)
+% Oceanic mantle (sub-slab) coefficients
+% Boundary conditions: Plate moves in (v_r = -1), Slab moves out (v_r = 1)
+
+alpha = pi - dip;  % Sub-slab corner angle
+
+C = -sin(dip) / (alpha + sin(dip));
+D = 2 * sin(dip/2)^2 / (alpha + sin(dip));
+
+A = pi * C;
+B = (dip - pi * cos(dip)) / (alpha + sin(dip));
+
+end
+
+function vx = calcNewtonianVx(A, B, C, D, x, z, theta, r2)
+% Horizontal velocity component for Newtonian fluid
+
+vx = -B - (C.*x.^2 + D.*x.*z) ./ r2 - D.*theta;
+
+end
+
+function vz = calcNewtonianVz(A, B, C, D, x, z, theta, r2)
+% Vertical velocity component for Newtonian fluid
+
+vz = A - (C.*x.*z + D.*z.^2) ./ r2 + C.*theta;
+
+end
+
+%% ========================================================================
+%                    POWER-LAW VELOCITY FIELD (n = 3)
+% =========================================================================
+
+function [Vx, Vz] = computePowerLawVelocity(dip, x, z, theta)
+% Numerical solution for power-law corner flow (n = 3)
+
+% Solve for coefficients using boundary conditions
+coeff_arc = solveArcCoefficients(dip);
+coeff_ocn = solveOceanCoefficients(dip);
+
+% Calculate velocities
+[vx_arc, vz_arc] = calcPowerLawVelocity(coeff_arc, theta, x, z);
+[vx_ocn, vz_ocn] = calcPowerLawVelocity(coeff_ocn, theta, x, z);
+
+% Combine results
+Vx = [vx_arc, vx_ocn];
+Vz = [vz_arc, vz_ocn];
+
+end
+
+function coeff = solveArcCoefficients(dip)
+% Solve for mantle wedge coefficients [A, B, C, D] using fsolve
+% Boundary conditions at phi=0 (surface) and phi=-dip (slab)
+
+opts = optimoptions('fsolve', ...
+    'Display', 'off', ...
+    'MaxFunctionEvaluations', 1e4, ...
+    'FunctionTolerance', 1e-6);
+
+x0 = [1, 1, 1, 0.1];  % Initial guess
+
+coeff = fsolve(@residualArc, x0, opts);
+
+    function R = residualArc(p)
+        % Residual function for boundary conditions
+
+        % Surface boundary (phi=0, z=0, x=1): velocity = 0
+        [vx_surf, vz_surf] = calcPowerLawVelocity(p, 0, 1, 0);
+
+        % Slab boundary (phi=-dip): velocity = [cos(dip), -sin(dip)]
+        [vx_slab, vz_slab] = calcPowerLawVelocity(p, -dip, 1, -tan(dip));
+
+        R = [vx_surf, ...
+             vz_surf, ...
+             vx_slab - cos(dip), ...
+             vz_slab + sin(dip)];
     end
+
 end
 
-%%%%%% Solve oceanic mantle coefficients using fsolve %%%%%%%%
-function coeff = solve_coefficients_ocean(dip)
+function coeff = solveOceanCoefficients(dip)
+% Solve for oceanic mantle coefficients [A, B, C, D] using fsolve
 
-opts = optimoptions('fsolve','Display','final-detailed');
+opts = optimoptions('fsolve', ...
+    'Display', 'off', ...
+    'MaxFunctionEvaluations', 1e4, ...
+    'FunctionTolerance', 1e-6);
 
-x0 = [1 1 1 0.1];
+x0 = [1, 1, 1, 0.1];  % Initial guess
 
-coeff = fsolve(@residual, x0, opts);
+coeff = fsolve(@residualOcean, x0, opts);
 
-    function R = residual(p)
-        A = p(1);
-        B = p(2);
-        C = p(3);
-        D = p(4);
+    function R = residualOcean(p)
+        % Residual function for boundary conditions
 
-        % Oceanic slab surface (phi = -pi, z = 0, x = -1)
-        [vx1, vz1] = calc_powerlaw_velocity(A,B,C,D,-pi,-1,0);
+        % Incoming plate (phi=-pi, x=-1, z=0): velocity = [1, 0]
+        [vx_plate, vz_plate] = calcPowerLawVelocity(p, -pi, -1, 0);
 
-        % Slab surface (phi = -dip, z = -tan(dip), x = 1)
-        [vx2, vz2] = calc_powerlaw_velocity(A,B,C,D,0,1,-tan(dip));
-        % velocity_from_streamfunction(1, zslab, p);
+        % Slab boundary (phi=0, x=1, z=-tan(dip))
+        [vx_slab, vz_slab] = calcPowerLawVelocity(p, 0, 1, -tan(dip));
 
-        R = [vx1 - 1, vz1, vx2 - cos(dip), vz2 + sin(dip)];
+        R = [vx_plate - 1, ...
+             vz_plate, ...
+             vx_slab - cos(dip), ...
+             vz_slab + sin(dip)];
     end
+
 end
 
-%%%%% Compute velocity-field for power-law fluid with known constants %%%%
-function [vx,vz] = calc_powerlaw_velocity(A,B,C,D,phi,x,z)
+function [vx, vz] = calcPowerLawVelocity(coeff, phi, x, z)
+% Calculate velocity field for power-law fluid (n=3)
+% Uses analytical form derived from stream function
 
-vx = ...
-    -A + ( ...
-    -27*z.*cos(sqrt(5)/3*(phi + D)) ...
-    +  z.*cos(sqrt(5)*(phi + D)) ...
-    -  sqrt(5)*x.*( ...
-    -9*sin(sqrt(5)/3*(phi + D)) ...
-    +  sin(sqrt(5)*(phi + D)) ...
-    ) ...
-    ).*C./sqrt(x.^2 + z.^2);
+A = coeff(1);
+B = coeff(2);
+C = coeff(3);
+D = coeff(4);
 
-vz = ...
-    B - ( ...
-    -27*x.*cos(sqrt(5)/3*(phi + D)) ...
-    +  x.*cos(sqrt(5)*(phi + D)) ...
-    +  sqrt(5)*z.*( ...
-    -9*sin(sqrt(5)/3*(phi + D)) ...
-    +  sin(sqrt(5)*(phi + D)) ...
-    ) ...
-    ).*C./sqrt(x.^2 + z.^2);
+% Compute radius
+r = sqrt(x.^2 + z.^2);
 
+% Angular terms
+s5 = sqrt(5);
+arg1 = s5/3 * (phi + D);
+arg2 = s5 * (phi + D);
+
+% Horizontal velocity component
+vx = -A + C ./ r .* (...
+    -27*z .* cos(arg1) + ...
+      z .* cos(arg2) - ...
+      s5*x .* (-9*sin(arg1) + sin(arg2)) ...
+    );
+
+% Vertical velocity component
+vz = B - C ./ r .* (...
+    -27*x .* cos(arg1) + ...
+      x .* cos(arg2) + ...
+      s5*z .* (-9*sin(arg1) + sin(arg2)) ...
+    );
 
 end

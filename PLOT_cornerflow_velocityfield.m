@@ -2,7 +2,7 @@ clear
 addpath functions/
 
 % specify subduction zone dip angle
-dip = 30*pi/180;
+dip = 25*pi/180;
 
 % mesh points to plot
 nx = 1000;
@@ -17,7 +17,7 @@ z = linspace(-4*tan(dip),-0.001,ny)';
 % Vx(:,2) - oceanic mantle solution
 % similarly for Vz
 
-n_powerlaw = 1;
+n_powerlaw = 3;
 % [Vx,Vz] = compute_cornerflow_velocityfield(dip,X(:),Z(:));
 % function that computes velocity field for n=1 or n=3 rheologies 
 [Vx,Vz] = computeCornerflowVelocityfield(dip,X(:),Z(:),n_powerlaw);
