@@ -14,51 +14,58 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 % Outputs:
 %   Y(:,j) = y(tvec(j))
 %   U(:,j) = ∫_0^{tvec(j)} y(τ) dτ
+% 
+% AUTHOR:
+% Rishav Mallick, EOS, 2025
 
-% compute Eigenvalues
-[Evectors,Evals] = eig(A);
-% remove eigen values that cause instabilities 
-Evals_corrected = diag(Evals);
-if any(real(Evals_corrected) >= 0) 
-    warning('Reconditioning ODE matrix due to positive eigen values')
-    Evals_corrected(real(Evals_corrected) >= 0) = -eps;
-    % reconstruct stress kernel
-    A = real(Evectors * diag(Evals_corrected) / Evectors);
+[V,D] = eig(A);
+lambda = diag(D);
+
+lam_scale = max(1,max(abs(lambda)));
+eps_lam = 1e-10 * lam_scale;
+
+stable   = real(lambda) < -eps_lam;
+nearzero = abs(real(lambda)) <= eps_lam;
+unstable = real(lambda) > eps_lam;
+
+if any(unstable)
+    warning('Discarding %d spurious unstable modes',sum(unstable))
 end
 
-n = size(A,1);
-tvec = tvec(:).';
+% Modal coordinates
+z0 = V \ y0;
+ct = V \ c;
+
+n = length(lambda);
 m = numel(tvec);
 
-Y = zeros(n, m);
-U = zeros(n, m);
+Z = zeros(n,m);
+UZ = zeros(n,m);
 
-% ---- Correct augmented matrix ----
-% M = [ A   0   c
-%       I   0   0
-%       0   0   0 ]
-M = zeros(2*n+1);
-M(1:n,1:n)     = A;
-M(1:n,2*n+1)   = c(:);
-M(n+1:2*n,1:n) = eye(n);
-
-% Initial augmented vector: [y0; u0; 1]
-aug0 = [y0(:); zeros(n,1); 1];
-
-parfor j = 1:m
+for j = 1:m
     t = tvec(j);
 
-    if t == 0
-        Y(:,j) = y0;
-        U(:,j) = 0;
-        continue
+    % ---- stable modes ----
+    ls = lambda(stable);
+    es = exp(ls*t);
+
+    Z(stable,j) = es .* z0(stable) ...
+        + ((es-1)./ls) .* ct(stable);
+
+    UZ(stable,j) = ((es-1)./ls) .* z0(stable) ...
+        + ((es-1)./ls.^2 - t./ls) .* ct(stable);
+
+    % ---- near-zero modes ----
+    if any(nearzero)
+        Z(nearzero,j)  = z0(nearzero) + t*ct(nearzero);
+        UZ(nearzero,j) = t*z0(nearzero) + 0.5*t^2*ct(nearzero);
     end
 
-    E = expm(M * t);
-    z = E * aug0;
-
-    Y(:,j) = z(1:n);
-    U(:,j) = z(n+1:2*n);
+    % ---- unstable modes: zero contribution ----
 end
+
+% Back to physical space
+Y = real(V * Z);
+U = real(V * UZ);
 
 end
