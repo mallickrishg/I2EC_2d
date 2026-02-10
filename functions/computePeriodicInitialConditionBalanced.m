@@ -1,4 +1,4 @@
-function y0 = computePeriodicInitialCondition_balanced(A, c, b, T)
+function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %COMPUTEPERIODICINITIALCONDITION_BALANCED Compute periodic initial condition with automatic balancing
 % 
 % y0 = COMPUTEPERIODICINITIALCONDITION_BALANCED(A, c, b, T) solves for
