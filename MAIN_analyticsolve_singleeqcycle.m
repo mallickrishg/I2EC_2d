@@ -53,27 +53,28 @@ Nobs = 401;
 obs = ([1;0]*(linspace(-100,500,Nobs)))'*1e3;
 % devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,1);
 load('kernels/devl.mat','devl');
-
+hinge = geometry.receiver('inputs/hinge2d.seg',earthModel);
+[Ghingex_d,Ghingez_d] = computeFaultDisplacementKernelsBem(hinge,obs,boundary,1);
 %% assign rheological properties 
 
 %%%%%%% approximate fault by a viscous shear zone %%%%%%%
 % (a-b)sigma in terms of viscosity
 % eta' = viscosity/L_fault
-rcv.Asigma = 1e-6.*(1e18/(sum(~rcv.pinnedPosition.*rcv.W))).*ones(rcv.N,1);
+rcv.Asigma = 1e-6.*(5e17/(sum(~rcv.pinnedPosition.*rcv.W))).*ones(rcv.N,1);
 
 % impose viscosity structure
 shz.n = 1.*ones(shz.N,1);
 %%%%%%% oceanic mantle viscosity structure %%%%%%%
 r = abs(tand(rcv.dip(1)).*shz.xc(:,1) + shz.xc(:,2) + 20e3)./sqrt(tand(rcv.dip(1))^2 + 1);
 r = r./max(r);% normalize to 0->1
-viscostructure = 10.^(18 + r.*0);
+viscostructure = 10.^(19 + r.*0);
 shz.alpha = 1./(viscostructure.*1e-6);
 
 oceanic_mantle = (shz.xc(:,1) < -shz.xc(:,2)/tand(rcv.dip(1)));
 % %%%%%%% continental mantle viscosity structure %%%%%%%
 r = sqrt((shz.xc(~oceanic_mantle,1)-200e3).^2);
 r = r./max(r);% normalize to 0->1
-viscostructure = 10.^(18 + (((r-0.5).*2).^2).*0);
+viscostructure = 10.^(18.5 + (((r-0.5).*2).^2).*0);
 shz.alpha(~oceanic_mantle) = 1./(viscostructure.*1e-6);
 
 % define locked zone on megathrust
@@ -133,7 +134,7 @@ edot_locking = -[evl_orig.KK(~locked,:)*fault_locking_velocity;...
 edot_lt = -rheoparam*[rcv.Vpl(~locked);shz.e22pl;shz.e23pl];
 
 % initial condition
-sol_initial = computePeriodicInitialCondition(rheoparam, edot_locking + edot_lt,...
+sol_initial = computePeriodicInitialConditionBalanced(rheoparam, edot_locking + edot_lt,...
                                          deltastrainrate, Trecur);
 % late-interseismic condition
 sol_interseismic = sol_initial - deltastrainrate;
