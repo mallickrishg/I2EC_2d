@@ -63,34 +63,7 @@ if cond_est < 1e15   % moderate threshold
     return
 end
 
-if false
-    % ---- Step 3: SVD-based robust fallback
-    [U,S,V] = svd(I_minus_Phi);
-    svals = diag(S);
-
-    tol = max(1e-12, eps * max(svals));
-    rnk = sum(svals > tol);
-
-    % ---- Step 4: Check compatibility: w' * rhs = 0 for all left-nullspace vectors w
-    if rnk < n
-        left_null = U(:, rnk+1:end);
-        compat = left_null' * rhs;   % must be ~0 for exact solution
-
-        if norm(compat) < 1e-8
-            % Compatible singular case: infinite solutions → return minimum-norm
-            y0 = V(:,1:rnk) * ( (diag(1./svals(1:rnk))) * (U(:,1:rnk)' * rhs) );
-            warning('I - Phi singular: returning minimum-norm periodic solution.');
-            return
-        else
-            % Incompatible singular case → least-squares solution
-            y0 = V * (diag(1./max(svals, tol)) * (U' * rhs));
-            warning('I - Phi singular & incompatible: returning least-squares periodic solution.');
-            return
-        end
-    end
-end
-
-% ---- Step 5: Full rank but ill-conditioned → use reconditioning & pseudo-inverse
+% ---- Full rank but ill-conditioned → use reconditioning & pseudo-inverse
 M = zeros(n+1, n+1);
 Arecon = reconditionODEoperator(A);
 M(1:n,1:n) = Arecon;
