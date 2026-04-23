@@ -1,5 +1,9 @@
 # I2EC: Integral Imposed Earthquake Cycles (2D)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MATLAB](https://img.shields.io/badge/MATLAB-R2023b+-blue.svg)](https://www.mathworks.com/products/matlab.html)
+[![DOI](https://img.shields.io/badge/DOI-10.1186%2Fs40623--026--02429--4-green)](https://doi.org/10.1186/s40623-026-02429-4)
+
 **Authors:** Rishav Mallick & Sharadha Sathiakumar (Earth Observatory of Singapore)
 
 **I2EC** is a MATLAB-based numerical modeling tool designed to simulate the spatiotemporal evolution of earthquake cycles in two-dimensional subduction zone geometries. It solves for mechanical equilibrium in the lithosphere-asthenosphere system to predict displacements, strains, and stresses. 
@@ -24,7 +28,7 @@ The code operates by splitting deformation into two components:
 
 The governing system of ODEs for the stress rate is:
 
-$$\dot{\\sigma}_i(\mathbf{x}) = \int_{\Gamma} K_i(\mathbf{x};\xi)(v - v^{\infty})d\xi + \iint_{\Omega} K_{ji}(\mathbf{x};\alpha)(\dot{\epsilon}_{\mathrm{v}_j} - \dot{\epsilon}_{\mathrm{v}_j}^{\infty})d\alpha$$
+$$\dot{\\sigma}_i(\mathbf{x}) = \int_{\Gamma} K_i(\mathbf{x};\xi)\cdot(v(\xi) - v^{\infty})d\xi + \iint_{\Omega} K_{ji}(\mathbf{x};\alpha)\cdot(\dot{\epsilon}_{\mathrm{v}_j}(\alpha) - \dot{\epsilon}_{\mathrm{v}_j}^{\infty}(\alpha))d\alpha$$
 
 where $K$ represents the elastostatic kernels mapping fault slip and viscous strain to stress.
 
