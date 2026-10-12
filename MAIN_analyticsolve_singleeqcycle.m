@@ -117,6 +117,10 @@ viscosityvector = [rcv.Asigma(~locked);1./shz.alpha;1./shz.alpha];
 % construct Operator matrix for dy/dt = [A].y 
 % where [A] = [K/η] - linear operator that contains all rheological parameters
 rheoparam = diag(1./viscosityvector)*stresskernel;
+% negate spurious growing modes (Re(lambda) > 0, from the discretisation)
+% before building the forcing, so that the long-term state stays the
+% steady state of the evolved system (see negateGrowingModes)
+[~, ~, rheoparam] = negateGrowingModes(rheoparam);
 
 % combine all stress change into a single vector that captures coseismic
 % strain rate change
@@ -142,7 +146,7 @@ sol_interseismic = sol_initial - deltastrainrate;
 %% provide time-steps to evaluate the solution
 tvec = [40,365,10*365,365*50].*86400;
 
-% use reconditioned matrix if singularity issues
+% evolve the postseismic transient (exact modal solution)
 [sol, sol_integrated] = analyticSolveIVP(rheoparam, edot_locking + edot_lt,...
     sol_initial, tvec);
 
