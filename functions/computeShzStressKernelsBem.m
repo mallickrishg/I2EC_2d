@@ -33,9 +33,7 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 %     every column.
 %   - For a shearZoneReceiver, the boundary contribution from
 %     geometry.computeFaultStressKernels is stacked in the same component
-%     order as the half-space part, (sxx, sxz, szz). Before 2026-11-19 the
-%     sxz and szz boundary rows were swapped; tests/unit/
-%     BoundaryCorrectionTest checks the order through Betti reciprocity.
+%     order as the half-space part, (sxx, sxz, szz).
 %
 % SEE ALSO
 %   computeAllStressKernelsBem, computeFaultTractionKernelsBem,

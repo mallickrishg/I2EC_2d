@@ -123,23 +123,39 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
             tc.verifyEqual(norm(jump), 1, 'AbsTol', 1e-3);
             tc.verifyEqual(abs(jump * rcv.dv(k,:)'), 1, 'AbsTol', 1e-3, 'jump is along the dip direction');
         end
-    end
 
-    methods (Test, TestTags = {'KnownIssue'})
         function faultDisplacementKernelOnPatchCentre(tc)
-            % An observation point exactly on a patch centre is nudged along
-            % rcv.nv(r==0,:), but r==0 is a mask over observation points,
-            % not patches.  With Nobs ~= N this takes another patch's normal,
-            % or errors when the point's row is beyond rcv.N; the nudge
-            % should use rcv.nv(k,:).  Here the coincident point is row 61.
+            % A point exactly on the centre of patch k must be nudged along
+            % rcv.nv(k,:), giving the value on the +nv side.  Until
+            % 2026-11-19 the normal was rcv.nv(r==0,:), indexed by the
+            % observation point: here the point is row 61 > rcv.N, which
+            % errored.
             rcv = tc.Ex.rcv;
-            obs = [linspace(-100e3, 400e3, 60)' zeros(60,1); rcv.xc(5,:)];
+            k = 5;
+            obs = [linspace(-100e3, 400e3, 60)' zeros(60,1); rcv.xc(k,:)];
             f = @() geometry.computeFaultDisplacementKernels(rcv, obs);
             tc.verifyWarningFree(f);
             [Gdx, Gdz] = geometry.computeFaultDisplacementKernels(rcv, obs);
             tc.verifyTrue(all(isfinite([Gdx(:); Gdz(:)])));
+            [Px, Pz] = geometry.computeFaultDisplacementKernels(rcv, rcv.xc(k,:) + 1e-6*rcv.W(k)*rcv.nv(k,:));
+            tc.verifyEqual([Gdx(end,:); Gdz(end,:)], [Px; Pz], 'AbsTol', 1e-5, '+nv side of patch k');
         end
 
+        function faultDisplacementKernelOnPatchCentreNegativeX(tc)
+            % The step used to be 1e-9*mean(ox(:,1)), which is negative
+            % when the observation points lie mostly at negative x, so the
+            % point landed on the -nv side and the self-displacement of
+            % patch k had the wrong sign.
+            rcv = tc.Ex.rcv;
+            k = 5;
+            obs = [-300e3 0; rcv.xc(k,:)];
+            [Gdx, Gdz] = geometry.computeFaultDisplacementKernels(rcv, obs);
+            [Px, Pz] = geometry.computeFaultDisplacementKernels(rcv, rcv.xc(k,:) + 1e-6*rcv.W(k)*rcv.nv(k,:));
+            tc.verifyEqual([Gdx(2,:); Gdz(2,:)], [Px; Pz], 'AbsTol', 1e-5, '+nv side of patch k');
+        end
+    end
+
+    methods (Test, TestTags = {'KnownIssue'})
         function uniformSegmentGivesUniformPatches(tc)
             % megathrust2d.seg asks for W0 = W/50 with growth factor 1.
             % flt2flt merges the last two patches when the remainder is

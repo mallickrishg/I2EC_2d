@@ -23,10 +23,10 @@ function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
 %   Gnx, Gnz  [Nobs x N] x and z displacement per unit opening (m/m)
 %
 % NOTES
-%   - An observation point that coincides with a patch centre is moved
-%     by 1e-9 * mean(ox(:,1)) along a patch normal. That normal is
-%     rcv.nv indexed by the observation point, so this only works when
-%     ox are the centres of rcv itself (e.g. boundary.xc for boundary).
+%   - The displacement jumps across a slipping patch, so it is undefined on
+%     the patch itself. An observation point that coincides with the
+%     centre of patch k is moved by 1e-9 * rcv.W(k) along that patch's
+%     normal rcv.nv(k,:), i.e. the value on the +nv side is returned.
 %
 % SEE ALSO
 %   geometry.LDdispHS, computeFaultDisplacementKernelsBem,
@@ -35,7 +35,6 @@ function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
 % AUTHORS
 %   Rishav Mallick, 2023
 
-delta = 1e-9.*mean(ox(:,1));
 xobs = ox(:,1);
 zobs = ox(:,2);
 
@@ -48,8 +47,11 @@ for k = 1:rcv.N
     xobs_mod = xobs;
     zobs_mod = zobs;
     r = sqrt((xobs-rcv.xc(k,1)).^2 + (zobs-rcv.xc(k,2)).^2);
-    xobs_mod(r==0) = xobs_mod(r==0) + rcv.nv(r==0,1)*delta;
-    zobs_mod(r==0) = zobs_mod(r==0) + rcv.nv(r==0,2)*delta;
+    % points on the centre of patch k: move them to the +nv side of patch k
+    oncentre = (r == 0);
+    delta = 1e-9*rcv.W(k);
+    xobs_mod(oncentre) = xobs(oncentre) + rcv.nv(k,1)*delta;
+    zobs_mod(oncentre) = zobs(oncentre) + rcv.nv(k,2)*delta;
     
     [Disp] = geometry.LDdispHS(xobs_mod,zobs_mod,rcv.xc(k,1),rcv.xc(k,2),rcv.W(k)/2,...
         -deg2rad(rcv.dip(k)),1,0,rcv.earthModel.nu);
