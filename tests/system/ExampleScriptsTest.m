@@ -29,12 +29,9 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
         function negateExactSolverVerificationPasses(tc)
             tc.verifyEmpty(ExampleScriptsTest.runScript(fullfile('tests', 'test_negate_exact_solver.m')));
         end
-    end
 
-    methods (Test, TestTags = {'KnownIssue'})
         function numericalSingleCycleScriptRuns(tc)
-            % rebuilds all kernels on the full mesh (minutes), then calls
-            % getStrainratesLongterm without the exponent n
+            % rebuilds all kernels on the full mesh (~2 min)
             tc.verifyEmpty(ExampleScriptsTest.runScript('MAIN_i2ec_singleeqcycle.m'));
         end
     end

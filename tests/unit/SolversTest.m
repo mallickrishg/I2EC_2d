@@ -145,6 +145,13 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifySize(Vx, size(V)); tc.verifySize(Vy, size(V));
         end
 
+        function interseismicSteadyStateRuns(tc)
+            ex = loadExampleModel(true);
+            ex.rcv.pinnedPosition = abs(ex.rcv.xc(:,2)) < 30e3;
+            f = @() computeInterseismicSteadystate(ex.rcv, ex.shz, ex.evl, 1e-9, 10);
+            tc.verifyWarningFree(f);
+        end
+
         function klModeDerivativesMatchNystromExtension(tc)
             % Vx(:,k) is the x-derivative of v_k(x) = (1/lam_k) sum_j k(x,x_j) v_k(x_j)
             mesh.xc = [linspace(0, 1, 25)' 0.5*cos(linspace(0, 2, 25))'];
@@ -176,14 +183,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
         function legacyPeriodicSolverIsQuiet(tc)
             out = evalc('computePeriodicInitialCondition(tc.A, tc.c, tc.b, tc.T);');
             tc.verifyEmpty(strtrim(out), 'prints the condition number on every call');
-        end
-
-        function interseismicSteadyStateRuns(tc)
-            % fails: calls getStrainratesLongterm without the exponent n
-            ex = loadExampleModel(true);
-            ex.rcv.pinnedPosition = abs(ex.rcv.xc(:,2)) < 30e3;
-            f = @() computeInterseismicSteadystate(ex.rcv, ex.shz, ex.evl, 1e-9, 10);
-            tc.verifyWarningFree(f);
         end
     end
 

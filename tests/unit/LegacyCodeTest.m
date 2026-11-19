@@ -52,19 +52,9 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
                 tc.verifyEqual(Ks, Kdn, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdn(:))), func2str(c{1}));
             end
         end
-    end
-
-    methods (Test, TestTags = {'KnownIssue'})
-        function stressFaultBemRuns(tc)
-            % calls computeFullTractionKernels, which exists nowhere
-            rcv = tc.Ex.rcv;
-            f = @() computeStressFault_bem([-1 0 1e3 14 1], tc.Ex.bnd, rcv.xc(:,1), rcv.xc(:,2), 0.25, 30e3);
-            tc.verifyWarningFree(f);
-        end
 
         function functionNamesMatchFileNames(tc)
             % a mismatch means the function is only reachable by file name
-            % (getStrainratesLongterm_old.m declares getStrainratesLongterm)
             bad = {};
             for f = LegacyCodeTest.functionFiles()'
                 declared = LegacyCodeTest.declaredName(f{1});
@@ -74,6 +64,15 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
                 end
             end
             tc.verifyEmpty(bad, strjoin(bad, newline));
+        end
+    end
+
+    methods (Test, TestTags = {'KnownIssue'})
+        function stressFaultBemRuns(tc)
+            % calls computeFullTractionKernels, which exists nowhere
+            rcv = tc.Ex.rcv;
+            f = @() computeStressFault_bem([-1 0 1e3 14 1], tc.Ex.bnd, rcv.xc(:,1), rcv.xc(:,2), 0.25, 30e3);
+            tc.verifyWarningFree(f);
         end
 
         function noDuplicateFileNames(tc)

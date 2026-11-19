@@ -119,33 +119,4 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GreensFunctionsTest < matlab.u
             tc.verifyEqual(w12, w21, 'RelTol', 1e-3);
         end
     end
-
-    methods (Test, TestTags = {'KnownIssue'})
-        function triangleStressAnalyticMatchesFiniteDifference(tc)
-            % computeStressPlaneStrainTriangleShearZone.m (2,238 lines, not
-            % called anywhere) should agree with the finite-difference
-            % version that the kernels use.  Evaluated point by point
-            % because the analytic routine rejects vector input (next test).
-            I = eye(3);
-            maxRel = 0;
-            for k = 1:3
-                for p = 1:numel(tc.ObsX2)
-                    [a1, a2, a3] = computeStressPlaneStrainTriangleShearZone(tc.ObsX2(p), tc.ObsX3(p), ...
-                        tc.TriA, tc.TriB, tc.TriC, I(k,1), I(k,2), I(k,3), tc.G, tc.nu);
-                    [f1, f2, f3] = computeStressPlaneStrainTriangleShearZoneFiniteDifference(tc.ObsX2(p), tc.ObsX3(p), ...
-                        tc.TriA, tc.TriB, tc.TriC, I(k,1), I(k,2), I(k,3), tc.G, tc.nu);
-                    maxRel = max(maxRel, norm([a1 a2 a3] - [f1 f2 f3]) / norm([f1 f2 f3]));
-                end
-            end
-            tc.verifyLessThan(maxRel, 1e-3, ...
-                'analytic and finite-difference triangle stresses disagree (see u2d2 overwrite at line 84)');
-        end
-
-        function triangleStressAnalyticAcceptsVectorInput(tc)
-            I = eye(3);
-            f = @() computeStressPlaneStrainTriangleShearZone(tc.ObsX2(:), tc.ObsX3(:), ...
-                tc.TriA, tc.TriB, tc.TriC, I(1,1), I(1,2), I(1,3), tc.G, tc.nu);
-            tc.verifyWarningFree(f, 'Omega(x2,x3)*e22 uses matrix product, fails for vectors');
-        end
-    end
 end

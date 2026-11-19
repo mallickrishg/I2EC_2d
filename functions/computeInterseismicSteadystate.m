@@ -55,7 +55,7 @@ function [sol_f,sol_22,sol_23] = computeInterseismicSteadystate(rcv,shz,evl_orig
 rcv.Vpl = Vpl.*ones(rcv.N,1);
 
 % Long-term strain rate calculation
-[e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
+[e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3],1);
 shz.e22pl = e22_dev.*Vpl;% 1/s
 shz.e23pl = -e23.*Vpl;% 1/s
 %% compute stress interaction kernels

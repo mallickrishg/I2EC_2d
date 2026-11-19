@@ -56,13 +56,10 @@ function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference
 %     triangle; I2EC evaluates the stress at cell centroids.
 %   - Where the closed-form displacement is not finite, it is recomputed
 %     by tanh-sinh quadrature (see computeDisplacementPlaneStrainTriangleShearZone).
-%   - Used instead of the closed-form stress of
-%     computeStressPlaneStrainTriangleShearZone.
 %   - x3 must be non-negative (assertion).
 %
 % SEE ALSO
-%   computeDisplacementPlaneStrainTriangleShearZone,
-%   computeStressPlaneStrainTriangleShearZone, computeShzStressKernelsBem
+%   computeDisplacementPlaneStrainTriangleShearZone, computeShzStressKernelsBem
 %
 % REFERENCES
 %   Barbot, S. (2018). Deformation of a half-space from anelastic strain

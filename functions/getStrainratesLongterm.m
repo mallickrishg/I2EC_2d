@@ -23,7 +23,8 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %                                 coordinates of oceanic-mantle cells
 %   continental_translate_params  [1 x 2] shift [dx, dz] (m) added to the
 %                                 coordinates of mantle-wedge cells
-%   n                             power-law exponent: 1 (Newtonian) or 3
+%   n                             power-law exponent: 1 (Newtonian) or 3.
+%                                 Optional, default 1
 %
 % OUTPUTS
 %   e22_dev                       [M x 1] deviatoric normal strain rate,
@@ -61,6 +62,10 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2025
+
+if nargin < 5
+    n = 1;
+end
 
 % rescale parameters: move the shz the x and z coordinates because corner flow solutions are at (0,0)
 % Note: Don't move to 0 because solutions are not well defined at 0,0. These
