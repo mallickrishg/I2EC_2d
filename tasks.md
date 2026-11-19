@@ -36,7 +36,7 @@ Each item names the failing test (`Class/test`).
 - [x] ~~**`computeStressPlaneStrainTriangleShearZone.m` (analytic, 2,238 lines) gives wrong stresses.** It disagrees with the finite-difference version everywhere, including the traction-free surface. Line 84 overwrites the summed `u2d2` with a single term, which looks like leftover debugging. The eigenstrain is then removed using `e22`/`e23`/`e33` after they have been overwritten with the total strain. And `Omega(x2,x3)*e22` is a matrix product, so vector input errors. → Delete it. The finite-difference version is correct: it passes the surface-traction and reciprocity tests. Tests: `GreensFunctionsTest/triangleStressAnalytic*`. *Deleted, with its two tests and its docs entry. Nothing ever called it.*~~
 - [x] ~~`computeStressFault_bem.m` errors with "Undefined function `computeFullTractionKernels`". *Deleted, with its docs entry and its test.* Test: `LegacyCodeTest/stressFaultBemRuns`.~~
 - [x] ~~`getStrainratesLongterm_old.m` declares `getStrainratesLongterm`. *Deleted.* Test: `LegacyCodeTest/functionNamesMatchFileNames`.~~
-- [ ] Four file names exist in both `functions/` and `+geometry/`. Test: `LegacyCodeTest/noDuplicateFileNames`.
+- [x] ~~Four file names exist in both `functions/` and `+geometry/`. *Fixed: the `functions/` copies are deleted.* Test: `LegacyCodeTest/noDuplicateFileNames`.~~
 - [ ] `reconditionODEoperator.m`: the help text says growing eigenvalues are replaced by `-eps`, but the code uses `-0.1` s⁻¹, a 10-second relaxation. `computePeriodicInitialCondition.m` prints the condition number on every call. Tests: `SolversTest/reconditionReplacesGrowingModesByMinusEps`, `SolversTest/legacyPeriodicSolverIsQuiet`.
 - [ ] `pcolor_logvals.m` draws nothing. Test: `UtilitiesTest/pcolorLogValsDrawsSomething`.
 - [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder. Test: `UtilitiesTest/createMegathrustLeavesWorkingFolderClean`.
@@ -68,13 +68,14 @@ Several files exist in both places. Package code calls the `geometry.` versions,
 
 | File | `+geometry/` copy | `functions/` copy | Action |
 |---|---|---|---|
-| `LDdispHS.m` | used (`geometry.LDdispHS`) | identical, **unused** | delete `functions/` copy |
-| `EdgeStress.m` | only used by the unused `geometry.computetractionkernels` | identical, **unused** (its only caller, `computeStressFault_bem`, is deleted) | delete both once the items below are gone |
-| `computedisplacementGFs.m` | **unused** | **unused** (only calls `LDdispHS`) | delete both (replaced by `computeFaultDisplacementKernels`) |
-| `computetractionkernels.m` | **unused** | **unused** (better header, same code) | delete both (replaced by `computeFaultTractionKernels`) |
+| `LDdispHS.m` | used (`geometry.LDdispHS`) | ~~identical, unused~~ **deleted** | done |
+| `EdgeStress.m` | only used by the unused `geometry.computetractionkernels` | ~~identical, unused~~ **deleted** | delete the `+geometry/` copy together with `geometry.computetractionkernels` |
+| `computedisplacementGFs.m` | **unused** | ~~unused~~ **deleted** | delete the `+geometry/` copy (replaced by `computeFaultDisplacementKernels`) |
+| `computetractionkernels.m` | **unused** | ~~unused~~ **deleted** | delete the `+geometry/` copy (replaced by `computeFaultTractionKernels`) |
 
-- [ ] Delete the duplicates listed above.
-- [ ] Remove the matching docs entries (`LDdispHS`, `EdgeStress`, `computedisplacementGFs`, `computetractionkernels`).
+- [x] ~~Delete the `functions/` copies of the four files above.~~
+- [ ] Delete the unused `+geometry/` versions: `computedisplacementGFs`, `computetractionkernels` and `EdgeStress` (only `computetractionkernels` uses it). `LegacyCodeTest` shows they match the current kernels, so no numbers change. Delete their equivalence tests in `LegacyCodeTest` along with them. Their docs entries go with the files, because `docs/api/geometry.rst` documents the package automatically.
+- [x] ~~Remove the docs mentions of the `functions/` copies (the note in `docs/api/kernels.rst`; they had no API entries of their own).~~
 - [ ] Decide on one rule for what goes where. For example: low-level Green's functions and geometry classes go in `+geometry/`, and the `*Bem` assembly, solvers and plotting go in `functions/`. Write the rule down in the README or docs.
 
 ## 3. Unused functions in `functions/`

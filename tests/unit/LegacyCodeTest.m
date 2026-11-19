@@ -1,8 +1,8 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unittest.TestCase
-    %LEGACYCODETEST  Duplicated, unused and broken files (see tasks.md §1-§3).
+    %LEGACYCODETEST  Unused and legacy files (see tasks.md §1-§3).
     %
-    % Equivalence tests show whether an old copy can be deleted without
-    % changing results.  Static checks scan every function file in
+    % Equivalence tests show whether an old kernel routine can be deleted
+    % without changing results.  Static checks scan every function file in
     % functions/, +geometry/ and meshing/.
 
     properties
@@ -16,41 +16,24 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
     end
 
     methods (Test)
-        %% ---------------- duplicates: same results as the kept version ----------------
-        function functionsLDdispHSEqualsPackageCopy(tc)
-            x = linspace(-30, 30, 7)'; y = -linspace(1, 40, 7)';
-            u1 = LDdispHS(x, y, 3, -10, 2, -0.4, 1, 0.2, 0.25);
-            u2 = geometry.LDdispHS(x, y, 3, -10, 2, -0.4, 1, 0.2, 0.25);
-            tc.verifyEqual(u1, u2);
-        end
-
-        function functionsEdgeStressEqualsPackageCopy(tc)
-            m = [5 2 10 30 1]; x = linspace(-30, 30, 7)'; z = -linspace(1, 40, 7)';
-            [a1, b1, c1] = EdgeStress(m, x, z, 0.25, 30e3);
-            [a2, b2, c2] = geometry.EdgeStress(m, x, z, 0.25, 30e3);
-            tc.verifyEqual([a1 b1 c1], [a2 b2 c2]);
-        end
-
+        %% ---------------- old kernel routines: same results as the current ones ----------------
         function oldDisplacementGFsEqualCurrentKernels(tc)
             rcv = tc.Ex.rcv;
             obs = [linspace(-100e3, 400e3, 9)' zeros(9,1)];
             [Gdx, Gdz] = geometry.computeFaultDisplacementKernels(rcv, obs);
-            for Gd = {computedisplacementGFs(rcv, obs), geometry.computedisplacementGFs(rcv, obs)}
-                tc.verifyEqual(Gd{1}(1:2:end,:), Gdx, 'AbsTol', 1e-14);
-                tc.verifyEqual(Gd{1}(2:2:end,:), Gdz, 'AbsTol', 1e-14);
-            end
+            Gd = geometry.computedisplacementGFs(rcv, obs);
+            tc.verifyEqual(Gd(1:2:end,:), Gdx, 'AbsTol', 1e-14);
+            tc.verifyEqual(Gd(2:2:end,:), Gdz, 'AbsTol', 1e-14);
         end
 
         function oldEdgeDislocationTractionKernelsEqualCurrentKernels(tc)
-            % computetractionkernels (edge dislocations, 2020) vs
+            % geometry.computetractionkernels (edge dislocations, 2020) vs
             % geometry.computeFaultTractionKernels (line dislocations, 2023)
             rcv = tc.Ex.rcv;
             [Kdd, Kdn] = geometry.computeFaultTractionKernels(rcv, rcv);
-            for c = {@computetractionkernels, @geometry.computetractionkernels}
-                [Kt, Ks] = c{1}(rcv, rcv);
-                tc.verifyEqual(Kt, Kdd, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdd(:))), func2str(c{1}));
-                tc.verifyEqual(Ks, Kdn, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdn(:))), func2str(c{1}));
-            end
+            [Kt, Ks] = geometry.computetractionkernels(rcv, rcv);
+            tc.verifyEqual(Kt, Kdd, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdd(:))));
+            tc.verifyEqual(Ks, Kdn, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdn(:))));
         end
 
         function functionNamesMatchFileNames(tc)
@@ -65,9 +48,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
             end
             tc.verifyEmpty(bad, strjoin(bad, newline));
         end
-    end
 
-    methods (Test, TestTags = {'KnownIssue'})
         function noDuplicateFileNames(tc)
             % the same function name in two folders (functions/ and +geometry/)
             files = LegacyCodeTest.functionFiles();

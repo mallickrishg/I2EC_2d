@@ -1,7 +1,7 @@
 Kernels
 =======
 
-Boundary-element stress, traction and displacement kernels. The half-space kernels shared with the geometry package (``EdgeStress``, ``LDdispHS``, ``computetractionkernels``, ``computedisplacementGFs``) are documented under :doc:`geometry`.
+Boundary-element stress, traction and displacement kernels. The half-space kernels they are built from are documented under :doc:`geometry`.
 
 .. mat:module:: functions
 
