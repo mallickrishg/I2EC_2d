@@ -142,11 +142,13 @@ system damped again. They are regularisations, not physics.
   {mat:func}`computeFaultTractionKernelsBem`): prescribed displacement where
   `boundary.Vpl == 0` (Dirichlet) and zero traction where `boundary.Vpl == 1`
   (Neumann). There is no topography.
-- **Boundary values must be zero.** The stress and traction kernel solves use
-  `boundary.Vx`, `boundary.Vz` as the Dirichlet values, while the displacement
-  kernel solves use zero. Kernels are responses to a unit source, so these
-  values should be zero (as in the example, `bcx = bcz = 0`); a non-zero
-  value would add the same constant to every column of the stress kernels.
+- **Homogeneous boundary problem.** All the BEM kernels (stress, traction and
+  displacement) solve the homogeneous problem: zero displacement on Dirichlet
+  patches and zero traction on Neumann patches. The prescribed boundary motion
+  in the `.seg` file (`bcx`, `bcz`, read into `boundary.Vx`, `boundary.Vz`) is
+  not used. It would add a particular solution, superposed once on the cycle
+  response; the code does not compute it, and the background rate comes from
+  the long-term solution instead.
 - **Mantle stress by finite differences.** The stress kernels of a triangle are
   not evaluated from closed-form stresses: they are computed from the analytic
   *displacement* by finite differences with a step of $10^{-6}$ times the

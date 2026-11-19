@@ -139,21 +139,29 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             tc.verifyEqual(sum(real(lam) > 0), 0, ...
                 sprintf('%d eigenvalues with Re > 0, max Re = %.3g', sum(real(lam) > 0), max(real(lam))));
         end
+    end
 
+    methods (Test)
         function stressKernelsIgnoreBoundaryVelocity(tc)
-            % Kernels are per unit source and must be linear in it.
-            % computeFaultTractionKernelsBem and computeShzStressKernelsBem
-            % put boundary.Vx / Vz into the Dirichlet data of every column,
-            % so a boundary with non-zero prescribed velocity (bcx/bcz in
-            % the .seg file, e.g. boundarytight2d.seg) adds a constant to
-            % each column.  The displacement-kernel routines use 0*Vx.
+            % The BEM kernels solve the homogeneous problem: the prescribed
+            % boundary motion (bcx/bcz in the .seg file -> boundary.Vx, Vz)
+            % is not used, so every column is linear in its unit source.
+            % (It used to enter the Dirichlet data of every column.)
             % own copy of the model: receiver objects are handles
             m = makeSmallModel(tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder);
-            [K0, ~] = computeFaultTractionKernelsBem(m.rcv, m.rcv, m.bnd);
+            [K0, S0] = computeFaultTractionKernelsBem(m.rcv, m.rcv, m.bnd);
+            L0 = computeShzStressKernelsBem(m.shz, m.shz, m.bnd);
+            T0 = computeShzStressKernelsBem(m.shz, m.rcv, m.bnd);
             % non-uniform (a uniform value is a rigid translation: no stress)
             m.bnd.Vx = linspace(0, 1, m.bnd.N)';
-            [K1, ~] = computeFaultTractionKernelsBem(m.rcv, m.rcv, m.bnd);
-            tc.verifyEqual(K1, K0, 'RelTol', 1e-12);
+            m.bnd.Vz = linspace(1, -1, m.bnd.N)'.^2;
+            [K1, S1] = computeFaultTractionKernelsBem(m.rcv, m.rcv, m.bnd);
+            L1 = computeShzStressKernelsBem(m.shz, m.shz, m.bnd);
+            T1 = computeShzStressKernelsBem(m.shz, m.rcv, m.bnd);
+            tc.verifyEqual(K1, K0, 'fault-fault shear traction');
+            tc.verifyEqual(S1, S0, 'fault-fault normal traction');
+            tc.verifyEqual(L1, L0, 'mantle-mantle stress');
+            tc.verifyEqual(T1, T0, 'mantle-fault traction');
         end
     end
 

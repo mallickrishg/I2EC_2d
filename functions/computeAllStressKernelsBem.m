@@ -18,7 +18,8 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 %   rcv       geometry.receiver object: megathrust patches (N patches)
 %   shz       geometry.shearZoneReceiver object: mantle cells (M cells)
 %   boundary  geometry.receiver object: model boundary patches
-%             .Vpl  0: prescribed displacement .Vx, .Vz; 1: zero traction
+%             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
+%             are ignored: the kernels solve the homogeneous problem)
 %
 % OPTIONS
 %   kernelmodify  1: set the eigenvalues of the deviatoric LL kernel with

@@ -14,7 +14,8 @@ function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
 %   rcv       receivers (Nr): a geometry.receiver object for tractions;
 %             any object with centres .xc [Nr x 2] (m) for stresses
 %   boundary  geometry.receiver object: model boundary patches
-%             .Vpl  0: prescribed displacement .Vx, .Vz; 1: zero traction
+%             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
+%             are ignored, see NOTES)
 %
 % OUTPUTS
 %   Ktau            [Nr x Ns] shear traction in the receiver dip direction
@@ -25,12 +26,14 @@ function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
 %
 % NOTES
 %   - Boundary correction: for each source, slip on the boundary patches
-%     is solved so that the total displacement (source plus boundary)
-%     equals .Vx, .Vz where boundary.Vpl == 0 (Dirichlet) and the total
-%     traction is zero where boundary.Vpl == 1 (Neumann).
-%   - The prescribed .Vx, .Vz enter every column, so the kernels are linear
-%     in slip only if they are zero on Dirichlet patches (as in
-%     inputs/boundary2d.seg).
+%     is solved so that the total displacement (source plus boundary) is
+%     zero where boundary.Vpl == 0 (Dirichlet) and the total traction is
+%     zero where boundary.Vpl == 1 (Neumann).
+%   - The kernels solve the homogeneous problem only. The prescribed
+%     boundary motion (.Vx, .Vz, from bcx, bcz in the .seg file) is
+%     ignored; it would be a separate particular solution added once, not
+%     part of each column. The background rate comes from the long-term
+%     solution instead.
 %   - Stress components are returned in the order (xx, zz, xz), unlike
 %     computeShzStressKernelsBem, which uses (xx, xz, zz).
 %   - Errors unless called with 2 or 3 outputs.
@@ -97,9 +100,8 @@ for i = 1:src.N
     idirichlet = boundary.Vpl == 0;
     ineumann = boundary.Vpl == 1;
 
-    % displacement BC
-    BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                  [ux_source(idirichlet);uz_source(idirichlet)];
+    % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     

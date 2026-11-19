@@ -11,7 +11,9 @@ classdef receiver < geometry.fpatch
 %
 %   For the model boundary, Vpl is read as the boundary-condition type of
 %   each patch (0: displacement, Dirichlet; 1: traction-free, Neumann) and
-%   Vx, Vz as the prescribed displacements; see computeShzStressKernelsBem.
+%   Vx, Vz as the prescribed displacements. The BEM kernels solve the
+%   homogeneous problem and do not use Vx, Vz yet; see
+%   computeFaultTractionKernelsBem.
 %
 % PROPERTIES
 %   Vo, a, b, l     [N x 1] rate-and-state friction parameters: reference

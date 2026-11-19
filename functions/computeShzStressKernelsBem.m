@@ -14,7 +14,8 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 %   shz       receivers (Nr): geometry.shearZoneReceiver object (stress) or
 %             geometry.receiver object (traction)
 %   boundary  geometry.receiver object: model boundary patches
-%             .Vpl  0: prescribed displacement .Vx, .Vz; 1: zero traction
+%             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
+%             are ignored, see NOTES)
 %
 % OUTPUTS
 %   LL_bem    [Nr x Ns x 3 x 3] kernels (MPa per unit strain); 4th index =
@@ -29,8 +30,9 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 %     i.e. finite differences of the analytic displacement of Barbot
 %     (2018); see computeStressPlaneStrainTriangleShearZoneFiniteDifference.
 %   - Boundary correction as in computeFaultTractionKernelsBem, with one
-%     solve per source and strain component; the prescribed .Vx, .Vz enter
-%     every column.
+%     solve per source and strain component. Homogeneous problem only:
+%     the prescribed .Vx, .Vz are ignored (see
+%     computeFaultTractionKernelsBem).
 %   - For a shearZoneReceiver, the boundary contribution from
 %     geometry.computeFaultStressKernels is stacked in the same component
 %     order as the half-space part, (sxx, sxz, szz).
@@ -95,9 +97,8 @@ for component = 1:3
         idirichlet = boundary.Vpl == 0;
         ineumann = boundary.Vpl == 1;
 
-        % displacement BC
-        BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                      [ux_source(idirichlet);uz_source(idirichlet)];
+        % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+        BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
         % traction BC
         BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
 
