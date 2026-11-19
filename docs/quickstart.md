@@ -107,11 +107,16 @@ for power-law rheology, where the semi-analytical solver does not apply.
 From the repository root:
 
 ```matlab
-addpath('tests'); test_negate_exact_solver
+addpath tests
+runTests            % fast tests, under a minute
+runTests('all')     % also rebuilds the example kernels and runs the driver scripts
 ```
 
-The tests compare the semi-analytical solver with the matrix exponential and
-check periodicity, continuity and the steady state on the example mesh.
+The suite checks the Green's functions, kernels, corner flow and solvers
+against physical identities (free surface, dislocation jump, reciprocity,
+Stokes equilibrium, the matrix exponential). Tests tagged `KnownIssue`
+document bugs listed in `tasks.md` and are expected to fail until they are
+fixed. See `tests/README.md` for how to read the results.
 
 ## Repository layout
 
@@ -120,10 +125,9 @@ check periodicity, continuity and the steady state on the example mesh.
 | `MAIN_i2ec_singleeqcycle.m` | Driver: imposed earthquake cycles by numerical integration (`ode45`). |
 | `MAIN_analyticsolve_singleeqcycle.m` | Driver: linear viscoelastic cycles with the semi-analytical solver. |
 | `PLOT_longtermVelocity.m` | Plots the long-term (corner-flow) velocity field. |
-| `I2EC_linearVEcycles.ipynb` | Notebook version of the linear viscoelastic workflow. |
 | `functions/` | Solvers, kernel assembly, long-term loading and plotting helpers. |
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
 | `meshing/` | Scripts to build triangular shear-zone meshes (based on *mesh2d*). |
 | `inputs/` | Example fault, boundary and shear-zone geometry files. |
 | `kernels/` | Pre-computed stress (`evl_orig.mat`) and displacement (`devl.mat`) kernels. |
-| `tests/` | Verification tests for the semi-analytical solver. |
+| `tests/` | Test suite (`matlab.unittest`); see `tests/README.md`. |

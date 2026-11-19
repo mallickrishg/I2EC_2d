@@ -187,7 +187,7 @@ regenerated.
 The discretised `LL` kernel, and therefore $A$, has a few eigenvalues with
 $\mathrm{Re}(\lambda) > 0$. They are associated with spatial scales comparable
 to the cell size and depend on the mesh. Left alone, each would grow as
-$e^{\lambda t}$ and the periodic condition above would be meaningless. Four
+$e^{\lambda t}$ and the periodic condition above would be meaningless. Three
 different treatments exist in the code:
 
 - **Zero them in the kernel** — {mat:func}`computeAllStressKernelsBem`, option
@@ -209,9 +209,6 @@ different treatments exist in the code:
   $-0.1\ \mathrm{s^{-1}}$ (dropping their imaginary parts), so they decay
   within seconds; no balancing. *Used by* the legacy
   {mat:func}`computePeriodicInitialCondition` only.
-- **Drop them** — `I2EC_linearVEcycles.ipynb`. Sets eigenvalues with
-  $\mathrm{Re}(\lambda) \ge 0$ to $-\infty$. *Used by* the notebook only,
-  which predates `negateGrowingModes`.
 
 Consequences to keep in mind:
 
@@ -222,9 +219,9 @@ Consequences to keep in mind:
 - **The solvers are not interchangeable at the cell scale.** Zeroing an
   eigenvalue of `LL` leaves a neutral mode (it neither grows nor decays);
   negating it in $A$ makes it decay at the same rate it would have grown;
-  dropping it removes it. The notebook, the two driver scripts and the legacy
-  periodic solver can therefore give slightly different answers on the same
-  mesh.
+  replacing it makes it vanish within seconds. The two driver scripts and the
+  legacy periodic solver can therefore give slightly different answers on the
+  same mesh.
 - **The set of modified modes depends on the viscosities.** `negateGrowingModes`
   works on $A = \operatorname{diag}(1/\eta) K$, whose eigenvalues change with
   $\eta$. Outputs vary continuously with viscosity, except where a

@@ -1,6 +1,6 @@
 # Maintenance tasks
 
-Code-maintenance backlog for I2EC_2d. Findings come from a static reference scan of every tracked `.m` file, the notebook (`I2EC_linearVEcycles.ipynb`) and the Sphinx API pages (`docs/api/*.rst`), done on 2026-11-19.
+Code-maintenance backlog for I2EC_2d. Findings come from a static reference scan of every tracked `.m` file, the notebook (`I2EC_linearVEcycles.ipynb`, since deleted) and the Sphinx API pages (`docs/api/*.rst`), done on 2026-11-19.
 
 "Unused" below means **nothing in the repo calls it** (comments excluded). Before deleting anything, check that no external experiment scripts or collaborators rely on it.
 
@@ -60,7 +60,7 @@ Each item names the failing test (`Class/test`).
 - [ ] **`functions/pcolor_logvals.m` is unfinished.** It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.
 - [ ] **Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `PLOT_longtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.
 - [ ] **`computeLongTermVelocity.m` and `getStrainratesLongterm.m` repeat the same translate/rescale block** (`ocean_translate_params`, `continental_translate_params`, the `- 1` shift). → Pull it into one helper so the two can't drift apart.
-- [ ] **`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Note that only the notebook calls this function.
+- [ ] **`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Moot if the function is deleted (§3): since the notebook was removed, nothing in the tracked code calls it.
 
 ## 2. Duplicate code: `+geometry/` vs `functions/`
 
@@ -85,6 +85,7 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 - [ ] `computePeriodicInitialCondition.m` (with `reconditionODEoperator.m`, which only it uses): replaced by `computePeriodicInitialConditionBalanced.m` and `negateGrowingModes.m`. → Delete both, or keep one as a documented fallback.
 - [ ] `computeSiteVelocitiesBem.m`: nothing calls it, and it carries a block of commented-out `devl`-based code.
 - [x] `computeStressPlaneStrainTriangleShearZone.m` (**2,238 lines**, Barbot 2018 analytic stress): the code actually uses `computeStressPlaneStrainTriangleShearZoneFiniteDifference.m` instead. The tests show it gives **wrong stresses** (§0), so it cannot serve as a reference. → Delete it. This is the largest single file in the repo. *Deleted.*
+- [ ] `computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.
 - [ ] `filenameGenerator.m`: no callers. Its long `if/elseif` chain could be one line, `sprintf('%06d', num)`.
 - [ ] `pcolor_logvals.m`: see §1.
 
@@ -101,7 +102,7 @@ The repo mixes several naming styles:
 Tasks:
 
 - [ ] Pick a convention and write it in the README or docs. Suggestion: lowerCamelCase for functions, UpperCamelCase for classes (`Receiver`, `ShearZoneReceiver`, `EarthModel`), and `run*` / `plot*` or a `scripts/` or `examples/` folder for entry-point scripts.
-- [ ] Rename the snake_case project functions after the dead code is gone, so you don't rename files that are about to be deleted. Do it in one commit per group, and update every caller, the notebook and `docs/api/*.rst`. Candidates:
+- [ ] Rename the snake_case project functions after the dead code is gone, so you don't rename files that are about to be deleted. Do it in one commit per group, and update every caller and `docs/api/*.rst`. Candidates:
   - `extract_v_edot_from_statevector` → `extractVEdotFromStateVector`
   - `viscoeq_sequence_simulation` → `simulateViscoEqSequence`
   - `ode_viscoelastic` → `odeViscoelastic`
@@ -113,7 +114,7 @@ Tasks:
 
 ## 5. `meshing/` folder
 
-This is mostly a vendored copy of Darren Engwirda's `mesh2d`. The repo only uses `mesh2d` and its internal helpers, through `CREATE_shearzone_mesh.m` (called from the notebook).
+This is mostly a vendored copy of Darren Engwirda's `mesh2d`. The repo only uses `mesh2d` and its internal helpers, through `CREATE_shearzone_mesh.m`, a stand-alone script run by hand (documented in `docs/inputs.md`).
 
 - [ ] Unused files: `CREATE_geometryFromEdgesMesh.m`, `TEST_dummymesh.m`, `ell_test.m`, `mesh2d_to_xml.m`, `centroid_mesh.m`, `connectivity.m`. → Delete them, or move them to `meshing/examples/`.
 - [ ] Add the `mesh2d` license and attribution. The README currently says meshing uses the MATLAB PDE Toolbox, so check which one is actually needed and correct the README.
@@ -121,12 +122,12 @@ This is mostly a vendored copy of Darren Engwirda's `mesh2d`. The repo only uses
 
 ## 6. Cached kernels and data
 
-- [ ] `kernels/evl_orig.mat` (~9 MB) and `kernels/devl.mat` (~6.7 MB) were committed in Jan 2024. They're loaded by `MAIN_analyticsolve_singleeqcycle.m`, the notebook and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
-- [ ] `MAIN_analyticsolve_singleeqcycle.m` keeps the `computeAll*KernelsBem` calls as comments and loads the `.mat` files instead. → Replace this with an explicit `if exist(...) load else compute` switch, the way the notebook does it.
+- [ ] `kernels/evl_orig.mat` (~9 MB) and `kernels/devl.mat` (~6.7 MB) were committed in Jan 2024. They're loaded by `MAIN_analyticsolve_singleeqcycle.m` and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
+- [ ] `MAIN_analyticsolve_singleeqcycle.m` keeps the `computeAll*KernelsBem` calls as comments and loads the `.mat` files instead. → Replace this with an explicit `if exist(...) load else compute` switch.
 
 ## 7. Path handling and project setup
 
-- [ ] Every script runs its own `addpath functions/` and depends on the current folder (`load('kernels/...')`). → Add one `setup.m` or `startup.m` that adds `functions/` and the repo root (for `+geometry`) with `fullfile(fileparts(mfilename('fullpath')), ...)`, and call it from the scripts, the test and the notebook.
+- [ ] Every script runs its own `addpath functions/` and depends on the current folder (`load('kernels/...')`). → Add one `setup.m` or `startup.m` that adds `functions/` and the repo root (for `+geometry`) with `fullfile(fileparts(mfilename('fullpath')), ...)`, and call it from the scripts and the tests.
 - [ ] `PLOT_longtermVelocity.m` adds `inputs/` to the path. Data folders shouldn't be on the MATLAB path; load files by full path instead.
 
 ## 8. Tests and CI
