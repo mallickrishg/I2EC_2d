@@ -1,41 +1,9 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unittest.TestCase
-    %LEGACYCODETEST  Unused and legacy files (see tasks.md §1-§3).
+    %LEGACYCODETEST  Static checks on the code base (see tasks.md §1-§3).
     %
-    % Equivalence tests show whether an old kernel routine can be deleted
-    % without changing results.  Static checks scan every function file in
-    % functions/, +geometry/ and meshing/.
-
-    properties
-        Ex
-    end
-
-    methods (TestClassSetup)
-        function loadExample(tc)
-            tc.Ex = loadExampleModel(false);
-        end
-    end
+    % Scans every function file in functions/, +geometry/ and meshing/.
 
     methods (Test)
-        %% ---------------- old kernel routines: same results as the current ones ----------------
-        function oldDisplacementGFsEqualCurrentKernels(tc)
-            rcv = tc.Ex.rcv;
-            obs = [linspace(-100e3, 400e3, 9)' zeros(9,1)];
-            [Gdx, Gdz] = geometry.computeFaultDisplacementKernels(rcv, obs);
-            Gd = geometry.computedisplacementGFs(rcv, obs);
-            tc.verifyEqual(Gd(1:2:end,:), Gdx, 'AbsTol', 1e-14);
-            tc.verifyEqual(Gd(2:2:end,:), Gdz, 'AbsTol', 1e-14);
-        end
-
-        function oldEdgeDislocationTractionKernelsEqualCurrentKernels(tc)
-            % geometry.computetractionkernels (edge dislocations, 2020) vs
-            % geometry.computeFaultTractionKernels (line dislocations, 2023)
-            rcv = tc.Ex.rcv;
-            [Kdd, Kdn] = geometry.computeFaultTractionKernels(rcv, rcv);
-            [Kt, Ks] = geometry.computetractionkernels(rcv, rcv);
-            tc.verifyEqual(Kt, Kdd, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdd(:))));
-            tc.verifyEqual(Ks, Kdn, 'RelTol', 1e-6, 'AbsTol', 1e-9*max(abs(Kdn(:))));
-        end
-
         function functionNamesMatchFileNames(tc)
             % a mismatch means the function is only reachable by file name
             bad = {};

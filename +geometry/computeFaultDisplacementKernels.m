@@ -29,8 +29,7 @@ function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
 %     normal rcv.nv(k,:), i.e. the value on the +nv side is returned.
 %
 % SEE ALSO
-%   geometry.LDdispHS, computeFaultDisplacementKernelsBem,
-%   geometry.computedisplacementGFs
+%   geometry.LDdispHS, computeFaultDisplacementKernelsBem
 %
 % AUTHORS
 %   Rishav Mallick, 2023

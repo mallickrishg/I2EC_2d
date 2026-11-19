@@ -69,12 +69,12 @@ Several files exist in both places. Package code calls the `geometry.` versions,
 | File | `+geometry/` copy | `functions/` copy | Action |
 |---|---|---|---|
 | `LDdispHS.m` | used (`geometry.LDdispHS`) | ~~identical, unused~~ **deleted** | done |
-| `EdgeStress.m` | only used by the unused `geometry.computetractionkernels` | ~~identical, unused~~ **deleted** | delete the `+geometry/` copy together with `geometry.computetractionkernels` |
-| `computedisplacementGFs.m` | **unused** | ~~unused~~ **deleted** | delete the `+geometry/` copy (replaced by `computeFaultDisplacementKernels`) |
-| `computetractionkernels.m` | **unused** | ~~unused~~ **deleted** | delete the `+geometry/` copy (replaced by `computeFaultTractionKernels`) |
+| `EdgeStress.m` | ~~only used by the unused `geometry.computetractionkernels`~~ **deleted** | ~~identical, unused~~ **deleted** | done |
+| `computedisplacementGFs.m` | ~~unused~~ **deleted** | ~~unused~~ **deleted** | done (replaced by `computeFaultDisplacementKernels`) |
+| `computetractionkernels.m` | ~~unused~~ **deleted** | ~~unused~~ **deleted** | done (replaced by `computeFaultTractionKernels`) |
 
 - [x] ~~Delete the `functions/` copies of the four files above.~~
-- [ ] Delete the unused `+geometry/` versions: `computedisplacementGFs`, `computetractionkernels` and `EdgeStress` (only `computetractionkernels` uses it). `LegacyCodeTest` shows they match the current kernels, so no numbers change. Delete their equivalence tests in `LegacyCodeTest` along with them. Their docs entries go with the files, because `docs/api/geometry.rst` documents the package automatically.
+- [x] ~~Delete the unused `+geometry/` versions: `computedisplacementGFs`, `computetractionkernels` and `EdgeStress` (only `computetractionkernels` used it). *Deleted, with their equivalence tests in `LegacyCodeTest`. Checked first: no caller in the repo, the local `expt*`/`experiments` folders or the git history since 2023, and the current kernels reproduce them to round-off for the example's megathrust, box and hinge, the small test model, and 14 synthetic faults (dips 5–90°, surface-breaking and buried). The current kernels also cover opening, which these did not.*~~
 - [x] ~~Remove the docs mentions of the `functions/` copies (the note in `docs/api/kernels.rst`; they had no API entries of their own).~~
 - [ ] Decide on one rule for what goes where. For example: low-level Green's functions and geometry classes go in `+geometry/`, and the `*Bem` assembly, solvers and plotting go in `functions/`. Write the rule down in the README or docs.
 
@@ -96,7 +96,7 @@ The repo mixes several naming styles:
 
 - **camelCase**: `computeLongTermVelocity`, `analyticSolveIVP`, `negateGrowingModes`
 - **snake_case**: `compute_cornerflow_velocityfield`, `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`, `pcolor_logvals`
-- **all lowercase**: `computedisplacementGFs`, `computetractionkernels`, `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
+- **all lowercase**: `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
 - **UPPERCASE script prefixes**: `MAIN_`, `PLOT_`, `CREATE_`, `TEST_`, plus a lowercase `tests/test_*.m`
 
 Tasks:
@@ -109,7 +109,7 @@ Tasks:
   - `create_megathrust` → `createMegathrust`
   - `egh_modal` → `eghModal` (or a more descriptive name)
 - [ ] Decide whether to rename the `+geometry` classes (`receiver`, `shearZoneReceiver`, `earthModel`, `fpatch`, `shzpatch`). Renaming them changes the public API for anyone with existing scripts.
-- [ ] Leave third-party files under their original names: `bluewhitered`, `cline`, `drchrnd`, `LDdispHS`, `LDstressHS`, `EdgeStress`. Credit their source in a header or a `THIRD_PARTY.md`.
+- [ ] Leave third-party files under their original names: `bluewhitered`, `cline`, `drchrnd`, `LDdispHS`, `LDstressHS`. Credit their source in a header or a `THIRD_PARTY.md`.
 - [ ] Bring the example and entry-point scripts in line with each other (`MAIN_analyticsolve_singleeqcycle.m`, `MAIN_i2ec_singleeqcycle.m`, `PLOT_longtermVelocity.m`). Consider moving them into `examples/`.
 
 ## 5. `meshing/` folder
