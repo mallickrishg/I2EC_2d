@@ -68,13 +68,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
     end
 
     methods (Test, TestTags = {'KnownIssue'})
-        function stressFaultBemRuns(tc)
-            % calls computeFullTractionKernels, which exists nowhere
-            rcv = tc.Ex.rcv;
-            f = @() computeStressFault_bem([-1 0 1e3 14 1], tc.Ex.bnd, rcv.xc(:,1), rcv.xc(:,2), 0.25, 30e3);
-            tc.verifyWarningFree(f);
-        end
-
         function noDuplicateFileNames(tc)
             % the same function name in two folders (functions/ and +geometry/)
             files = LegacyCodeTest.functionFiles();

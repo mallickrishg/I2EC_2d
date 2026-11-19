@@ -34,7 +34,7 @@ Each item names the failing test (`Class/test`).
 ### Affects unused or legacy code (delete rather than fix, see §1-§3)
 
 - [x] ~~**`computeStressPlaneStrainTriangleShearZone.m` (analytic, 2,238 lines) gives wrong stresses.** It disagrees with the finite-difference version everywhere, including the traction-free surface. Line 84 overwrites the summed `u2d2` with a single term, which looks like leftover debugging. The eigenstrain is then removed using `e22`/`e23`/`e33` after they have been overwritten with the total strain. And `Omega(x2,x3)*e22` is a matrix product, so vector input errors. → Delete it. The finite-difference version is correct: it passes the surface-traction and reciprocity tests. Tests: `GreensFunctionsTest/triangleStressAnalytic*`. *Deleted, with its two tests and its docs entry. Nothing ever called it.*~~
-- [ ] `computeStressFault_bem.m` errors with "Undefined function `computeFullTractionKernels`". Test: `LegacyCodeTest/stressFaultBemRuns`.
+- [x] ~~`computeStressFault_bem.m` errors with "Undefined function `computeFullTractionKernels`". *Deleted, with its docs entry and its test.* Test: `LegacyCodeTest/stressFaultBemRuns`.~~
 - [x] ~~`getStrainratesLongterm_old.m` declares `getStrainratesLongterm`. *Deleted.* Test: `LegacyCodeTest/functionNamesMatchFileNames`.~~
 - [ ] Four file names exist in both `functions/` and `+geometry/`. Test: `LegacyCodeTest/noDuplicateFileNames`.
 - [ ] `reconditionODEoperator.m`: the help text says growing eigenvalues are replaced by `-eps`, but the code uses `-0.1` s⁻¹, a 10-second relaxation. `computePeriodicInitialCondition.m` prints the condition number on every call. Tests: `SolversTest/reconditionReplacesGrowingModesByMinusEps`, `SolversTest/legacyPeriodicSolverIsQuiet`.
@@ -55,7 +55,7 @@ Each item names the failing test (`Class/test`).
 
 ## 1. Broken or likely incorrect code (fix or delete first)
 
-- [ ] **`functions/computeStressFault_bem.m` is broken.** It calls `computeFullTractionKernels`, which doesn't exist anywhere in the repo. Nothing calls this function, but the docs list it (`docs/api/kernels.rst`). → Delete it and its docs entry, or bring back the missing kernel function.
+- [x] ~~**`functions/computeStressFault_bem.m` is broken.** *Deleted, with its docs entry and `LegacyCodeTest/stressFaultBemRuns`.* It called `computeFullTractionKernels`, which doesn't exist anywhere in the repo. Nothing called this function, but the docs listed it (`docs/api/kernels.rst`).~~
 - [x] ~~**`functions/getStrainratesLongterm_old.m` has the wrong function name inside it.** *Deleted.* The file declares `function ... = getStrainratesLongterm(...)`, so the declared name doesn't match the filename. Nothing calls it. → Delete it.~~
 - [ ] **`functions/pcolor_logvals.m` is unfinished.** It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.
 - [ ] **Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `PLOT_longtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.
@@ -69,7 +69,7 @@ Several files exist in both places. Package code calls the `geometry.` versions,
 | File | `+geometry/` copy | `functions/` copy | Action |
 |---|---|---|---|
 | `LDdispHS.m` | used (`geometry.LDdispHS`) | identical, **unused** | delete `functions/` copy |
-| `EdgeStress.m` | only used by the unused `geometry.computetractionkernels` | identical; only used by the broken `computeStressFault_bem` | delete both once the items below are gone |
+| `EdgeStress.m` | only used by the unused `geometry.computetractionkernels` | identical, **unused** (its only caller, `computeStressFault_bem`, is deleted) | delete both once the items below are gone |
 | `computedisplacementGFs.m` | **unused** | **unused** (only calls `LDdispHS`) | delete both (replaced by `computeFaultDisplacementKernels`) |
 | `computetractionkernels.m` | **unused** | **unused** (better header, same code) | delete both (replaced by `computeFaultTractionKernels`) |
 
@@ -96,7 +96,6 @@ The repo mixes several naming styles:
 - **camelCase**: `computeLongTermVelocity`, `analyticSolveIVP`, `negateGrowingModes`
 - **snake_case**: `compute_cornerflow_velocityfield`, `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`, `pcolor_logvals`
 - **all lowercase**: `computedisplacementGFs`, `computetractionkernels`, `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
-- **mixed suffixes**: `computeStressFault_bem` vs `computeFaultTractionKernelsBem`
 - **UPPERCASE script prefixes**: `MAIN_`, `PLOT_`, `CREATE_`, `TEST_`, plus a lowercase `tests/test_*.m`
 
 Tasks:
