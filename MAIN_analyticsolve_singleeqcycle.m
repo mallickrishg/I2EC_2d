@@ -25,9 +25,10 @@ earthModel = geometry.LDhs(mu,nu);
 rcv = geometry.receiver('inputs/megathrust2d.seg',earthModel);
 
 % boundary mesh
+% Vpl column = boundary-condition type (0: zero displacement, 1: zero
+% traction); the kernels solve the homogeneous problem, so the bcx, bcz
+% values are not used
 boundary = geometry.receiver('inputs/boundary2d.seg',earthModel);
-boundary.Vx = boundary.Vx.*Vpl;
-boundary.Vz = boundary.Vz.*Vpl;
 
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)

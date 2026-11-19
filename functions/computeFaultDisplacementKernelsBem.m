@@ -74,9 +74,8 @@ for i = 1:src.N
     idirichlet = boundary.Vpl == 0;
     ineumann = boundary.Vpl == 1;
 
-    % displacement BC
-    BC([idirichlet;idirichlet]) = 0.*[boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                  [ux_source(idirichlet);uz_source(idirichlet)];
+    % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     
