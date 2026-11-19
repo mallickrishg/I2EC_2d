@@ -31,10 +31,11 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 %   - Boundary correction as in computeFaultTractionKernelsBem, with one
 %     solve per source and strain component; the prescribed .Vx, .Vz enter
 %     every column.
-%   - For a shearZoneReceiver, the boundary contribution is stacked in the
-%     order (sxx, szz, sxz) while the source part and the output use
-%     (sxx, sxz, szz), so the boundary terms of sxz and szz appear to be
-%     swapped. To be checked.
+%   - For a shearZoneReceiver, the boundary contribution from
+%     geometry.computeFaultStressKernels is stacked in the same component
+%     order as the half-space part, (sxx, sxz, szz). Before 2026-11-19 the
+%     sxz and szz boundary rows were swapped; tests/unit/
+%     BoundaryCorrectionTest checks the order through Betti reciprocity.
 %
 % SEE ALSO
 %   computeAllStressKernelsBem, computeFaultTractionKernelsBem,
@@ -117,8 +118,8 @@ for component = 1:3
                 LL_src_shz(:,:,2,component);...
                 LL_src_shz(:,:,3,component)] * source + ...
                 [Kdxx_boundary_shz,Knxx_boundary_shz;...
-                Kdzz_boundary_shz,Knzz_boundary_shz;...
-                Kdxz_boundary_shz,Knxz_boundary_shz] * bem_sol;
+                Kdxz_boundary_shz,Knxz_boundary_shz;...
+                Kdzz_boundary_shz,Knzz_boundary_shz] * bem_sol;
 
             Kxx(:,i) = sigma(1:end/3);
             Kxz(:,i) = sigma(end/3+1:2/3*end);

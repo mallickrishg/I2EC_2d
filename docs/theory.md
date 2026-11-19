@@ -164,16 +164,22 @@ system damped again. They are regularisations, not physics.
   -\epsilon_{22}$ imposed. The source code flags the index construction of
   the deviatoric `LL` kernel as still to be verified.
 
-:::{warning}
-**Open issue in the mantle stress kernels.** In
-{mat:func}`computeShzStressKernelsBem`, for mantle receivers, the
-half-space part of the stress is stacked as
-$(\sigma_{xx}, \sigma_{xz}, \sigma_{zz})$ while the boundary-correction part
-is stacked as $(\sigma_{xx}, \sigma_{zz}, \sigma_{xz})$. As written, the
-boundary corrections of $\sigma_{xz}$ and $\sigma_{zz}$ are swapped before
-they are added. This affects `LL` (and so the dynamics of the mantle) through
-the boundary term only; the effect is largest for cells close to the model
-boundary. It has not been fixed or quantified yet.
+:::{note}
+**Fixed (November 2026): component order of the box correction.** Until
+then, {mat:func}`computeShzStressKernelsBem` added the box correction for
+mantle receivers in the order $(\sigma_{xx}, \sigma_{zz}, \sigma_{xz})$ to a
+half-space part ordered $(\sigma_{xx}, \sigma_{xz}, \sigma_{zz})$, so the
+corrections of $\sigma_{xz}$ and $\sigma_{zz}$ were swapped. The swap made
+the correction strongly non-reciprocal (65 % asymmetric under Betti's
+theorem, 0.15 % after the fix). On the example mesh the box correction is
+about 1 % of `LL`, and the fix changes `LL` by 0.5 % without moving the
+growing modes or the fastest decay rates. The slow modes respond the most:
+for {file}`MAIN_analyticsolve_singleeqcycle.m`, early postseismic strain
+rates change by about 1 %, strain rates 50 years after the earthquake by up
+to 20 % in the more active half of the cells, and the late-interseismic
+surface velocity by up to 0.04 $V_{pl}$. Results and cached kernels from
+before the fix carry this error; `kernels/evl_orig.mat` has been
+regenerated.
 :::
 
 ### 2. Spurious growing modes
