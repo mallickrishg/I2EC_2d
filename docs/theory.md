@@ -168,16 +168,29 @@ system damped again. They are regularisations, not physics.
 
 The discretised `LL` kernel, and therefore $A$, has a few eigenvalues with
 $\mathrm{Re}(\lambda) > 0$. They are associated with spatial scales comparable
-to the cell size and depend on the mesh. Left alone, each would grow as
-$e^{\lambda t}$ and the periodic condition above would be meaningless. Three
-different treatments exist in the code:
+to the cell size and appear on every mesh tried, including structured
+meshes of uniform cells; remeshing does not remove them, so they have to be
+handled numerically. Left alone, each would grow as $e^{\lambda t}$ and the
+periodic condition above would be meaningless. The numerical (`ode45`) and
+semi-analytical solvers handle them differently:
 
-- **Zero them in the kernel** — {mat:func}`computeAllStressKernelsBem`, option
-  `kernelmodify` (default `1`). Eigendecomposes the $2M \times 2M$
-  deviatoric `LL` kernel, sets eigenvalues with $\mathrm{Re}(\lambda) > 0$
-  to **zero** and rebuilds `LL`. Acts on the kernel alone, before viscosities
-  are applied. *Used by* the numerical integration
-  (`MAIN_i2ec_singleeqcycle.m`).
+- **Change them in the kernel (numerical solves)** —
+  {mat:func}`modifyGrowingModes`, also the `kernelmodify` option of
+  {mat:func}`computeAllStressKernelsBem` (default `1`). Eigendecomposes the
+  $2M \times 2M$ deviatoric `LL` kernel, changes the eigenvalues with
+  $\mathrm{Re}(\lambda) > 0$ and rebuilds `LL`. Acts on the kernel alone,
+  before viscosities are applied, so it works for any power-law exponent: for
+  a reciprocal kernel the linearised mantle system has as many growing modes
+  as `LL`, whatever $n$ and the stress state. Two choices:
+  - `kernelmodify = 1` sets them to **zero**. The modes become neutral;
+    nothing restores them, so they can accumulate over many earthquake
+    cycles and slow the approach to a cycle-invariant state.
+  - `kernelmodify = 2` sets them to $-\max|\lambda|$ (**damped**). They decay
+    at the fastest rate the kernel has. Prefer this for long spin-ups and for
+    power-law ($n = 3$) runs.
+
+  *Used by* the numerical integration (`MAIN_i2ec_singleeqcycle.m`). Not for
+  the semi-analytical solvers, which take the full kernel.
 - **Negate them in the operator** — {mat:func}`negateGrowingModes`. Balances
   $A$, eigendecomposes it and replaces each $\lambda$ with
   $\mathrm{Re}(\lambda) > 0$ by $-\lambda$, keeping its eigenvector. Acts on
@@ -256,7 +269,8 @@ Consequences to keep in mind:
   ones with large $|\lambda|$, suggests a mesh problem.
 - Recompute the kernels after any geometry change; the files in `kernels/`
   match the example meshes only, and `evl_orig.mat` was computed with
-  `kernelmodify = 0`.
+  `kernelmodify = 0`. For a numerical solve, build the zeroed or damped kernel
+  from it without recomputing: `evl = modifyGrowingModes(evl_orig, 2)`.
 - `tests/test_negate_exact_solver.m` checks the semi-analytical solver
   against the matrix exponential, periodicity, continuity in viscosity and the
   steady state on the example mesh.

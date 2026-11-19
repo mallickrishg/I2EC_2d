@@ -7,6 +7,8 @@ Boundary-element stress, traction and displacement kernels. The half-space kerne
 
 .. mat:autofunction:: computeAllStressKernelsBem
 
+.. mat:autofunction:: modifyGrowingModes
+
 .. mat:autofunction:: computeAllDisplacementKernelsBem
 
 .. mat:autofunction:: computeFaultTractionKernelsBem
