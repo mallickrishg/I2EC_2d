@@ -82,6 +82,47 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             tc.verifyEqual(size(Y,1), numel(t));
         end
 
+        function cyclesChainFromTheEndState(tc)
+            % nreps = 3 returns the cycle that starts from the end state of
+            % nreps = 2: same ode45 calls in the same order, so bitwise equal
+            [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
+            [~, ~, Y2] = evalc('viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur, 2)');
+            [~, t3, Y3] = evalc('viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur, 3)');
+            [t1, Y1] = viscoeq_sequence_simulation(f, Y2(end,:)', rcv, shz, sc, Trecur);
+            tc.verifyEqual(t3, t1);
+            tc.verifyEqual(Y3, Y1);
+            tc.verifyNotEqual(Y2(end,:), Y0', 'the events do change the state');
+        end
+
+        function everyEventIsAppliedOnce(tc)
+            % K events per cycle: each event time appears twice in t (just
+            % before and after the step), and the jump in log(v) and in the
+            % mantle stress is exactly that event's stress change
+            [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
+            [t, Y] = viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur);
+            iV = 1:rcv.N; i22 = rcv.N+1:2:size(Y,2); i23 = rcv.N+2:2:size(Y,2);
+            for k = 1:sc.Nevents
+                i = find(t == sc.Timing(k));
+                tc.verifyNumElements(i, 2, sprintf('event %d', k));
+                dY = Y(i(2),:) - Y(i(1),:);
+                tc.verifyEqual(dY(iV)', sc.dtau(:,k)./rcv.Asigma, 'AbsTol', 1e-12);
+                tc.verifyEqual(dY(i22)', sc.dsigma22(:,k), 'AbsTol', 1e-12);
+                tc.verifyEqual(dY(i23)', sc.dsigma23(:,k), 'AbsTol', 1e-12);
+            end
+            tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
+            tc.verifyTrue(all(diff(t) >= 0));
+        end
+
+        function badEventTimesAreRejected(tc)
+            [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
+            run = @(T) viscoeq_sequence_simulation(f, Y0, rcv, shz, ...
+                setfield(sc, 'Timing', T), Trecur); %#ok<SFLD>
+            tc.verifyError(@() run(sc.Timing([2 1 3 4 5])), 'viscoeq_sequence_simulation:timing');
+            tc.verifyError(@() run([0 sc.Timing(2:end)]), 'viscoeq_sequence_simulation:timing');
+            tc.verifyError(@() run([sc.Timing(1:end-1) Trecur]), 'viscoeq_sequence_simulation:timing');
+            tc.verifyError(@() run(sc.Timing(1:4)), 'viscoeq_sequence_simulation:events');
+        end
+
         function lockedNewtonianCycleMatchesAnalyticSolver(tc)
             % fully locked fault + n = 1 mantle: the ODE is linear in the
             % mantle strain rate e = alpha * s:
@@ -114,20 +155,35 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
         end
     end
 
-    methods (Test, TestTags = {'KnownIssue'})
+    methods (Test)
         function singleCycleRunReturnsTime(tc)
-            % with nreps = 1 the first call discards t ([~,Y] = ...) and the
-            % loop never runs, so output t is never assigned
+            % nreps = 1: one cycle from the long-term state, no spin-up
+            % (the first call used to discard t, so t was never assigned)
             rcv = tc.M.rcv; shz = tc.M.shz;
             sc = struct('Nevents', 1, 'Timing', 10*tc.yr, ...
                 'dtau', zeros(rcv.N,1), 'dsigma22', zeros(shz.N,1), 'dsigma23', zeros(shz.N,1));
-            msg = '';
-            try
-                evalc('[t, V] = runImposedEarthquakeCycles(rcv, shz, tc.Evl, sc, 1, 50*tc.yr);');
-            catch err
-                msg = err.message;
-            end
-            tc.verifyEmpty(msg, msg);
+            Trecur = 50*tc.yr;
+            [~, t, V, e22] = evalc('runImposedEarthquakeCycles(rcv, shz, tc.Evl, sc, 1, Trecur)');
+            tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
+            tc.verifySize(V, [numel(t) rcv.N]);
+            tc.verifySize(e22, [numel(t) shz.N]);
+        end
+    end
+
+    methods (Access = private)
+        function [rcv, shz, sc, Y0, f, Trecur] = multiEventSetup(tc)
+            % 5 irregularly spaced events with different slip, n = 3
+            % mantle, a third of the fault locked
+            rcv = tc.M.rcv; shz = tc.M.shz; evl = tc.Evl;
+            shz.n = 3 * ones(shz.N, 1);
+            rcv.pinnedPosition = (1:rcv.N)' <= rcv.N/3;
+            Trecur = 80*tc.yr;
+            rng(7); slip = rand(rcv.N, 5);
+            sc = struct('Nevents', 5, 'Timing', [3 11 12 40 66]*tc.yr, ...
+                'dtau', 0.3*rand(rcv.N, 5), ...
+                'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
+            Y0 = [log(rcv.Vpl); reshape([shz.e22pl shz.e23pl]' ./ shz.alpha', [], 1)];
+            f = @(t, y) ode_viscoelastic(t, y, rcv, shz, evl);
         end
     end
 end

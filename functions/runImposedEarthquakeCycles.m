@@ -31,7 +31,8 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %                  .dgf             degrees of freedom per cell (2)
 %   evl            struct of stress kernels (.KK, .KL, .LK, .LL) from
 %                  computeAllStressKernelsBem
-%   stress_change  struct of imposed events
+%   stress_change  struct of imposed events (any number K >= 1, see
+%                  viscoeq_sequence_simulation)
 %                  .Nevents         number of events per cycle
 %                  .Timing          [1 x Nevents] event times from the
 %                                   start of the cycle (s)
@@ -55,8 +56,8 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %     kernel are integrated too.
 %   - Spin-up is by brute force: nreps must be large enough for the cycle
 %     to become periodic; compare successive cycles to check.
-%   - Known issue: t is assigned only from the second cycle on, so
-%     nreps = 1 stops with an error (output t not assigned).
+%   - nreps = 1 runs and returns a single cycle from the long-term state,
+%     with no spin-up.
 %
 % SEE ALSO
 %   viscoeq_sequence_simulation, ode_viscoelastic,
@@ -79,15 +80,9 @@ Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s22_0;
 Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
 
 
-% start simulation (nrep-1 spin-up cycles)
-disp(['Cycle number 1/' num2str(nreps)])
-[~,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change,Trecur);
-
-for i = 2:nreps
-    disp(['Cycle number ' num2str(i) '/' num2str(nreps)])
-    Y0 = Y(end,:)';
-    [t,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl),Y0,rcv,shz,stress_change,Trecur);
-end
+% nreps-1 spin-up cycles, then the returned one
+[t,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+    Y0,rcv,shz,stress_change,Trecur,nreps);
 
 % extract important quantities from state vector
 [V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz);
