@@ -1,44 +1,66 @@
 function [u2,u3]=computeDisplacementPlaneStrainTriangleShearZone( ...
     x2,x3,A,B,C,e22,e23,e33,nu)
-% function COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONE computes the
-% displacement field associated with deforming triangle strain volume
-% considering the following geometry using the tanh-sinh numerical
-% quadrature.
+% COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONE  Displacement due to a strained triangle in a half-space.
 %
-%              surface
-%      -------------+-------------- E (x2)
-%                   |
-%                   |     + A
-%                   |    /  . 
-%                   |   /     .  
-%                   |  /        .            
-%                   | /           .      
-%                   |/              + B
-%                   /            .
-%                  /|          /  
-%                 / :       .
-%                /  |    /
-%               /   : .
-%              /   /|
-%             / .   :
-%            +      |
-%          C        :
-%                   |
-%                   D (x3)
+%   [u2, u3] = computeDisplacementPlaneStrainTriangleShearZone(x2, x3, A, B, C, e22, e23, e33, nu)
 %
+%   Computes the plane-strain displacement at (x2, x3) due to uniform
+%   eigenstrain (e22, e23, e33) in the triangle ABC in a homogeneous
+%   elastic half-space, using the closed-form solution of Barbot (2018).
+%   Points where the closed form is not finite are recomputed by tanh-sinh
+%   quadrature. Geometry (x3 is depth, positive down):
 %
-% Input:
-% x2, x3             east coordinates and depth of the observation point,
-% A, B, C            east and depth coordinates of the vertices,
-% eij                source strain component 22, 23 and 33 in the strain
-%                    volume,
-% nu                 Poisson's ratio in the half space.
+%                 surface
+%         -------------+-------------- E (x2)
+%                      |
+%                      |     + A
+%                      |    /  .
+%                      |   /     .
+%                      |  /        .
+%                      | /           .
+%                      |/              + B
+%                      /            .
+%                     /|          /
+%                    / :       .
+%                   /  |    /
+%                  /   : .
+%                 /   /|
+%                / .   :
+%               +      |
+%             C        :
+%                      |
+%                      D (x3)
 %
-% Output:
-% u2                 displacement component in the east direction,
-% u3                 displacement component in the down direction.
+% INPUTS
+%   x2, x3          observation points: horizontal position and depth
+%                   (m, x3 >= 0)
+%   A, B, C         [1 x 2] triangle vertices [x2, x3] (m)
+%   e22, e23, e33   eigenstrain components in the triangle (tensor
+%                   components)
+%   nu              Poisson's ratio
 %
-% Author: Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
+% OUTPUTS
+%   u2              displacement in the x2 (east) direction, same size as
+%                   x2 (m)
+%   u3              displacement in the x3 (down) direction (m)
+%
+% NOTES
+%   - The displacement depends on Poisson's ratio only, not on the shear
+%     modulus.
+%   - Prints the number of points corrected by quadrature, if any.
+%   - x3 must be non-negative (assertion).
+%
+% SEE ALSO
+%   computeDisplacementPlaneStrainTriangleShearZoneTanhSinh,
+%   computeStressPlaneStrainTriangleShearZoneFiniteDifference
+%
+% REFERENCES
+%   Barbot, S. (2018). Deformation of a half-space from anelastic strain
+%   confined in a tetrahedral volume. Bulletin of the Seismological Society
+%   of America, 108(5A), 2687-2712. doi:10.1785/0120180058
+%
+% AUTHORS
+%   Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
 
 assert(min(x3(:))>=0,'depth must be positive.');
 

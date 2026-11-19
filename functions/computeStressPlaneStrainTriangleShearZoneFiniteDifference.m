@@ -1,45 +1,77 @@
 function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
     x2,x3,A,B,C,e22,e23,e33,G,nu)
-% function COMPUTESTRESSPLANESTRAINTRIANGLESHEARZONE computes the
-% stress field associated with deforming triangle strain volume
-% considering the following geometry using the analytic solution of
-% Barbot (2018).
+% COMPUTESTRESSPLANESTRAINTRIANGLESHEARZONEFINITEDIFFERENCE  Stress due to a strained triangle, by finite differences.
 %
-%              surface
-%      -------------+-------------- E (x2)
-%                   |
-%                   |     + A
-%                   |    /  . 
-%                   |   /     .  
-%                   |  /        .            
-%                   | /           .      
-%                   |/              + B
-%                   /            .
-%                  /|          /  
-%                 / :       .
-%                /  |    /
-%               /   : .
-%              /   /|
-%             / .   :
-%            +      |
-%          C        :
-%                   |
-%                   D (x3)
+%   [s22, s23, s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference(x2, x3, A, B, C, e22, e23, e33, G, nu)
 %
+%   Computes the plane-strain stress at (x2, x3) due to uniform
+%   eigenstrain (e22, e23, e33) in the triangle ABC in a homogeneous
+%   elastic half-space. The strain is obtained by numerically
+%   differentiating the analytic displacement of Barbot (2018)
+%   (computeDisplacementPlaneStrainTriangleShearZone); the eigenstrain is
+%   removed inside the triangle and Hooke's law gives the stress. This is
+%   the stress used for the I2EC shear-zone kernels (through
+%   geometry.computeShzStressKernels). Geometry (x3 is depth, positive
+%   down):
 %
-% Input:
-% x2, x3             east coordinates and depth of the observation point,
-% A, B, C            east and depth coordinates of the vertices,
-% eij                source strain component 22, 23 and 33 in the strain
-%                    volume,
-% G, nu              rigidity and Poisson's ratio in the half space.
+%                 surface
+%         -------------+-------------- E (x2)
+%                      |
+%                      |     + A
+%                      |    /  .
+%                      |   /     .
+%                      |  /        .
+%                      | /           .
+%                      |/              + B
+%                      /            .
+%                     /|          /
+%                    / :       .
+%                   /  |    /
+%                  /   : .
+%                 /   /|
+%                / .   :
+%               +      |
+%             C        :
+%                      |
+%                      D (x3)
 %
-% Output:
-% s22                horizontal uniaxial stress,
-% s23                shear stress
-% s33                vertical uniaxial stress.
+% INPUTS
+%   x2, x3          observation points: horizontal position and depth
+%                   (m, x3 >= 0)
+%   A, B, C         [1 x 2] triangle vertices [x2, x3] (m)
+%   e22, e23, e33   eigenstrain components in the triangle (tensor
+%                   components)
+%   G               shear modulus (MPa)
+%   nu              Poisson's ratio
 %
-% Author: Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
+% OUTPUTS
+%   s22             horizontal normal stress, same size as x2 (MPa)
+%   s23             shear stress (MPa)
+%   s33             vertical normal stress (MPa)
+%
+% NOTES
+%   - Step h = 1e-6 times the shortest edge of the triangle: central
+%     differences in x2, a forward difference (u(x3 + h) - u(x3))/h in x3.
+%   - The eigenstrain is subtracted at points strictly inside the
+%     triangle; I2EC evaluates the stress at cell centroids.
+%   - Where the closed-form displacement is not finite, it is recomputed
+%     by tanh-sinh quadrature (see computeDisplacementPlaneStrainTriangleShearZone).
+%   - Used instead of the closed-form stress of
+%     computeStressPlaneStrainTriangleShearZone.
+%   - x3 must be non-negative (assertion).
+%
+% SEE ALSO
+%   computeDisplacementPlaneStrainTriangleShearZone,
+%   computeStressPlaneStrainTriangleShearZone, computeShzStressKernelsBem
+%
+% REFERENCES
+%   Barbot, S. (2018). Deformation of a half-space from anelastic strain
+%   confined in a tetrahedral volume. Bulletin of the Seismological Society
+%   of America, 108(5A), 2687-2712. doi:10.1785/0120180058
+%
+% AUTHORS
+%   Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore
+%   Added to I2EC by Rishav Mallick, 2023
 
 assert(min(x3(:))>=0,'depth must be positive.');
 

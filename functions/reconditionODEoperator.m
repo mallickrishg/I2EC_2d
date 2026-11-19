@@ -1,34 +1,35 @@
 function matrixout = reconditionODEoperator(matrixinput)
-% RECONDITIONODEOPERATOR  Stabilize an ODE operator matrix by removing spurious positive eigenvalues
+% RECONDITIONODEOPERATOR  Replace non-decaying eigenvalues by -0.1 (legacy).
 %
-%   matrixout = RECONDITIONODEOPERATOR(matrixinput)
+%   matrixout = reconditionODEoperator(matrixinput)
 %
-%   This function takes a square matrix representing an ODE operator (e.g., a
-%   stress kernel or decay matrix) and ensures numerical stability by:
-%     1. Computing its eigenvalue decomposition.
-%     2. Replacing any eigenvalues with non-negative real parts (>=0) by -eps.
-%        This removes spurious growth modes that could cause instability in
-%        exponential operators or periodic solutions.
-%     3. Reconstructing the matrix from the corrected eigenvalues.
+%   Eigendecomposes a square ODE operator, sets every eigenvalue with a
+%   non-negative real part to -0.1, and rebuilds the matrix:
+%       matrixout = real(V*diag(lam_corrected)/V)
 %
-%   Input:
-%     matrixinput  - (n x n) square matrix to be reconditioned.
+% INPUTS
+%   matrixinput  [n x n] ODE operator matrix (1/s)
 %
-%   Output:
-%     matrixout    - (n x n) stabilized matrix with all eigenvalues strictly
-%                    negative (or complex with negative real parts).
+% OUTPUTS
+%   matrixout    [n x n] reconditioned operator (1/s)
 %
-%   Notes:
-%     - Only the real parts of the eigenvalues are checked; complex parts are
-%       preserved.
-%     - This is useful when small numerical errors produce spurious positive
-%       eigenvalues that make exp(A*T) ill-conditioned or lead to unstable
-%       periodic solves.
+% NOTES
+%   - Stability: a legacy damping rule, used only as the fallback in
+%     computePeriodicInitialCondition. Eigenvalues with Re(lam) >= 0 are
+%     replaced by the real number -0.1 1/s (a fixed, fast decay), so
+%     their imaginary parts are lost. The current solvers use
+%     negateGrowingModes (lam -> -lam for Re(lam) > 0) instead.
+%   - No balancing is applied before eig, and the result is the real part
+%     of the reconstruction.
 %
-%   Example:
-%     K_stable = reconditionODEoperator(K);
+% EXAMPLE
+%   K_stable = reconditionODEoperator(K);
 %
-%   See also eig, expm, pinv
+% SEE ALSO
+%   negateGrowingModes, computePeriodicInitialCondition, eig
+%
+% AUTHORS
+%   Rishav Mallick, 2025
 
 [Evectors,Evals] = eig(matrixinput);
 % remove eigen values that cause instabilities 

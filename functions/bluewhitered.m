@@ -1,13 +1,24 @@
 function newmap = bluewhitered(m, varargin)
-%BLUEWHITERED   Blue, white, and red color map.
-%   BLUEWHITERED(M) returns an M-by-3 matrix containing a blue to white
-%   to red colormap, with white corresponding to the CAXIS value closest
-%   to zero.  This colormap is most useful for images and surface plots
-%   with positive and negative values.  BLUEWHITERED, by itself, is the
-%   same length as the current colormap.
+% BLUEWHITERED  Blue, white and red colour map centred on zero.
 %
-%   Examples:
-%   ------------------------------
+%   newmap = bluewhitered(m)
+%   newmap = bluewhitered(m, lims)
+%   newmap = bluewhitered
+%
+%   Returns an m-by-3 colour map that runs from blue through white to red,
+%   with white at the colour-axis value closest to zero. Useful for
+%   images and surfaces with positive and negative values. If the colour
+%   limits are all positive (or all negative), only the white-to-red (or
+%   blue-to-white) half is used.
+%
+% INPUTS
+%   m       number of colours (default: length of the current colormap)
+%   lims    [1 x 2] colour limits (default: CLim of the current axes)
+%
+% OUTPUTS
+%   newmap  [m x 3] RGB colour map
+%
+% EXAMPLE
 %   figure
 %   imagesc(peaks(250));
 %   colormap(bluewhitered(256)), colorbar
@@ -25,8 +36,12 @@ function newmap = bluewhitered(m, varargin)
 %   colormap(bluewhitered)
 %   axis tight
 %
-%   See also HSV, HOT, COOL, BONE, COPPER, PINK, FLAG, 
-%   COLORMAP, RGBPLOT.
+% SEE ALSO
+%   colormap, rgbplot, hsv, hot, cool, bone, copper, pink, flag
+%
+% AUTHORS
+%   Third-party colour map, original author not named in this file,
+%   added to I2EC by Rishav Mallick, 2023
 
 
 if nargin < 1

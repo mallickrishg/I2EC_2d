@@ -1,4 +1,41 @@
 function gps = computeSiteVelocitiesBem(obs,rcv,shz,boundary,V,e22dot,e23dot)
+% COMPUTESITEVELOCITIESBEM  Surface velocities from fault slip rates and mantle strain rates.
+%
+%   gps = computeSiteVelocitiesBem(obs, rcv, shz, boundary, V, e22dot, e23dot)
+%
+%   For each time step, computes the velocity at the observation points
+%   due to slip rate on the fault patches and deviatoric strain rate in the
+%   mantle cells, in a half-space corrected for the model boundary by one
+%   boundary element solve per time step. Unlike
+%   computeAllDisplacementKernelsBem, it corrects the summed source field
+%   instead of building kernels.
+%
+% INPUTS
+%   obs       [Nobs x 2] observation points [x, z] (m)
+%   rcv       geometry.receiver object: megathrust patches (N patches)
+%   shz       geometry.shearZoneReceiver object: mantle cells (M cells)
+%   boundary  geometry.receiver object: model boundary patches
+%             .Vpl  0: zero displacement; 1: zero traction
+%   V         [Nt x N] fault slip rate at each time step (m/s)
+%   e22dot    [Nt x M] deviatoric strain rate e22, with e33 = -e22 (1/s)
+%   e23dot    [Nt x M] strain rate e23 (1/s)
+%
+% OUTPUTS
+%   gps       struct with fields
+%             .vx  [Nt x Nobs] horizontal velocity (m/s)
+%             .vz  [Nt x Nobs] vertical velocity (m/s)
+%
+% NOTES
+%   - The rates are used as given (no long-term rates are subtracted).
+%   - Not called by the driver scripts, which use the kernels from
+%     computeAllDisplacementKernelsBem.
+%
+% SEE ALSO
+%   computeAllDisplacementKernelsBem, computeFaultDisplacementKernelsBem,
+%   computeShzDisplacementKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 % surface velocity 
 % gps = [];

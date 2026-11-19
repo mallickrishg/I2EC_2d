@@ -1,20 +1,34 @@
 function [Sxx,Sxz,Szz]=EdgeStress(m,x,z,nu,mu)
-%EdgeStress     [Sxx,Sxz,Szz]=EdgeStress(m,x,z,nu,{mu})
+% EDGESTRESS  Half-space stress from a finite dipping edge dislocation.
 %
-%Computes stresses at (x,z) due to an edge dislocation specified in m.   
-%All length inputs should be in same units; otherwise stresses will be off   
-%by a constant.  Nu is Poisson's ratio and mu is shear modulus.  If mu is   
-%not specified, it defaults to one.   
-% 
-%The form of m:   
-%   
-%     m(1) = Depth of updip end    
-%     m(2) = Horizontal position of updip end    
-%     m(3) = Length downdip   
-%     m(4) = Dip (degrees)   
-%     m(5) = Slip   
-%   
-%The vertical axis is reckoned NEGATIVE down.
+%   [Sxx, Sxz, Szz] = geometry.EdgeStress(m, x, z, nu)
+%   [Sxx, Sxz, Szz] = geometry.EdgeStress(m, x, z, nu, mu)
+%
+%   Stress at (x, z) due to uniform slip on a straight dipping fault in a
+%   homogeneous elastic half-space, built from a pair of edge
+%   dislocations of opposite sign at the up-dip and down-dip ends. All
+%   lengths must be in the same units, otherwise the stresses are off by
+%   a constant factor.
+%
+% INPUTS
+%   m       [1 x 5] fault: [depth of the up-dip end, horizontal position of
+%           the up-dip end, down-dip length, dip (degrees), slip]
+%   x, z    [Nobs x 1] observation points; the vertical axis is negative
+%           down (z and m(1) are made negative with -abs)
+%   nu      [1 x 1] Poisson's ratio
+%   mu      [1 x 1] shear modulus  [1]
+%
+% OUTPUTS
+%   Sxx     [Nobs x 1] normal stress in x (units of mu)
+%   Sxz     [Nobs x 1] shear stress (units of mu)
+%   Szz     [Nobs x 1] normal stress in z (units of mu)
+%
+% SEE ALSO
+%   geometry.computetractionkernels, geometry.LDstressHS
+%
+% AUTHORS
+%   Original author not given in the file
+%   Added to I2EC by Rishav Mallick, 2023
 
 
 if nargin <5	mu=1;end   

@@ -1,20 +1,37 @@
 function [Sxx,Sxz,Szz]=EdgeStress(m,x,z,nu,mu)
-%EdgeStress     [Sxx,Sxz,Szz]=EdgeStress(m,x,z,nu,{mu})
+% EDGESTRESS  Stress due to an edge dislocation in a half-space.
 %
-%Computes stresses at (x,z) due to an edge dislocation specified in m.   
-%All length inputs should be in same units; otherwise stresses will be off   
-%by a constant.  Nu is Poisson's ratio and mu is shear modulus.  If mu is   
-%not specified, it defaults to one.   
-% 
-%The form of m:   
-%   
-%     m(1) = Depth of updip end    
-%     m(2) = Horizontal position of updip end    
-%     m(3) = Length downdip   
-%     m(4) = Dip (degrees)   
-%     m(5) = Slip   
-%   
-%The vertical axis is reckoned NEGATIVE down.
+%   [Sxx, Sxz, Szz] = EdgeStress(m, x, z, nu)
+%   [Sxx, Sxz, Szz] = EdgeStress(m, x, z, nu, mu)
+%
+%   Computes the plane-strain stress at (x, z) due to a finite edge
+%   dislocation (a dipping segment with uniform slip) in a homogeneous
+%   elastic half-space, as the sum of two infinite edge dislocations of
+%   opposite sign at its ends. All lengths must be in the same units;
+%   otherwise the stresses are off by a constant.
+%
+% INPUTS
+%   m       [1 x 5] dislocation: [depth of the updip end, horizontal
+%           position of the updip end, length down dip, dip (degrees),
+%           slip]
+%   x, z    observation points (z is made negative inside the function)
+%   nu      Poisson's ratio
+%
+% OPTIONS
+%   mu      shear modulus; sets the units of the stress  [1]
+%
+% OUTPUTS
+%   Sxx, Sxz, Szz  stress components, same size as x (units of mu)
+%
+% NOTES
+%   - The vertical axis is negative down; the code takes -abs() of z and
+%     of m(1), so their signs do not matter.
+%
+% SEE ALSO
+%   computetractionkernels, LDstressHS
+%
+% AUTHORS
+%   Not given in the source; added to I2EC by Rishav Mallick, 2023
 
 
 if nargin <5	mu=1;end   

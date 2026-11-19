@@ -1,26 +1,49 @@
 function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
-% COMPUTECORNERFLOWVELOCITYFIELD Analytic corner flow for subduction zones
+% COMPUTECORNERFLOWVELOCITYFIELD  Evaluate analytical subduction corner flow.
 %
 %   [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 %
-%   Computes the isoviscous corner flow velocity field for two regions:
-%   1. Continental Arc (Mantle Wedge): Fixed upper boundary, moving slab
-%   2. Oceanic Mantle (Sub-slab): Moving slab with incoming plate
+%   Returns the corner-flow velocity for a unit plate speed in two regions
+%   at once: the mantle wedge (continental arc) between the fixed upper
+%   plate and the slab, and the oceanic mantle below the incoming plate and
+%   the slab. For n = 1 (Newtonian) the closed-form stream-function
+%   solution is used; for n = 3 the coefficients of the power-law solution
+%   are found with fsolve from the boundary conditions.
 %
-% INPUTS:
-%   dip - Slab dip angle in radians (e.g., pi/4 for 45°)
-%   x   - Horizontal coordinates [Nx1 vector], z negative inside Earth
-%   z   - Vertical coordinates [Nx1 vector]
-%   n   - Power law exponent: 1 (Newtonian) or 3 (power-law)
+% INPUTS
+%   dip     slab dip (radians)
+%   x       [N x 1] horizontal coordinates in the corner-flow frame
+%   z       [N x 1] vertical coordinates, negative inside the Earth
+%   n       power-law exponent: 1 (Newtonian) or 3
 %
-% OUTPUTS:
-%   Vx  - [Nx2] horizontal velocities (Column 1: Arc, Column 2: Oceanic)
-%   Vz  - [Nx2] vertical velocities (Column 1: Arc, Column 2: Oceanic)
+% OUTPUTS
+%   Vx      [N x 2] horizontal velocity per unit plate speed;
+%           column 1 mantle wedge (arc), column 2 oceanic mantle
+%   Vz      [N x 2] vertical velocity per unit plate speed;
+%           column 1 mantle wedge (arc), column 2 oceanic mantle
 %
-% EXAMPLE:
+% NOTES
+%   - Both columns are evaluated at every point; the caller picks the column
+%     for the region each point lies in.
+%   - The solution is singular at the corner (origin). Callers translate the
+%     coordinates of each region (ocean/continental translate parameters in
+%     getStrainratesLongterm) to keep points away from it; r = 0 is set to
+%     r^2 = Inf in the Newtonian branch.
+%   - Wedge: fixed upper surface, slab moving down-dip. Oceanic mantle:
+%     incoming plate moving at unit speed, slab moving down-dip.
+%   - n = 3 needs the Optimization Toolbox (fsolve) and prints fsolve
+%     diagnostics.
+%
+% EXAMPLE
 %   dip = pi/4;
 %   [x, z] = meshgrid(linspace(0, 2, 50), linspace(-2, 0, 50));
 %   [Vx, Vz] = computeCornerflowVelocityfield(dip, x(:), z(:), 1);
+%
+% SEE ALSO
+%   getStrainratesLongterm, compute_cornerflow_velocityfield
+%
+% AUTHORS
+%   Rishav Mallick (EOS), 2025
 
 %% Input validation
 if ~ismember(n, [1, 3])

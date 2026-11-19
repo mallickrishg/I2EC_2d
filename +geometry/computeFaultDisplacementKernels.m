@@ -1,4 +1,39 @@
 function [Gdx,Gdz,Gnx,Gnz] = computeFaultDisplacementKernels(rcv,ox)
+% COMPUTEFAULTDISPLACEMENTKERNELS  Half-space displacements from fault slip.
+%
+%   [Gdx, Gdz, Gnx, Gnz] = geometry.computeFaultDisplacementKernels(rcv, ox)
+%
+%   Displacement at the observation points due to unit dip slip and unit
+%   opening on each patch of rcv, in a homogeneous elastic half-space
+%   (geometry.LDdispHS). No boundary-element correction is applied; see
+%   computeFaultDisplacementKernelsBem for that.
+%
+% INPUTS
+%   rcv     geometry.receiver object: source patches
+%           .N           [1 x 1] number of patches
+%           .xc          [N x 2] patch centres (m, z negative)
+%           .W           [N x 1] patch widths (m)
+%           .dip         [N x 1] patch dips (degrees)
+%           .nv          [N x 2] unit normal vectors
+%           .earthModel  geometry.LDhs object (uses .nu)
+%   ox      [Nobs x 2] observation points (x, z) (m, z <= 0)
+%
+% OUTPUTS
+%   Gdx, Gdz  [Nobs x N] x and z displacement per unit dip slip (m/m)
+%   Gnx, Gnz  [Nobs x N] x and z displacement per unit opening (m/m)
+%
+% NOTES
+%   - An observation point that coincides with a patch centre is moved
+%     by 1e-9 * mean(ox(:,1)) along a patch normal. That normal is
+%     rcv.nv indexed by the observation point, so this only works when
+%     ox are the centres of rcv itself (e.g. boundary.xc for boundary).
+%
+% SEE ALSO
+%   geometry.LDdispHS, computeFaultDisplacementKernelsBem,
+%   geometry.computedisplacementGFs
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 delta = 1e-9.*mean(ox(:,1));
 xobs = ox(:,1);

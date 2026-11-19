@@ -1,16 +1,39 @@
 function [Ktau,Ksigma] = computetractionkernels(src,rcv)
-% traction kernel computation for a given source and receiver object pair
+% COMPUTETRACTIONKERNELS  Half-space traction kernels due to fault slip (edge dislocations).
+%
+%   [Ktau, Ksigma] = computetractionkernels(src, rcv)
+%
+%   For unit slip on each source patch, modelled as an edge dislocation
+%   with EdgeStress, computes the shear and normal traction at the receiver
+%   patch centres in a homogeneous half-space. There is no boundary
+%   correction.
+%
 % INPUTS
-% src,rcv - objects or data structures containing fault mesh 
-%           (end points and center nodes)
-% 
-% OUTPUTS 
-% 2 x [N x N] matrices containing fault-centric traction kernels
-% these kernels are for half-space only
-% Ktau - traction kernel in shear direction
-% Ksigma - traction kernel in fault-normal direction
-% 
-% Rishav Mallick, EOS, 2020
+%   src     geometry.receiver object: source patches (Ns patches)
+%           .x    [Ns x 2] upper end [x, z] of each patch (m)
+%           .W    [Ns x 1] patch widths (m)
+%           .dip  [Ns x 1] dips (degrees)
+%           .earthModel  elastic parameters .G (MPa) and .nu
+%   rcv     geometry.receiver object: receiver patches (Nr patches)
+%           .xc   [Nr x 2] patch centres (m)
+%           .dv   [Nr x 2] unit vectors in the dip direction
+%           .nv   [Nr x 2] unit normal vectors
+%
+% OUTPUTS
+%   Ktau    [Nr x Ns] shear traction in the receiver dip direction (MPa/m)
+%   Ksigma  [Nr x Ns] normal traction (MPa/m)
+%
+% NOTES
+%   - Not used by the I2EC solvers, which build fault kernels with
+%     geometry.computeFaultTractionKernels (line dislocations, LDstressHS)
+%     through computeFaultTractionKernelsBem.
+%   - The +geometry package has a copy that calls geometry.EdgeStress.
+%
+% SEE ALSO
+%   EdgeStress, computeFaultTractionKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick (EOS), 2020
 
 Ktau = zeros(rcv.N,src.N);
 Ksigma = Ktau;

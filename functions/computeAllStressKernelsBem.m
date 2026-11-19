@@ -1,22 +1,63 @@
 function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
-% Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant stress kernels
-% 
+% COMPUTEALLSTRESSKERNELSBEM  Assemble all stress interaction kernels.
+%
+%   evl = computeAllStressKernelsBem(rcv, shz, boundary)
+%   evl = computeAllStressKernelsBem(rcv, shz, boundary, 'kernelmodify', 0)
+%
+%   Computes the four blocks of the elastic interaction operator between
+%   fault patches (rcv) and mantle shear-zone cells (shz), corrected for
+%   the model boundary by the boundary element method: fault slip to fault
+%   shear traction (KK), fault slip to mantle deviatoric stress (KL),
+%   mantle deviatoric strain to fault shear traction (LK) and mantle
+%   deviatoric strain to mantle deviatoric stress (LL). Mantle strain is
+%   deviatoric (e33 = -e22), so each cell has two strain components
+%   (e22, e23) and two stress components, sigma22' = (sxx - szz)/2 and
+%   sigma23 = sxz.
+%
 % INPUTS
-% rcv - object or data structure that contains fault geometry and Elastic parameters
-% shz - object or data structure that contains shear zone geometry and Elastic parameters
-% boundary - object or data structure that contains the boundary mesh and Elastic parameters
-% 
+%   rcv       geometry.receiver object: megathrust patches (N patches)
+%   shz       geometry.shearZoneReceiver object: mantle cells (M cells)
+%   boundary  geometry.receiver object: model boundary patches
+%             .Vpl  0: prescribed displacement .Vx, .Vz; 1: zero traction
+%
+% OPTIONS
+%   kernelmodify  1: set the eigenvalues of the deviatoric LL kernel with
+%                 positive real part to 0; 0: keep LL as computed  [1]
+%
 % OUTPUTS
-% evl - data structure with the following kernels
-% KK  - rcv(source)-shz(receiver) traction kernel (only in fault-shear direction) [Nf x Nf]
-% KL  - rcv(source)-shz(receiver) deviatoric stress kernel [Nshz x Nf x 2]
-% LK  - shz(source)-rcv(receiver) traction kernel (sources are deviatoric
-%       eigen strains, receiver traction is only in shear component) [Nf x Nshz x 2]
-% LL  - shz(source)-shz(receiver) deviatoric strain source and 
-%       deviatoric receiver stress [Nshz x Nshz x 2 x 2]
-% 
-% Authors:
-% Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
+%   evl       struct with fields
+%             .KK  [N x N] shear traction on rcv per unit slip on rcv
+%                  (MPa/m)
+%             .KL  [M x N x 2] deviatoric stress in shz per unit slip on
+%                  rcv; (:,:,1) = (sxx - szz)/2, (:,:,2) = sxz (MPa/m)
+%             .LK  [N x M x 2] shear traction on rcv per unit deviatoric
+%                  strain in shz; (:,:,1) from e22 (with e33 = -e22),
+%                  (:,:,2) from e23 (MPa)
+%             .LL  [M x M x 2 x 2] deviatoric stress in shz per unit
+%                  deviatoric strain in shz; 3rd index = receiver stress
+%                  component (sigma22', sigma23), 4th index = source strain
+%                  component (e22, e23) (MPa)
+%
+% NOTES
+%   - Kernel modification (default): the 2M x 2M matrix
+%     [LL11 LL12; LL21 LL22] is eigendecomposed, every eigenvalue with
+%     positive real part is set to 0, and the matrix is rebuilt (real part
+%     kept). Positive eigenvalues come from the discretisation and would
+%     make the viscoelastic system grow instead of relax. Call with
+%     'kernelmodify', 0 for the unmodified kernels (evl_orig).
+%   - KK, KL and LK are never modified.
+%   - A comment in the code says the index construction of the deviatoric
+%     LL kernel still needs to be checked.
+%   - Units assume the shear modulus of the earth model is in MPa.
+%   - Prints progress and timings to the command window.
+%
+% SEE ALSO
+%   computeFaultTractionKernelsBem, computeShzStressKernelsBem,
+%   computeAllDisplacementKernelsBem, assembleStressKernel,
+%   negateGrowingModes
+%
+% AUTHORS
+%   Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
 
 % Check the number of optional arguments
 numOptionalArgs = nargin - 3; % Subtract the three required arguments

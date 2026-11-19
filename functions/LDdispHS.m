@@ -1,53 +1,47 @@
 function [Disp] = LDdispHS(x,y,xe,ye,a,Beta,Ds,Dn,nu)
-% LDdispHS: LineDisplacementInducedDisplacementHalfSpace Computes the 
-%               influence (displacement) of a single planar line crack
-%               shearing and/or opening on the surronding points. Half
-%               space at 0.
+% LDDISPHS  Displacement due to a constant-slip line dislocation in a half-space.
 %
-% usage #1:
-%[Disp] = LDdispHS(x,y,xe,ye,a,Beta,Ds,Dn,nu)
+%   Disp = LDdispHS(x, y, xe, ye, a, Beta, Ds, Dn, nu)
 %
-% Arguments: (input)
-%      x & y  - The observation points locations in real Cartesian coords.
-%              (y must be below 0)
+%   Computes the displacement at observation points due to a single planar
+%   line element (crack) with uniform shear and/or opening displacement in
+%   a homogeneous elastic half-space whose surface y = 0 is traction-free
+%   (LineDisplacementInducedDisplacementHalfSpace).
 %
-%     xe & ye - The element midpoint location in real coords. 
-%              (must have a ye below 0). 
+% INPUTS
+%   x, y    observation points in Cartesian coordinates (y <= 0)
+%   xe, ye  element midpoint (ye < 0)
+%   a       element half-length
+%   Beta    angle of the element from the x-axis (radians): 0 when the
+%           normal points along -y (down); in degrees, 90 when the normal
+%           points east, -90 west and 180 north
+%   Ds      shear displacement of the element; positive is left-lateral
+%   Dn      normal displacement of the element; positive is opening
+%   nu      Poisson's ratio
 %
-%       a     - The elements half length.
+% OUTPUTS
+%   Disp    [numel(x) x 2] displacement [Ux, Uy] (units of Ds, Dn)
 %
-%       Beta  - The angle of the element away from the x-axis (radians).
-%               When the normal in the -y axis down this is 0. In degrees
-%               when the normal points east this is 90, west -90 and north
-%               180.
+% NOTES
+%   - Errors if any y > 0.
+%   - The displacement depends on Poisson's ratio only, not on the elastic
+%     moduli. (The original help listed a Young's modulus input E; this
+%     function has none.)
 %
-%     Dn,Ds   - The defined displacement of each element.(normal and shear).
-%               Dn+ is opening, Ds+ is left lateral shearing. 
+% EXAMPLE
+%   [x, y] = meshgrid(-2:0.05:2, -4:0.05:0);
+%   Disp = LDdispHS(x(:), y(:), 0, -2, 1, 0, 0, 1, 0.25);
+%   figure, quiver(x(:), y(:), Disp(:,1), Disp(:,2));
 %
-%       nu    - The Poisson's ratio.
+% SEE ALSO
+%   LDstressHS, computedisplacementGFs
 %
-%       E     - The Young's modulus.
-%
-% Arguments: (output)
-% Disp        - Is the displacement caused by the movement of the
-%             dislocation at the observataion points. [Ux,Uy].
-%
-% Example usage:
-% 
-%  [x,y]=meshgrid(-2:0.05:2,-4:0.05:0);
-%  dimx = length(x(:,1)); 
-%  dimy = length(x(1,:)); 
-%  Ds=0; Dn=1;
-%  [Disp] = LDdispHS(x(:),y(:),0,-2,1,0,Ds,Dn,0.25);
-%  [ Ux,Uy ] = ExtractCols( Disp );
-%  [Ux,Uy]=ReshapeData2d( dimx,dimy,Ux,Uy );
-%  figure,quiver(x(:),y(:),Ux(:),Uy(:));
-%
-%  Author: Tim Davis/Steve Martel
-%  Copyright 2017, Tim Davis, Potsdam University\The University of Aberdeen
-%  Modified form of Steve Martels BEM scripts from:
-%  http://www.soest.hawaii.e.du/martel/Martel.BEM_dir/
-%  Also includes some notation from Ritz & Pollard 2012.
+% AUTHORS
+%   Author: Tim Davis/Steve Martel
+%   Copyright 2017, Tim Davis, Potsdam University\The University of Aberdeen
+%   Modified form of Steve Martels BEM scripts from:
+%   http://www.soest.hawaii.e.du/martel/Martel.BEM_dir/
+%   Also includes some notation from Ritz & Pollard 2012.
 
 
 if any(y>0)

@@ -1,45 +1,69 @@
 function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZone( ...
     x2,x3,A,B,C,e22,e23,e33,G,nu)
-% function COMPUTESTRESSPLANESTRAINTRIANGLESHEARZONE computes the
-% stress field associated with deforming triangle strain volume
-% considering the following geometry using the analytic solution of
-% Barbot (2018).
+% COMPUTESTRESSPLANESTRAINTRIANGLESHEARZONE  Stress due to a strained triangle in a half-space (analytic).
 %
-%              surface
-%      -------------+-------------- E (x2)
-%                   |
-%                   |     + A
-%                   |    /  . 
-%                   |   /     .  
-%                   |  /        .            
-%                   | /           .      
-%                   |/              + B
-%                   /            .
-%                  /|          /  
-%                 / :       .
-%                /  |    /
-%               /   : .
-%              /   /|
-%             / .   :
-%            +      |
-%          C        :
-%                   |
-%                   D (x3)
+%   [s22, s23, s33] = computeStressPlaneStrainTriangleShearZone(x2, x3, A, B, C, e22, e23, e33, G, nu)
 %
+%   Computes the plane-strain stress at (x2, x3) due to uniform
+%   eigenstrain (e22, e23, e33) in the triangle ABC in a homogeneous
+%   elastic half-space, from the analytic displacement gradients of
+%   Barbot (2018). The eigenstrain is removed inside the triangle before
+%   Hooke's law is applied. Geometry (x3 is depth, positive down):
 %
-% Input:
-% x2, x3             east coordinates and depth of the observation point,
-% A, B, C            east and depth coordinates of the vertices,
-% eij                source strain component 22, 23 and 33 in the strain
-%                    volume,
-% G, nu              rigidity and Poisson's ratio in the half space.
+%                 surface
+%         -------------+-------------- E (x2)
+%                      |
+%                      |     + A
+%                      |    /  .
+%                      |   /     .
+%                      |  /        .
+%                      | /           .
+%                      |/              + B
+%                      /            .
+%                     /|          /
+%                    / :       .
+%                   /  |    /
+%                  /   : .
+%                 /   /|
+%                / .   :
+%               +      |
+%             C        :
+%                      |
+%                      D (x3)
 %
-% Output:
-% s22                horizontal uniaxial stress,
-% s23                shear stress
-% s33                vertical uniaxial stress.
+% INPUTS
+%   x2, x3          observation points: horizontal position and depth
+%                   (m, x3 >= 0)
+%   A, B, C         [1 x 2] triangle vertices [x2, x3] (m)
+%   e22, e23, e33   eigenstrain components in the triangle (tensor
+%                   components)
+%   G               shear modulus (MPa)
+%   nu              Poisson's ratio
 %
-% Author: Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
+% OUTPUTS
+%   s22             horizontal normal stress, same size as x2 (MPa)
+%   s23             shear stress (MPa)
+%   s33             vertical normal stress (MPa)
+%
+% NOTES
+%   - Not used by the I2EC kernels, which call
+%     computeStressPlaneStrainTriangleShearZoneFiniteDifference.
+%   - Right after the full sum for the derivative u2d2, the code assigns
+%     u2d2 again from the edge B-C only, which drops the other two edges.
+%     Check this before using the function.
+%   - x3 must be non-negative (assertion).
+%
+% SEE ALSO
+%   computeStressPlaneStrainTriangleShearZoneFiniteDifference,
+%   computeDisplacementPlaneStrainTriangleShearZone
+%
+% REFERENCES
+%   Barbot, S. (2018). Deformation of a half-space from anelastic strain
+%   confined in a tetrahedral volume. Bulletin of the Seismological Society
+%   of America, 108(5A), 2687-2712. doi:10.1785/0120180058
+%
+% AUTHORS
+%   Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
 
 assert(min(x3(:))>=0,'depth must be positive.');
 

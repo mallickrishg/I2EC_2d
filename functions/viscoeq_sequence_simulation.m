@@ -1,13 +1,46 @@
 function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,stress_change,Trecur)
-% function to apply initial conditions to a single earthquake sequence ODE (IVP) 
-% and solve the system of equations using Runge-Kutta 4th order integration
-% this code can deal with a single event or a sequence of events
+% VISCOEQ_SEQUENCE_SIMULATION  Integrate one cycle with imposed earthquakes.
+%
+%   [tfull, Yfull] = viscoeq_sequence_simulation(y_odefunction, Y0, rcv, ...
+%                                                shz, stress_change, Trecur)
+%
+%   Integrates the state from Y0 with ode45 from t = 0 to the first event,
+%   applies that event's stress change to the state, integrates to the
+%   next event, and so on until Trecur. An event adds dtau/Asigma to
+%   log(v) on each fault patch and dsigma22, dsigma23 to the mantle
+%   stresses.
+%
 % INPUTS
-% stress_change - data structure containing 
-%                 Nevents (number of coseismic events)
-%                 Timing (vector of event times - since start of cycle) 
-%                 dtau, dsigma22,disgma23 (matrix of stress changes)
-% Trecur        - earthquake supercycle recurrence time
+%   y_odefunction  function handle @(t, y) returning dY/dt, e.g.
+%                  @(t, y) ode_viscoelastic(t, y, rcv, shz, evl)
+%   Y0             [n x 1] initial state (layout as in ode_viscoelastic)
+%   rcv            geometry.receiver object (uses .N, .dgf, .Asigma)
+%   shz            geometry.shearZoneReceiver object (uses .N, .dgf)
+%   stress_change  struct of imposed events
+%                  .Nevents         number of events per cycle
+%                  .Timing          [1 x Nevents] increasing event times
+%                                   from the start of the cycle (s)
+%                  .dtau            [N x Nevents] shear stress change (MPa)
+%                  .dsigma22        [M x Nevents] change in s22 (MPa)
+%                  .dsigma23        [M x Nevents] change in s23 (MPa)
+%   Trecur         cycle length (s)
+%
+% OUTPUTS
+%   tfull          [Nt x 1] times from the start of the cycle (s)
+%   Yfull          [Nt x n] states at those times
+%
+% NOTES
+%   - Uses ode45 (adaptive Runge-Kutta 4(5)) with AbsTol = RelTol = 1e-10,
+%     InitialStep = 1e-6 s and MaxStep = 1e8 s.
+%   - Each event time appears twice in tfull: the states just before and
+%     just after the stress step.
+%   - Events are applied by the local function apply_initialconditions.
+%
+% SEE ALSO
+%   runImposedEarthquakeCycles, ode_viscoelastic, ode45
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 options=odeset('Refine',1,'AbsTol',1e-10,'RelTol',1e-10,'InitialStep',1e-6,'MaxStep',1e8);
 
