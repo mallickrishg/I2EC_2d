@@ -70,7 +70,7 @@ classdef shearZoneReceiver < geometry.shzpatch
             %   shz = geometry.shearZoneReceiver('inputs/shearzone', earthModel);
             %
             % SEE ALSO
-            %   geometry.shzpatch, CREATE_shearzone_mesh
+            %   geometry.shzpatch, createShearZoneMesh
             %
             % AUTHORS
             %   Sharadha Sathiakumar, 2023

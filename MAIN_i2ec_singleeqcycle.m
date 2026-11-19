@@ -48,8 +48,7 @@ boundary.Vz = boundary.Vz.*Vpl;
 % provide shear zone mesh as 2 .dat files of the form
 % meshname_vertices.dat (contains x,z coordinates of vertices)
 % meshname_triangulation.dat (contains 3 columns of vertex linkage)
-% This mesh can be created using CREATE_shearzone_mesh.m provided in the
-% folder 'meshing'
+% This mesh can be created with meshing/createShearZoneMesh.m (PDE Toolbox)
 
 shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 

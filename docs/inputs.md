@@ -55,8 +55,18 @@ Load them by passing the prefix to
 shz = geometry.shearZoneReceiver('inputs/shearzone', earthModel);
 ```
 
-New meshes can be made with `meshing/CREATE_shearzone_mesh.m` or
-`meshing/CREATE_geometryFromEdgesMesh.m`.
+New meshes can be made with `meshing/createShearZoneMesh.m`, which meshes the
+oceanic mantle and the mantle wedge with the PDE Toolbox and writes both files:
+
+```matlab
+addpath meshing
+createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine');   % inputs/shearzone_fine_*.dat
+```
+
+Its default polygons are the outline of the example mesh. The example mesh was
+made with the PDE Toolbox, but its exact settings were not recorded, so
+`'Hmax', 20` gives a similar mesh (495 triangles instead of 521), not the same
+one. Rebuild the cached kernels below after changing the mesh.
 
 ## Pre-computed kernels
 

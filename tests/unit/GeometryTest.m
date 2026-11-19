@@ -81,6 +81,30 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
             tc.verifyEqual(sum(m.shz.area), 100e3 * 60e3, 'RelTol', 1e-12);
         end
 
+        function createdMeshIsReadableAndFillsTheOutline(tc)
+            % meshing/createShearZoneMesh: PDE Toolbox mesh written as .dat
+            % files that geometry.shearZoneReceiver reads; the triangles
+            % tile both polygons exactly
+            tc.assumeTrue(license('test', 'PDE_Toolbox') && exist('createpde', 'file') > 0, ...
+                'needs the PDE Toolbox');
+            folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+            [vert, tri] = createShearZoneMesh('Hmax', 40, 'OutputFolder', folder, 'Name', 'mesh');
+            shz = geometry.shearZoneReceiver(fullfile(folder, 'mesh'), tc.Ex.em);
+            tc.verifyEqual(shz.N, size(tri, 1));
+            tc.verifyEqual(shz.vert, vert, 'AbsTol', 1e-6);
+            tc.verifyGreaterThan(min(shz.area), 0, 'no degenerate triangles');
+            % default outline: same as the example mesh in inputs/
+            oc = [-100 -20; -100 -200; 450 -200; 450 -132.5; 0 -20];
+            we = [201 -50; 450 -112.5; 450 -35; 201 -35];
+            outline = (polyarea(oc(:,1), oc(:,2)) + polyarea(we(:,1), we(:,2))) * 1e6;
+            tc.verifyEqual(sum(shz.area), outline, 'RelTol', 1e-10, 'mesh fills the polygons');
+            tc.verifyEqual(sum(tc.Ex.shz.area), outline, 'RelTol', 1e-10, 'default outline = example mesh');
+            % every triangle lies in one of the two polygons
+            inO = inpolygon(shz.xc(:,1)/1e3, shz.xc(:,2)/1e3, oc(:,1), oc(:,2));
+            inW = inpolygon(shz.xc(:,1)/1e3, shz.xc(:,2)/1e3, we(:,1), we(:,2));
+            tc.verifyTrue(all(xor(inO, inW)));
+        end
+
         %% ---------------- half-space kernel wrappers ----------------
         function faultTractionKernelIsReciprocal(tc)
             % W_i K(i,j) = W_j K(j,i) for well-separated patches (Betti)

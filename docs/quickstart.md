@@ -127,7 +127,7 @@ fixed. See `tests/README.md` for how to read the results.
 | `PLOT_longtermVelocity.m` | Plots the long-term (corner-flow) velocity field. |
 | `functions/` | Solvers, kernel assembly, long-term loading and plotting helpers. |
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
-| `meshing/` | Scripts to build triangular shear-zone meshes (based on *mesh2d*). |
+| `meshing/` | `createShearZoneMesh.m`: builds the triangular shear-zone mesh (PDE Toolbox). |
 | `inputs/` | Example fault, boundary and shear-zone geometry files. |
 | `kernels/` | Pre-computed stress (`evl_orig.mat`) and displacement (`devl.mat`) kernels. |
 | `tests/` | Test suite (`matlab.unittest`); see `tests/README.md`. |
