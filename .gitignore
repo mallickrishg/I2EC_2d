@@ -44,5 +44,8 @@ expt*
 .ipynb_checkpoints/MAIN_analyticsolve_singleeqcycle-checkpoint.m
 .ipynb_checkpoints/I2EC_linearVEcycles-checkpoint.ipynb
 
+# Sphinx build output
+docs/_build/
+
 # Test run output (tests/runTests.m)
 tests/results/

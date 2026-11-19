@@ -3,8 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MATLAB](https://img.shields.io/badge/MATLAB-R2023b+-blue.svg)](https://www.mathworks.com/products/matlab.html)
 [![DOI](https://img.shields.io/badge/DOI-10.1186%2Fs40623--026--02429--4-green)](https://doi.org/10.1186/s40623-026-02429-4)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-informational)](https://mallickrishg.github.io/I2EC_2d/)
 
 **Authors:** Rishav Mallick & Sharadha Sathiakumar (Earth Observatory of Singapore)
+
+**Documentation:** https://mallickrishg.github.io/I2EC_2d/
 
 **I2EC** is a MATLAB-based numerical modeling tool designed to simulate the spatiotemporal evolution of earthquake cycles in two-dimensional subduction zone geometries. It solves for mechanical equilibrium in the lithosphere-asthenosphere system to predict displacements, strains, and stresses. 
 
@@ -15,7 +18,7 @@ The codebase utilizes an extended Boundary Element Method (BEM) framework that r
 * **Mechanical Consistency Across Timescales:** Ensures consistency from individual earthquake cycles to geological periods by integrating long-term deformation rates with short-term cycle perturbations.
 * **Support for Diverse Rheologies:** Accommodates spatially variable power-law viscous rheologies in the bulk mantle and rate-dependent friction on faults.
 * **Advanced Numerical Schemes:**
-    * **ODE Integration:** Solves the coupled system (IVP) using a 4th-order Runge-Kutta scheme for non-linear cases.
+    * **ODE Integration:** Solves the coupled system (IVP) using MATLAB's adaptive Runge-Kutta 4(5) solver (`ode45`) for non-linear cases.
     * **Semi-Analytical Speedup:** Transforms linear viscoelastic problems into an eigenvalue problem, reducing computational time by orders of magnitude.
 * **Optimized Stress Kernels:** Implements regularized stress kernels to eliminate unphysical instabilities common in standard hypersingular BEM formulations.
 * **Geodynamical Integration:** Directly incorporates long-term strain rates derived from geodynamic solutions (e.g., Newtonian corner-flow approximations) as a loading term.
