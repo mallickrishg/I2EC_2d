@@ -123,7 +123,7 @@ available:
 | `..., 'cellaverage', 7` | 7-point rule; certified | none | finer quadrature, about 2x the cost of 3-point |
 | `..., 'cellaverage', 1, 'kernelcertify', false` | at the cell centroid | a few (43 on the example mesh) | earlier kernels; need one of the fixes below |
 | `..., 'cellaverage', 1, 'kernelcertify', false, 'kernelmodify', 1` | at the centroid | zeroed (neutral) | earlier default for `ode45` runs |
-| `..., 'cellaverage', 1, 'kernelcertify', false, 'kernelmodify', 2` | at the centroid | damped to $-\max|\lambda|$ | `ode45` runs with long spin-ups |
+| `..., 'cellaverage', 1, 'kernelcertify', false, 'kernelmodify', 2` | at the centroid | damped to $-\max\lvert\lambda\rvert$ | `ode45` runs with long spin-ups |
 
 For the semi-analytical solvers with centroid kernels, negate the growing
 modes of the operator explicitly: `[~, ~, A] = negateGrowingModes(A)`.
