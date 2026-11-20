@@ -15,6 +15,8 @@ Plotting helpers and miscellaneous tools.
 
 .. mat:autofunction:: create_megathrust
 
+.. mat:autofunction:: createShearZoneMesh
+
 .. mat:autofunction:: filenameGenerator
 
 .. mat:autofunction:: drchrnd

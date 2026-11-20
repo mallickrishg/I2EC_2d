@@ -55,11 +55,11 @@ Load them by passing the prefix to
 shz = geometry.shearZoneReceiver('examples/inputs/shearzone', earthModel);
 ```
 
-New meshes can be made with `meshing/createShearZoneMesh.m`, which meshes the
+New meshes can be made with {mat:func}`createShearZoneMesh`, which meshes the
 oceanic mantle and the mantle wedge with the PDE Toolbox and writes both files:
 
 ```matlab
-addpath meshing
+addpath functions
 createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine');   % examples/inputs/shearzone_fine_*.dat
 ```
 

@@ -82,7 +82,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
         end
 
         function createdMeshIsReadableAndFillsTheOutline(tc)
-            % meshing/createShearZoneMesh: PDE Toolbox mesh written as .dat
+            % createShearZoneMesh: PDE Toolbox mesh written as .dat
             % files that geometry.shearZoneReceiver reads; the triangles
             % tile both polygons exactly
             tc.assumeTrue(license('test', 'PDE_Toolbox') && exist('createpde', 'file') > 0, ...
