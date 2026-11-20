@@ -35,7 +35,7 @@ function [vert, tri] = createShearZoneMesh(varargin)
 %   - The example mesh in examples/inputs/ was made with the PDE Toolbox, but the
 %     exact settings were not recorded: 'Hmax' = 20 gives 495 triangles,
 %     close to its 521 but not the same mesh. Rebuild the cached kernels
-%     in kernels/ after replacing it.
+%     in examples/kernels/ after replacing it.
 %   - Requires the PDE Toolbox. It is needed only to make meshes, not to
 %     run models.
 %

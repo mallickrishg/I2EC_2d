@@ -50,4 +50,4 @@ docs/_build/
 tests/results/
 
 # Mesh-convergence example cache (examples/example3_meshConvergence.m)
-kernels/meshconvergence/
+examples/kernels/meshconvergence/

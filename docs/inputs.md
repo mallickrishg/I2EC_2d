@@ -70,7 +70,7 @@ one. Rebuild the cached kernels below after changing the mesh.
 
 ## Pre-computed kernels
 
-`kernels/evl_orig.h5` and `kernels/devl.h5` hold the stress and displacement
+`examples/kernels/evl_orig.h5` and `examples/kernels/devl.h5` hold the stress and displacement
 kernels for the example geometry. `evl_orig.h5` holds the default kernels of
 {mat:func}`computeAllStressKernelsBem` (3-point cell average, certified; see its
 `certificate` group). They are valid only for these meshes:
@@ -86,8 +86,8 @@ into the same MATLAB struct:
 
 ```matlab
 evl = computeAllStressKernelsBem(rcv, shz, boundary);
-saveKernels('kernels/evl_orig.h5', evl, 'rcv', rcv, 'shz', shz);
-evl = loadKernels('kernels/evl_orig.h5');
+saveKernels('examples/kernels/evl_orig.h5', evl, 'rcv', rcv, 'shz', shz);
+evl = loadKernels('examples/kernels/evl_orig.h5');
 ```
 
 Layout (format `I2EC kernels`, version 1):
@@ -109,7 +109,7 @@ certificate values and options) are one-element arrays. In Python:
 
 ```python
 import h5py
-with h5py.File("kernels/evl_orig.h5", "r") as f:
+with h5py.File("examples/kernels/evl_orig.h5", "r") as f:
     KK = f["KK"][:]                      # (N, N)
     LL = f["LL"][:]                      # (M, M, 2, 2)
     print(f["LL"].attrs["description"], f["LL"].attrs["units"])

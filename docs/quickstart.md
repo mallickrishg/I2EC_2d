@@ -47,9 +47,9 @@ shared helpers are `exampleModel` (paths, meshes, cached kernels) and
 `newtonianCycle` (the model of examples 2-4). {doc}`examples/index` describes each
 example in detail, with its figures.
 
-Examples 1, 2 and 4 load the cached kernels in `kernels/` and take one to two
+Examples 1, 2 and 4 load the cached kernels in `examples/kernels/` and take one to two
 minutes. Example 3 builds and caches the kernels of its three meshes in
-`kernels/meshconvergence/` on its first run, which adds about a minute; later
+`examples/kernels/meshconvergence/` on its first run, which adds about a minute; later
 runs take about a minute.
 
 ### Semi-analytical solver (linear viscoelasticity)
@@ -149,5 +149,5 @@ fixed. See `tests/README.md` for how to read the results.
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
 | `meshing/` | `createShearZoneMesh.m`: builds the triangular shear-zone mesh (PDE Toolbox). |
 | `examples/inputs/` | Example fault, boundary and shear-zone geometry files. |
-| `kernels/` | Pre-computed stress (`evl_orig.h5`) and displacement (`devl.h5`) kernels, as HDF5 (see {doc}`inputs`). |
+| `examples/kernels/` | Pre-computed stress (`evl_orig.h5`) and displacement (`devl.h5`) kernels, as HDF5 (see {doc}`inputs`). |
 | `tests/` | Test suite (`matlab.unittest`); see `tests/README.md`. |

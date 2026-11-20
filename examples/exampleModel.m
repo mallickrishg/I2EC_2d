@@ -9,7 +9,7 @@ function m = exampleModel(varargin)
 %   (examples/inputs/boundary2d.seg), the kinematic hinge fault (examples/inputs/hinge2d.seg)
 %   and a mantle mesh (default examples/inputs/shearzone). With 'StressKernels' or
 %   'DisplacementKernels' true it also returns the default kernels: loaded
-%   from the cache in kernels/ when they match the meshes, computed (and
+%   from the cache in examples/kernels/ when they match the meshes, computed (and
 %   not saved) otherwise.
 %
 % OPTIONS (name-value)
@@ -35,8 +35,8 @@ function m = exampleModel(varargin)
 %       .evl, .devl, .Ghx, .Ghz  kernels, when requested
 %
 % NOTES
-%   - The cached kernels are kernels/evl_orig.h5 (stress, default options)
-%     and kernels/devl.h5 (displacement at m.obs), both for
+%   - The cached kernels are examples/kernels/evl_orig.h5 (stress, default options)
+%     and examples/kernels/devl.h5 (displacement at m.obs), both for
 %     examples/inputs/shearzone. They are used only when their sizes match the
 %     meshes; a different mantle mesh gets its kernels computed.
 %   - rcv, shz and the other receivers are handle objects: examples set
@@ -85,11 +85,11 @@ if opt.StressKernels
     %                                    'kernelcertify',false,'kernelmodify',1);
     % ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
     % semi-analytical solvers use negateGrowingModes on the operator instead.)
-    % kernels/evl_orig.h5 holds the default kernels for examples/inputs/shearzone
+    % examples/kernels/evl_orig.h5 holds the default kernels for examples/inputs/shearzone
     % (HDF5, written by saveKernels; readable outside MATLAB):
     %   evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
-    %   saveKernels('kernels/evl_orig.h5', evl_orig, 'rcv', rcv, 'shz', shz);
-    cached = fullfile(m.root, 'kernels', 'evl_orig.h5');
+    %   saveKernels('examples/kernels/evl_orig.h5', evl_orig, 'rcv', rcv, 'shz', shz);
+    cached = fullfile(m.root, 'examples', 'kernels', 'evl_orig.h5');
     if isfile(cached)
         evl_orig = loadKernels(cached);
     end
@@ -101,7 +101,7 @@ if opt.StressKernels
 end
 
 if opt.DisplacementKernels
-    cached = fullfile(m.root, 'kernels', 'devl.h5');
+    cached = fullfile(m.root, 'examples', 'kernels', 'devl.h5');
     if isfile(cached)
         devl = loadKernels(cached);
     end

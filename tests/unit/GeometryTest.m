@@ -186,7 +186,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
             % flt2flt merges the last two patches when the remainder is
             % 2*W0 (round-off makes 'Wt > Wc/2' true), so the example mesh
             % has 49 patches and the deepest one is 2*W0 wide. The cached
-            % kernels in kernels/ are built on this mesh, so this test pins
+            % kernels in examples/kernels/ are built on this mesh, so this test pins
             % it: a change here means the kernels must be rebuilt.
             rcv = tc.Ex.rcv;
             W = rcv.W;

@@ -39,9 +39,10 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §2: write down the rule for `+geometry/` vs `functions/`.
 - [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`; optional `filenameGenerator` tidy-up.
 - [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
-- [ ] §6: a regeneration script or hash check for `kernels/*.h5`.
+- [ ] §6: a regeneration script or hash check for `examples/kernels/*.h5`.
 - [ ] §7: one `setup.m`.
 - [x] ~~Move the example geometry from `inputs/` to `examples/inputs/`, next to the driver scripts that use it.~~ *Done (2026-11-21); `createShearZoneMesh` now writes there by default.*
+- [x] ~~Move the cached example kernels from `kernels/` to `examples/kernels/` (including the git-ignored `meshconvergence/` caches).~~ *Done (2026-11-21).*
 - [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
 - [x] ~~§9: one help-block format; README dependency list.~~ *Done: every help block has an H1 line and INPUTS/OUTPUTS; the README no longer has a dependency list (rewritten in #13).*
 
@@ -275,7 +276,7 @@ Tasks:
 
 ## 6. Cached kernels and data
 
-- [ ] `kernels/evl_orig.h5` (~8.7 MB) and `kernels/devl.h5` (~6.2 MB) are loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code beyond their sizes. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
+- [ ] `examples/kernels/evl_orig.h5` (~8.7 MB) and `examples/kernels/devl.h5` (~6.2 MB) are loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code beyond their sizes. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
 - [x] ~~Store kernels in a format usable outside MATLAB.~~ *Done (2026-11-20): `saveKernels`/`loadKernels` write and read HDF5 (format 'I2EC kernels', version 1). Each kernel block is a compressed dataset with description and units attributes; the certificate, the build options (`evl.options`, now recorded by `computeAllStressKernelsBem`) and optionally the fault and mantle geometry are stored too. Row-major readers (h5py/NumPy) see the MATLAB shape and index order. `kernels/evl_orig.mat` and `devl.mat` were converted to `.h5` (identical on reading back) and removed; example 3 caches `.h5` and converts an existing `.mat` cache once. Layout: `docs/inputs.md`. Tests: `KernelsTest/kernelFilesRoundTrip`, `kernelFilesShowTheMatlabShapeToRowMajorReaders`, `loadKernelsRejectsOtherFiles`.*
 - [x] ~~`MAIN_analyticsolve_singleeqcycle.m` keeps the `computeAll*KernelsBem` calls as comments and loads the `.mat` files instead. → Replace this with an explicit `if exist(...) load else compute` switch.~~ *Done: `examples/exampleModel.m` loads the cached kernels when they exist and match the mesh sizes, and computes them otherwise.*
 

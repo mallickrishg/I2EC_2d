@@ -27,7 +27,7 @@ function stresskernel = assembleStressKernel(evl,locked)
 %
 % NOTES
 %   - The drivers pass the default kernels of computeAllStressKernelsBem
-%     (cell-averaged and certified, saved as kernels/evl_orig.h5), which
+%     (cell-averaged and certified, saved as examples/kernels/evl_orig.h5), which
 %     have no growing modes; negateGrowingModes in the solvers then changes
 %     nothing. With centroid kernels it negates their growing modes.
 %

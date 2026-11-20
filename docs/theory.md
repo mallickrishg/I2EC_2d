@@ -219,7 +219,7 @@ the negated operator too.
 - After building kernels for a new mesh, look at `evl.certificate`: the
   asymmetry removed and the largest eigenvalue of the symmetrised kernel. A
   failed certification is an error; it points to a mesh or kernel problem.
-- Recompute the kernels after any geometry change. The files in `kernels/`
+- Recompute the kernels after any geometry change. The files in `examples/kernels/`
   match the example meshes only.
 - `runTests` checks the Green's functions, kernels and solvers against
   physical identities; see `tests/README.md`.
