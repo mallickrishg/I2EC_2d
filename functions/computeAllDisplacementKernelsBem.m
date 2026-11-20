@@ -1,23 +1,40 @@
 function devl = computeAllDisplacementKernelsBem(obs,rcv,shz,boundary,scalar_value)
-% Function that takes in a given shear zone data structure 'shz', and fault 'rcv', computes all relevant displacement kernels
-% 
-% INPUTS
-% obs - array containing the x2,x3 coordinates of the observation points 
-% rcv - object or data structure that contains fault geometry and Elastic parameters
-% shz - object or data structure that contains shear zone geometry and Elastic parameters
-% scalar_value - rescale BEM problem (typically the plate velocity)
-% 
-% OUTPUTS
-% devl - data structure with the following kernels
-% KO  - displacement kernels due to fault slip 
-% KO(:,:,1) - horizontal component of displacement 
-% KO(:,:,2) - vertical component of displacement
-% LO  - displacement kernels due to strain in shear zones 
-% LO(:,:,1,1) and LO(:,:,1,2) - horizontal component of displacement 
-% LO(:,:,2,1) and LO(:,:,2,2) - vertical  component of displacement 
+% COMPUTEALLDISPLACEMENTKERNELSBEM  Assemble displacement kernels at observation points.
 %
-% Authors:
-% Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
+%   devl = computeAllDisplacementKernelsBem(obs, rcv, shz, boundary, scalar_value)
+%
+%   Computes the displacement at observation points due to slip on the
+%   fault patches (KO) and deviatoric strain in the mantle cells (LO),
+%   corrected for the model boundary by the boundary element method.
+%
+% INPUTS
+%   obs           [Nobs x 2] observation points [x, z] (m)
+%   rcv           geometry.receiver object: megathrust patches (N patches)
+%   shz           geometry.shearZoneReceiver object: mantle cells (M cells)
+%   boundary      geometry.receiver object: model boundary patches
+%                 .Vpl  0: zero displacement; 1: zero traction
+%   scalar_value  source amplitude of each kernel column (slip in m or
+%                 strain); 1 gives kernels per unit source
+%
+% OUTPUTS
+%   devl          struct with fields
+%                 .KO  [Nobs x N x 2] displacement due to slip on each
+%                      patch; (:,:,1) = ux, (:,:,2) = uz
+%                 .LO  [Nobs x M x 2 x 2] displacement due to deviatoric
+%                      strain in each cell; 3rd index = displacement
+%                      component (ux, uz), 4th index = source strain
+%                      component (e22 with e33 = -e22, e23)
+%
+% NOTES
+%   - The driver scripts call it with scalar_value = 1.
+%   - Prints progress to the command window.
+%
+% SEE ALSO
+%   computeFaultDisplacementKernelsBem, computeShzDisplacementKernelsBem,
+%   computeAllStressKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick (Caltech) & Sharadha Sathiakumar (EOS), 2023
 
 % create data structure to hold disp kernels
 devl = [];
@@ -28,7 +45,6 @@ disp('Computing displacement kernels')
 Nobs=length(obs(:,1));
 %% compute fault displacement kernels
 
-% Gf_d = computedisplacementGFs(rcv,obs);
 [Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(rcv,obs,boundary,scalar_value);
 
 % Nobs x shz.N x 2 corresponding to the horizontal and vertical kernels

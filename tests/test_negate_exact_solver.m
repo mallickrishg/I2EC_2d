@@ -6,7 +6,7 @@ function test_negate_exact_solver
 % (inputs/ and kernels/).  Run from the I2EC_2d root:
 %   addpath('tests'); test_negate_exact_solver
 %
-% The forcing is built as in MAIN_analyticsolve_singleeqcycle.m, with the
+% The forcing is built as in the former MAIN_analyticsolve_singleeqcycle.m (now examples/newtonianCycle.m), with the
 % negated operator: c = edot_lock - A_neg * y_pl.
 %
 % Tests:
@@ -44,7 +44,7 @@ Trecur = 500 * yr;  Vpl = 1e-9;
 earthModel = geometry.LDhs(mu, nu);
 rcv = geometry.receiver(fullfile(root, 'inputs', 'megathrust2d.seg'), earthModel);
 shz = geometry.shearZoneReceiver(fullfile(root, 'inputs', 'shearzone'), earthModel);
-load(fullfile(root, 'kernels', 'evl_orig.mat'), 'evl_orig');
+evl_orig = loadKernels(fullfile(root, 'kernels', 'evl_orig.h5'));
 
 % Rheology (I2EC example)
 rcv.Asigma = 1e-6 .* (5e17 / (sum(~rcv.pinnedPosition .* rcv.W))) .* ones(rcv.N, 1);
@@ -241,11 +241,12 @@ t7 = [1e6, 1e8, 1e9, 1e10];     % |lam t| from 1e-7 (series) to 10
 
 [~, ~, A7_neg] = negateGrowingModes(A7);
 err7a = norm(A7_neg - A7_ref) / norm(A7_ref);
-[Y7, U7] = analyticSolveIVP(A7, c7, y7, t7);
+% the solvers no longer negate: pass the negated operator
+[Y7, U7] = analyticSolveIVP(A7_neg, c7, y7, t7);
 [Y7r, U7r] = expm_ivp(A7_ref, c7, y7, t7);
 err7b = max([vecnorm(Y7 - Y7r) ./ vecnorm(Y7r), vecnorm(U7 - U7r) ./ vecnorm(U7r)]);
 T7 = 1e10;
-y07 = computePeriodicInitialConditionBalanced(A7, c7, b7, T7);
+y07 = computePeriodicInitialConditionBalanced(A7_neg, c7, b7, T7);
 eM7 = expm([A7_ref c7; zeros(1, 6)] * T7);
 err7c = norm((eye(5) - eM7(1:5, 1:5)) * y07 - (eM7(1:5, 6) + b7)) / norm(eM7(1:5, 6) + b7);
 
@@ -315,7 +316,7 @@ end
 %% ======== Local functions ========
 
 function [A, A_neg, c, b, c_lock] = build_system(evl_orig, stresskernel, locked, Asigma, eta_mantle, slip_co, flv, y_pl)
-% Operator, forcing and coseismic jump as in MAIN_analyticsolve_singleeqcycle.m
+% Operator, forcing and coseismic jump as in the former MAIN_analyticsolve_singleeqcycle.m (now examples/newtonianCycle.m)
 viscvec = [Asigma(~locked); eta_mantle * 1e-6; eta_mantle * 1e-6];
 A = diag(1 ./ viscvec) * stresskernel;
 [~, ~, A_neg] = negateGrowingModes(A);

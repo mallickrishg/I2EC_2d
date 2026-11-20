@@ -1,24 +1,51 @@
 function [Vx, Vz]=computeLongTermVelocity(X,Z,Vpl,Tplate,dip,shz,boundary,ocean_translate_params,continental_translate_params)
-% Function computeLongTermVelocity calculates the long-term velocity field
-% at the observation points
-% given the shear zone, boundary data structures and the angle of suduction 
-% This function uses compute_cornerflow_velocityfield to compute velocity field 
-% in continental & oceanic mantle
-% INPUTS:
-% X,Z - Input/observation points
-% Vpl - Loading velocity
-% Tplate - Thickness of the plate
-% dip - Angle of subduction in degrees
-% shz - data structure containing shear zone mesh coordinates
-% boundary - data structure containing the boundary file
-% dip - slab dip in radians
-% oceanic & continental translation parameters - provide as [x,z] translations
-% 
-% OUTPUTS:
-% Vx,Vz - horizontal and vertical velocity components
-% 
-% Authors:
-% Sharadha Sathiakumar (EOS), 2023 
+% COMPUTELONGTERMVELOCITY  Compute the long-term velocity at observation points.
+%
+%   [Vx, Vz] = computeLongTermVelocity(X, Z, Vpl, Tplate, dip, shz, ...
+%       boundary, ocean_translate_params, continental_translate_params)
+%
+%   Assigns the long-term (geological) velocity to each point by region:
+%   the incoming plate moves at Vpl, the overriding plate is fixed, the
+%   slab moves down-dip at Vpl, and the oceanic mantle and mantle wedge
+%   follow Newtonian corner flow (compute_cornerflow_velocityfield) scaled
+%   by Vpl. Points in no region get zero velocity.
+%
+% INPUTS
+%   X, Z                          [Nobs x 1] observation points (m), Z negative
+%                                 below the surface
+%   Vpl                           plate speed (m/s)
+%   Tplate                        plate (lithosphere) thickness (m)
+%   dip                           slab dip (degrees)
+%   shz                           geometry.shearZoneReceiver object: mantle mesh
+%                                 .vert     [Nv x 2] vertices [x, z] (m)
+%   boundary                      geometry.receiver object: model boundary
+%                                 .x        [Nb x 2] patch upper ends (m)
+%   ocean_translate_params        [1 x 2] shift [dx, dz] (m) of oceanic-mantle
+%                                 points into the corner-flow frame
+%   continental_translate_params  [1 x 2] shift [dx, dz] (m) of mantle-wedge
+%                                 points into the corner-flow frame
+%
+% OUTPUTS
+%   Vx      [Nobs x 1] horizontal velocity (m/s)
+%   Vz      [Nobs x 1] vertical velocity (m/s)
+%
+% NOTES
+%   - Regions are polygons built from the boundary and mesh extents
+%     (inpolygon): incoming plate (x < 0, above -Tplate), overriding plate,
+%     slab of thickness Tplate, oceanic mantle and mantle wedge. Where they
+%     overlap, the region assigned last wins (oceanic, then wedge mantle).
+%   - Oceanic-mantle points use column 2 and wedge points column 1 of
+%     compute_cornerflow_velocityfield.
+%   - The corner-flow solution is singular at its origin. The translations
+%     move each region into the corner-flow frame and keep points away from
+%     that singularity; 1 m is also subtracted from both z shifts.
+%   - dip is in degrees here (getStrainratesLongterm takes radians).
+%
+% SEE ALSO
+%   compute_cornerflow_velocityfield, getStrainratesLongterm, inpolygon
+%
+% AUTHORS
+%   Sharadha Sathiakumar (EOS), 2023
 
 oceanic_x_translate = ocean_translate_params(1); % x translation (relative to trench)
 oceanic_z_translate = ocean_translate_params(2) - 1;% plate thickness ~ 20e3 (shift slightly)

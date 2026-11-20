@@ -1,0 +1,18 @@
+/* Figure captions: left-aligned, slightly smaller than body text. */
+figure figcaption,
+.figure .caption,
+figcaption p {
+  text-align: left;
+  font-size: 0.9em;
+}
+
+/* Parameter sizes (":type x: n x 1") are unresolved cross-references:
+   show them as italic text, like the sizes in the Returns list. */
+dl.field-list span > code.xref.mat-obj {
+  font-family: inherit;
+  font-size: inherit;
+  font-style: italic;
+  background: none;
+  border: none;
+  padding: 0;
+}

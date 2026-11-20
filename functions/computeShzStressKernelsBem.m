@@ -1,23 +1,48 @@
 function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
-% traction or shear kernel computation for a given source and receiver object pair
+% COMPUTESHZSTRESSKERNELSBEM  Stress or traction kernels due to shear-zone strain, BEM-corrected.
+%
+%   LL_bem = computeShzStressKernelsBem(src, shz, boundary)
+%
+%   For a unit eigenstrain in each source triangle, one strain component at
+%   a time, computes the half-space stress (receiver is a
+%   geometry.shearZoneReceiver) or traction (receiver is a
+%   geometry.receiver) at the receiver centres and adds the response to the
+%   model boundary, found by a boundary element solve.
+%
 % INPUTS
-% src,shz - objects or data structures containing shear zone source (src) 
-%           and either a shear zone receiver or fault mesh (shz)
-% boundary - object or data structure containing boundary mesh for BEM
-% 
-% OUTPUTS 
-% returns half-space kernels 
-% 
-% if shz is a receiver (fault) provide traction kernels
-%   [Nshz x Nsrc x 2 x 3] matrices containing fault-centric traction kernels
-%   LL(:,:,1,:) - traction kernel in shear direction due to [exx,exz,ezz]
-%   LL(:,:,2,:) - traction kernel in fault-normal direction
-% if shz is a shearZoneReceiver provide full stress kernel
-%   [Nshz x Nsrc x 3 x 3] matrices containing stress kernels
-%   3rd index is stress component, 4th index is strain source
-% 
-% Author:
-% Rishav Mallick, JPL, 2023
+%   src       geometry.shearZoneReceiver object: source triangles (Ns)
+%   shz       receivers (Nr): geometry.shearZoneReceiver object (stress) or
+%             geometry.receiver object (traction)
+%   boundary  geometry.receiver object: model boundary patches
+%             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
+%             are ignored, see NOTES)
+%
+% OUTPUTS
+%   LL_bem    [Nr x Ns x 3 x 3] kernels (MPa per unit strain); 4th index =
+%             source strain component (e22, e23, e33), 3rd index =
+%             receiver component: (sxx, sxz, szz) for a shearZoneReceiver;
+%             (shear traction, normal traction, zeros) for a receiver
+%
+% NOTES
+%   - Source strains are tensor components: e23 = 1 is a unit tensor shear
+%     strain.
+%   - The half-space stress comes from geometry.computeShzStressKernels,
+%     i.e. finite differences of the analytic displacement of Barbot
+%     (2018); see computeStressPlaneStrainTriangleShearZoneFiniteDifference.
+%   - Boundary correction as in computeFaultTractionKernelsBem, with one
+%     solve per source and strain component. Homogeneous problem only:
+%     the prescribed .Vx, .Vz are ignored (see
+%     computeFaultTractionKernelsBem).
+%   - For a shearZoneReceiver, the boundary contribution from
+%     geometry.computeFaultStressKernels is stacked in the same component
+%     order as the half-space part, (sxx, sxz, szz).
+%
+% SEE ALSO
+%   computeAllStressKernelsBem, computeFaultTractionKernelsBem,
+%   computeShzDisplacementKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 % these are [3 x 3] or [2 x 3] stress kernels
 LL_bem = zeros(shz.N,src.N,3,3);
@@ -72,9 +97,8 @@ for component = 1:3
         idirichlet = boundary.Vpl == 0;
         ineumann = boundary.Vpl == 1;
 
-        % displacement BC
-        BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                      [ux_source(idirichlet);uz_source(idirichlet)];
+        % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+        BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
         % traction BC
         BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
 
@@ -93,8 +117,8 @@ for component = 1:3
                 LL_src_shz(:,:,2,component);...
                 LL_src_shz(:,:,3,component)] * source + ...
                 [Kdxx_boundary_shz,Knxx_boundary_shz;...
-                Kdzz_boundary_shz,Knzz_boundary_shz;...
-                Kdxz_boundary_shz,Knxz_boundary_shz] * bem_sol;
+                Kdxz_boundary_shz,Knxz_boundary_shz;...
+                Kdzz_boundary_shz,Knzz_boundary_shz] * bem_sol;
 
             Kxx(:,i) = sigma(1:end/3);
             Kxz(:,i) = sigma(end/3+1:2/3*end);

@@ -1,9 +1,41 @@
 function [Kdd,Kdn,Knd,Knn] = computeFaultTractionKernels(src,rcv)
-% full traction kernel computation in 2-d plane strain
-% returns all 4 traction kernels 
-% Kdd,Kdn - for dip-slip coponent
-% Knd,Knn - for tensile-slip component
-% Rishav Mallick, 2023
+% COMPUTEFAULTTRACTIONKERNELS  Half-space tractions on faults from fault slip.
+%
+%   [Kdd, Kdn, Knd, Knn] = geometry.computeFaultTractionKernels(src, rcv)
+%
+%   Shear and normal traction at the centres of rcv due to unit dip slip
+%   and unit opening on each patch of src, in a homogeneous elastic
+%   half-space. The stress from geometry.LDstressHS is projected onto the
+%   dip and normal vectors of each receiver patch.
+%
+% INPUTS
+%   src     geometry.receiver object: source patches
+%           .N           [1 x 1] number of patches
+%           .xc          [N x 2] patch centres (m, z negative)
+%           .W           [N x 1] patch widths (m)
+%           .dip         [N x 1] patch dips (degrees)
+%           .earthModel  geometry.LDhs object (uses .G, .nu)
+%   rcv     geometry.receiver object: receiver patches
+%           .N           [1 x 1] number of patches
+%           .xc          [Nr x 2] patch centres (m, z negative)
+%           .dv          [Nr x 2] unit dip vectors
+%           .nv          [Nr x 2] unit normal vectors
+%
+% OUTPUTS
+%   Kdd     [Nr x N] shear traction per unit dip slip (MPa/m)
+%   Kdn     [Nr x N] normal traction per unit dip slip (MPa/m)
+%   Knd     [Nr x N] shear traction per unit opening (MPa/m)
+%   Knn     [Nr x N] normal traction per unit opening (MPa/m)
+%
+% NOTES
+%   - Young's modulus is passed to geometry.LDstressHS as 2*G*(1 + nu).
+%
+% SEE ALSO
+%   geometry.LDstressHS, geometry.computeFaultStressKernels,
+%   computeFaultTractionKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 Kdd = zeros(rcv.N,src.N);
 Kdn = zeros(rcv.N,src.N);

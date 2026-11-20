@@ -1,7 +1,24 @@
 function filename = filenameGenerator(foldername)
-% function to read a results folder and create a new sub-folder to store
-% results.mat
-% Rishav Mallick, JPL 2023
+% FILENAMEGENERATOR  Create a numbered results folder; return a file name in it.
+%
+%   filename = filenameGenerator(foldername)
+%
+%   Counts the entries of foldername whose names start with "0", creates
+%   the next sub-folder (six digits, e.g. 000004) and returns the path of
+%   results.mat inside it.
+%
+% INPUTS
+%   foldername  path of the results folder
+%
+% OUTPUTS
+%   filename    path to <foldername>/<NNNNNN>/results.mat (the file itself
+%               is not created)
+%
+% NOTES
+%   - Raises an error when 10000 or more experiments exist.
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 fout = dir([foldername '/0*']);
 

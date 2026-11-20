@@ -1,22 +1,30 @@
 function [flt]=flt2flt(xo,W,dip,wo,alphaw)
-% [flt]=flt2flt(xo,L,W,strike,dip,lo,wo,alphal,alphaw)
+% FLT2FLT  Split a straight segment into patches of growing width.
 %
-% function flt2flt subsamples a fault patch into smaller segments
-% of length and width starting from lo and wo, respectively
-% increasing geometrically with down-dip distance with increment 
-% alphal and alphaw (alphal>1 for increase).
+%   flt = geometry.flt2flt(xo, W, dip, wo, alphaw)
 %
-% input:
-%   xo     origin position vector [x1 (horizontal);x3 (down)]
-%   W      total width
-%   dip    dip angle in degrees
-%   wo     approximative initial width of output segments
-%   alphaw geometric factor for width increase
+%   Divides a segment of down-dip length W, starting at xo, into patches
+%   whose widths grow geometrically, wo*alphaw^k for k = 0, 1, 2, and so
+%   on. When the next width would exceed half of the remaining length,
+%   the remainder becomes the last patch, so the widths always sum to W.
 %
-% output:
-%   flt    list of output segments in the format
-%          x1,x3,width,dip
+% INPUTS
+%   xo      [2 x 1] upper end of the segment, [x; z] with z the depth,
+%           positive downward (m)
+%   W       [1 x 1] down-dip length of the segment (m)
+%   dip     [1 x 1] dip (degrees)
+%   wo      [1 x 1] approximate width of the first patch (m)
+%   alphaw  [1 x 1] geometric growth factor of the widths (1 = uniform)
 %
+% OUTPUTS
+%   flt     [Np x 4] one row per patch: x, z, width, dip, with (x, z) the
+%           upper end of the patch (z positive downward, m)
+%
+% SEE ALSO
+%   geometry.fpatch.seg2flt, geometry.receiver
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 % create wi
 Wc=W;

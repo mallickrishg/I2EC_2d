@@ -1,30 +1,34 @@
 function [V,e22dot,e23dot] = extractComponentsSolutionVector(sol,locked,N,M)
-% EXTRACTCOMPONENTSSOLUTIONVECTOR  Extract velocity and strain-rate components from solution vector
+% EXTRACTCOMPONENTSSOLUTIONVECTOR  Split linear-solver states into parts.
 %
-%   [V, e22dot, e23dot] = EXTRACTCOMPONENTSSOLUTIONVECTOR(sol, locked, N, M)
+%   [V, e22dot, e23dot] = extractComponentsSolutionVector(sol, locked, N, M)
 %
-%   Given a solution matrix `sol` from a PDE/ODE solver, this function
-%   separates the solution into velocity and strain-rate components.
+%   Splits states of the semi-analytical solver, ordered as
+%   [creeping-patch slip rates; e22 rates; e23 rates], into fault slip
+%   rate (zero on locked patches) and the two deviatoric strain-rate
+%   components. It works the same way on time-integrated states (slip and
+%   strain), e.g. the second output of analyticSolveIVP.
 %
-%   Inputs:
-%     sol    - (n x Nt) solution matrix where columns correspond to time steps
-%     locked - (N x 1) logical vector indicating which velocity degrees of freedom are constrained
-%     N      - total number of velocity DOFs
-%     M      - number of elements for strain-rate components
+% INPUTS
+%   sol     [n x Nt] states, one time per column, n = Nc + 2M
+%   locked  [N x 1] logical, true for locked fault patches
+%   N       number of fault patches (rcv.N)
+%   M       number of shear-zone cells (shz.N)
 %
-%   Outputs:
-%     V       - (N x Nt) velocity matrix; locked DOFs remain zero
-%     e22dot  - (M x Nt) first strain-rate component
-%     e23dot  - (M x Nt) second strain-rate component
+% OUTPUTS
+%   V       [N x Nt] fault slip rate (m/s); zero on locked patches
+%   e22dot  [M x Nt] deviatoric strain rate e22 (1/s)
+%   e23dot  [M x Nt] shear strain rate e23 (1/s)
 %
-%   Notes:
-%     - Assumes `sol` is ordered as [unlocked velocities; e22dot; e23dot] at each time step.
-%     - The function automatically maps the unlocked DOFs back into the full velocity vector.
+% EXAMPLE
+%   [V, e22dot, e23dot] = ...
+%       extractComponentsSolutionVector(sol, locked, rcv.N, shz.N);
 %
-%   Example:
-%       [V, e22dot, e23dot] = extractComponentsSolutionVector(sol, locked, N, M);
+% SEE ALSO
+%   analyticSolveIVP, assembleStressKernel
 %
-%   See also logical, zeros
+% AUTHORS
+%   Rishav Mallick, 2025
 
 Nt = length(sol(1,:));
 V = zeros(N,Nt);

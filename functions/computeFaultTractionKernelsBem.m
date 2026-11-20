@@ -1,26 +1,49 @@
 function [varargout] = computeFaultTractionKernelsBem(src,rcv,boundary)
-% traction or shear kernel computation for a given source and receiver object pair
+% COMPUTEFAULTTRACTIONKERNELSBEM  Traction or stress kernels due to fault slip, BEM-corrected.
+%
+%   [Ktau, Ksigma] = computeFaultTractionKernelsBem(src, rcv, boundary)
+%   [Kxx, Kzz, Kxz] = computeFaultTractionKernelsBem(src, rcv, boundary)
+%
+%   For unit dip slip on each source patch, computes the half-space
+%   traction (two outputs) or stress (three outputs) at the receiver
+%   centres and adds the response to the model boundary, found by a
+%   boundary element solve. Only shear (dip-slip) sources are considered.
+%
 % INPUTS
-% src,rcv - objects or data structures containing fault mesh 
-%           (end points and center nodes)
-% boundary - object or data structure containing boundary mesh for BEM
-% 
-% OUTPUTS 
-% returns half-space kernels 
-% ONLY resulting from shear slip on a source 
-% based on number of output variables
-% 
-% if varargout == 2 (traction kernels)
-%   2 x [N x N] matrices containing fault-centric traction kernels
-%   Ktau - traction kernel in shear direction
-%   Ksigma - traction kernel in fault-normal direction
-% if varargout == 3 (full stress kernel)
-%   3 x [N x N] matrices containing stress kernels
-%   [Kxx,Kzz,Kxz]
-%   (note: this ordering of components is different from  computeShzStressKernels)
-% 
-% Author:
-% Rishav Mallick, JPL, 2023
+%   src       geometry.receiver object: source fault patches (Ns patches)
+%   rcv       receivers (Nr): a geometry.receiver object for tractions;
+%             any object with centres .xc [Nr x 2] (m) for stresses
+%   boundary  geometry.receiver object: model boundary patches
+%             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
+%             are ignored, see NOTES)
+%
+% OUTPUTS
+%   Ktau            [Nr x Ns] shear traction in the receiver dip direction
+%                   (MPa/m)
+%   Ksigma          [Nr x Ns] normal traction on the receiver (MPa/m)
+%   Kxx, Kzz, Kxz   [Nr x Ns] stress components at the receiver centres
+%                   (MPa/m)
+%
+% NOTES
+%   - Boundary correction: for each source, slip on the boundary patches
+%     is solved so that the total displacement (source plus boundary) is
+%     zero where boundary.Vpl == 0 (Dirichlet) and the total traction is
+%     zero where boundary.Vpl == 1 (Neumann).
+%   - The kernels solve the homogeneous problem only. The prescribed
+%     boundary motion (.Vx, .Vz, from bcx, bcz in the .seg file) is
+%     ignored; it would be a separate particular solution added once, not
+%     part of each column. The background rate comes from the long-term
+%     solution instead.
+%   - Stress components are returned in the order (xx, zz, xz), unlike
+%     computeShzStressKernelsBem, which uses (xx, xz, zz).
+%   - Errors unless called with 2 or 3 outputs.
+%
+% SEE ALSO
+%   computeAllStressKernelsBem, computeFaultDisplacementKernelsBem,
+%   computeShzStressKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 if nargout == 2
     Ktau = zeros(rcv.N,src.N);
@@ -77,9 +100,8 @@ for i = 1:src.N
     idirichlet = boundary.Vpl == 0;
     ineumann = boundary.Vpl == 1;
 
-    % displacement BC
-    BC([idirichlet;idirichlet]) = [boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                  [ux_source(idirichlet);uz_source(idirichlet)];
+    % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     

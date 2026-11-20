@@ -1,31 +1,37 @@
 function [e, g, h] = egh_modal(lam, t)
-%EGH_MODAL  Exact modal integrals for the linear ODE  dy/dt = A y + c.
+% EGH_MODAL  Exact modal integrals for the linear ODE dy/dt = A*y + c.
 %
 %   [e, g, h] = egh_modal(lam, t)
 %
-% For each eigenvalue lam and scalar time t, returns
-%   e = exp(lam * t)
-%   g = integral_0^t exp(lam * s) ds        = (exp(lam*t) - 1) / lam
-%   h = integral_0^t g(s) ds                = ((exp(lam*t) - 1)/lam - t) / lam
+%   For each eigenvalue lam and a scalar time t, returns
+%       e = exp(lam*t)
+%       g = integral_0^t exp(lam*s) ds = (exp(lam*t) - 1)/lam
+%       h = integral_0^t g(s) ds       = ((exp(lam*t) - 1)/lam - t)/lam
+%   These evolve one mode of dy/dt = A*y + c and its time integral
+%   exactly (see analyticSolveIVP).
 %
-% All three are continuous through lam = 0 (g -> t, h -> t^2/2).  With
-% x = lam * t, an 8-term Taylor series is used when |x| < 1e-2 (|x|
-% includes the imaginary part; truncation error < 1e-21 at |x| = 1e-2),
-% and the closed forms g = expm1(x)/lam, h = (expm1(x) - x)/lam^2 above.
-% expm1 avoids the cancellation in exp(x) - 1; h still cancels for small
-% |x| (relative error ~ eps/|x|), hence the series below the switch.
+% INPUTS
+%   lam     [n x 1] eigenvalues, possibly complex (1/s)
+%   t       scalar time (s)
 %
-% Inputs:
-%   lam : (n x 1) complex eigenvalues
-%   t   : scalar, time (seconds)
+% OUTPUTS
+%   e, g, h  [n x 1] complex vectors (units 1, s and s^2)
 %
-% Outputs:
-%   e, g, h : (n x 1) complex vectors
+% NOTES
+%   - All three are continuous through lam = 0 (g -> t, h -> t^2/2).
+%   - With x = lam*t, an 8-term Taylor series is used for |x| < 1e-2 (|x|
+%     includes the imaginary part; truncation error < 1e-21 at
+%     |x| = 1e-2), and the closed forms g = expm1(x)/lam and
+%     h = (expm1(x) - x)/lam^2 above. expm1 avoids the cancellation in
+%     exp(x) - 1; h still cancels for small |x| (relative error about
+%     eps/|x|), hence the series below the switch.
 %
-% Used by analyticSolveIVP and computePeriodicInitialConditionBalanced
-% (eigenvalues from negateGrowingModes).
+% SEE ALSO
+%   analyticSolveIVP, computePeriodicInitialConditionBalanced,
+%   negateGrowingModes
 %
-% Author: Sharadha Sathiakumar, EOS, 2026
+% AUTHORS
+%   Sharadha Sathiakumar (EOS), 2026
 
 x = lam * t;
 e = exp(x);

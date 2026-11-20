@@ -1,46 +1,78 @@
 function [u2,u3]=computeDisplacementPlaneStrainTriangleShearZone( ...
     x2,x3,A,B,C,e22,e23,e33,nu)
-% function COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONE computes the
-% displacement field associated with deforming triangle strain volume
-% considering the following geometry using the tanh-sinh numerical
-% quadrature.
+% COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONE  Displacement due to a strained triangle in a half-space.
 %
-%              surface
-%      -------------+-------------- E (x2)
-%                   |
-%                   |     + A
-%                   |    /  . 
-%                   |   /     .  
-%                   |  /        .            
-%                   | /           .      
-%                   |/              + B
-%                   /            .
-%                  /|          /  
-%                 / :       .
-%                /  |    /
-%               /   : .
-%              /   /|
-%             / .   :
-%            +      |
-%          C        :
-%                   |
-%                   D (x3)
+%   [u2, u3] = computeDisplacementPlaneStrainTriangleShearZone(x2, x3, A, B, C, e22, e23, e33, nu)
 %
+%   Computes the plane-strain displacement at (x2, x3) due to uniform
+%   eigenstrain (e22, e23, e33) in the triangle ABC in a homogeneous
+%   elastic half-space, using the closed-form solution of Barbot (2018).
+%   Points where the closed form is not finite are recomputed by tanh-sinh
+%   quadrature. Geometry (x3 is depth, positive down):
 %
-% Input:
-% x2, x3             east coordinates and depth of the observation point,
-% A, B, C            east and depth coordinates of the vertices,
-% eij                source strain component 22, 23 and 33 in the strain
-%                    volume,
-% nu                 Poisson's ratio in the half space.
+%                 surface
+%         -------------+-------------- E (x2)
+%                      |
+%                      |     + A
+%                      |    /  .
+%                      |   /     .
+%                      |  /        .
+%                      | /           .
+%                      |/              + B
+%                      /            .
+%                     /|          /
+%                    / :       .
+%                   /  |    /
+%                  /   : .
+%                 /   /|
+%                / .   :
+%               +      |
+%             C        :
+%                      |
+%                      D (x3)
 %
-% Output:
-% u2                 displacement component in the east direction,
-% u3                 displacement component in the down direction.
+% INPUTS
+%   x2, x3          observation points: horizontal position and depth
+%                   (m, x3 >= 0)
+%   A, B, C         [1 x 2] triangle vertices [x2, x3] (m)
+%   e22, e23, e33   eigenstrain components in the triangle (tensor
+%                   components)
+%   nu              Poisson's ratio
 %
-% Author: Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
+% OUTPUTS
+%   u2              displacement in the x2 (east) direction, same size as
+%                   x2 (m)
+%   u3              displacement in the x3 (down) direction (m)
+%
+% NOTES
+%   - The displacement depends on Poisson's ratio only, not on the shear
+%     modulus.
+%   - Prints the number of points corrected by quadrature, if any.
+%   - x3 must be non-negative (assertion).
+%   - Edges that are horizontal or vertical to within 1e-7 of their length
+%     are made exactly horizontal or vertical before evaluation. The
+%     closed form is exact for an axis-aligned edge but divides by the
+%     edge's small direction component when it is only nearly aligned:
+%     a 10 km edge tilted by 1e-10 m (floating-point noise in a mesh file)
+%     gave u2 errors of ~66 per unit strain, 1e-8 m gave 0.15, 1e-3 m
+%     8e-6. Snapping moves vertices by at most 1e-7 of an edge length.
+%
+% SEE ALSO
+%   computeDisplacementPlaneStrainTriangleShearZoneTanhSinh,
+%   computeStressPlaneStrainTriangleShearZoneFiniteDifference
+%
+% REFERENCES
+%   Barbot, S. (2018). Deformation of a half-space from anelastic strain
+%   confined in a tetrahedral volume. Bulletin of the Seismological Society
+%   of America, 108(5A), 2687-2712. doi:10.1785/0120180058
+%
+% AUTHORS
+%   Sylvain Barbot (sbarbot@ntu.edu.sg) - March 7, 2018, Singapore.
 
 assert(min(x3(:))>=0,'depth must be positive.');
+
+% make nearly horizontal / vertical edges exactly so (see NOTES)
+[A,B,C]=snapNearlyAlignedEdges(A,B,C);
 
 % Lame parameter
 lambda=2*nu/(1-2*nu);
@@ -409,4 +441,24 @@ end
         u2=(I32(A,B,norm(B-A)/2)-I32(A,B,-norm(B-A)/2));
     end
 
+end
+
+function [A,B,C]=snapNearlyAlignedEdges(A,B,C)
+% Snap edges within 1e-7 (relative) of horizontal or vertical: both end
+% points get the mean coordinate. Vertices are row or column vectors.
+tol=1e-7;
+V=[A(:)';B(:)';C(:)'];
+E=[1 2;2 3;3 1];
+for k=1:3
+    i=E(k,1); j=E(k,2);
+    d=V(j,:)-V(i,:);
+    L=norm(d);
+    if d(2)~=0 && abs(d(2))<tol*L        % nearly horizontal: equal depths
+        z=(V(i,2)+V(j,2))/2; V(i,2)=z; V(j,2)=z;
+    end
+    if d(1)~=0 && abs(d(1))<tol*L        % nearly vertical: equal x
+        x=(V(i,1)+V(j,1))/2; V(i,1)=x; V(j,1)=x;
+    end
+end
+A=reshape(V(1,:),size(A)); B=reshape(V(2,:),size(B)); C=reshape(V(3,:),size(C));
 end

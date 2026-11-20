@@ -1,64 +1,67 @@
 function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
-%ANALYTICSOLVEIVP  Solve the linear ODE  dy/dt = A y + c  semi-analytically.
+% ANALYTICSOLVEIVP  Solve the linear ODE dy/dt = A*y + c semi-analytically.
 %
 %   [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %
-% Computes y(t) and u(t) = integral_0^t y(s) ds at each time in tvec by
-% eigendecomposition of the balanced operator and exact modal integrals
-% (egh_modal).
+%   Evaluates the state y(t) and its time integral u(t) at each time in
+%   tvec. The operator is balanced and eigendecomposed (eigBalanced); each
+%   mode is then evolved exactly
+%   with the modal integrals of egh_modal:
+%       z(t) = e(t).*z0 + g(t).*zc,    uz(t) = g(t).*z0 + h(t).*zc
+%   with z0 = V\y0 and zc = V\c. This is the time stepper of the
+%   semi-analytical (linear viscoelastic) path in I2EC.
 %
-% Eigenvalues with Re(lam) > 0 are negated (lam -> -lam) by
-% negateGrowingModes, which assumes they are spurious (they arise from the
-% spatial discretisation and depend on the mesh).  Every mode is then
-% evolved exactly: no mode is dropped or frozen.  Build the forcing c with
-% the negated operator (see negateGrowingModes), e.g.
-%   [~, ~, A] = negateGrowingModes(A);   c = edot_lock - A * y_pl;
+% INPUTS
+%   A       [n x n] ODE operator matrix (1/s), e.g. diag(1./eta)*K
+%   c       [n x 1] constant forcing vector (units of dy/dt)
+%   y0      [n x 1] initial condition at t = 0
+%   tvec    [1 x m] evaluation times (s)
 %
-% What changed (2026) and why:
-%   - Previously, modes with |Re(lam)| <= 1e-10*max(1,max|lam|) s^-1 were
-%     frozen (evolved as lam = 0) and modes with larger Re(lam) > 0 were
-%     dropped, with a warning.  The freeze was the solver's only error.
-%     In a forced relaxation from the plate-rate state plus a coseismic
-%     step, on the example mesh and three regenerated meshes (497-1316
-%     triangles; uniform mantle
-%     1e17-1e19 Pa s and layered), the error in mantle strain rate,
-%     ||error|| / ||reference|| over all mantle cells against the matrix
-%     exponential, was up to 1.6% at 10 yr after the earthquake and up to
-%     95% over the 500-yr relaxation; on meshes with no mode in the freeze
-%     band it was <= 5e-9.  The exact integrals remove it (round-off
-%     agreement with the matrix exponential).
-%   - Negating instead of dropping gives a contracting operator, a
-%     consistent periodic cycle (computePeriodicInitialConditionBalanced
-%     uses the same rule) and outputs that depend continuously on the
-%     viscosities, except where a complex-conjugate pair of eigenvalues
-%     crosses Re(lam) = 0: there negation flips the sign of its imaginary
-%     part, so that mode's response changes from exp(i Im(lam) t) to
-%     exp(-i Im(lam) t), a jump of 2|sin(Im(lam) t)| of its amplitude
-%     (about 2|Im(lam)| t when that is small).  Negation is a
-%     regularisation of discretisation-induced growing modes, not a claim
-%     about the true continuum physics.  A spurious eigenvalue very close
-%     to zero stays nearly neutral after negation, so it decays slowly.
+% OUTPUTS
+%   Y       [n x m] state y(tvec(j)) in column j
+%   U       [n x m] integral of y from 0 to tvec(j) in column j
 %
-% Inputs:
-%   A    : (n x n) ODE operator matrix
-%   c    : (n x 1) constant forcing vector
-%   y0   : (n x 1) initial condition at t = 0
-%   tvec : (1 x m) vector of evaluation times (seconds)
+% NOTES
+%   - Stability: the operator must have no growing modes (Re(lam) >
+%     1e-10 max|lam|), or the function raises an error
+%     ('I2EC:growingModes'). The default kernels of
+%     computeAllStressKernelsBem (cell-averaged, certified) guarantee this
+%     for any viscosity. For centroid kernels ('cellaverage', 1) negate
+%     the growing modes explicitly first and build the forcing with the
+%     negated operator:
+%         [~, ~, A] = negateGrowingModes(A); c = edot_lock - A*y_pl;
+%     (Until 2026-11 this function negated growing modes itself.)
+%   - With a negated operator, outputs jump where a complex-conjugate
+%     pair of eigenvalues crosses Re(lam) = 0 as the viscosities change
+%     (see negateGrowingModes).
+%   - Changed in 2026: modes with |Re(lam)| <= 1e-10*max(1,max|lam|) 1/s
+%     were previously frozen (evolved as lam = 0) and modes with larger
+%     Re(lam) > 0 dropped. Against the matrix exponential, the freeze
+%     gave errors in mantle strain rate of up to 1.6% at 10 yr and 95%
+%     over a 500-yr relaxation on the example mesh and three regenerated
+%     meshes (497-1316 triangles; mantle 1e17-1e19 Pa s, uniform and
+%     layered). The exact modal integrals agree with the matrix
+%     exponential to round-off.
+%   - Y and U are the real parts of the modal sums.
 %
-% Outputs:
-%   Y(:,j) = y(tvec(j))                     state at each time
-%   U(:,j) = integral_0^{tvec(j)} y(s) ds   integrated state
+% SEE ALSO
+%   eigBalanced, egh_modal, computePeriodicInitialConditionBalanced,
+%   negateGrowingModes, computeAllStressKernelsBem
 %
-% See also negateGrowingModes, egh_modal, computePeriodicInitialConditionBalanced
-%
-% AUTHOR:
-% Rishav Mallick, EOS, 2025
-% Modified: Sharadha Sathiakumar, EOS, 2026 (negate + exact solver)
+% AUTHORS
+%   Rishav Mallick (EOS), 2025; modified by Sharadha Sathiakumar (EOS), 2026
 
 n = size(A, 1);
 
-% ---- Eigendecomposition with growing modes negated ----
-[V, lambda] = negateGrowingModes(A);
+% ---- Balanced eigendecomposition; growing modes are an error ----
+[V, lambda, nGrowing] = eigBalanced(A);
+if nGrowing > 0
+    error('I2EC:growingModes', ['analyticSolveIVP: the operator has %d growing modes (largest ' ...
+        'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
+        '(cell-averaged, certified), or negate them explicitly with ' ...
+        '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
+        nGrowing, max(real(lambda)));
+end
 
 % ---- Modal coordinates ----
 z0 = V \ y0;

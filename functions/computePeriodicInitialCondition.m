@@ -1,45 +1,47 @@
 function y0 = computePeriodicInitialCondition(A, c, b, T)
-% COMPUTEPERIODICINITIALCONDITION  Robustly compute initial condition for a linear ODE with periodic offset
+% COMPUTEPERIODICINITIALCONDITION  Periodic initial state via expm (legacy).
 %
-%   y0 = COMPUTEPERIODICINITIALCONDITION(A, c, b, T)
+%   y0 = computePeriodicInitialCondition(A, c, b, T)
 %
-%   Solves the periodic offset condition
-%       y(0) = y(T) + b
-%   for the linear ODE
-%       dy/dt = A*y + c,    0 <= t <= T
+%   Solves the periodic offset condition y(0) = y(T) + b for the linear
+%   ODE dy/dt = A*y + c on 0 <= t <= T. Phi = expm(A*T) and
+%   eta = integral_0^T expm(A*(T-s))*c ds come from one matrix exponential
+%   of the augmented matrix [A c; 0 0], and
+%       (I - Phi)*y0 = eta + b
+%   is then solved directly. Superseded by
+%   computePeriodicInitialConditionBalanced, which the drivers use.
 %
-%   The function computes
-%       Phi = expm(A*T)
-%       eta = integral_0^T exp(A*(T-s)) * c ds
-%   and solves
-%       (I - Phi) * y0 = eta + b
+% INPUTS
+%   A       [n x n] ODE operator matrix (1/s)
+%   c       [n x 1] constant forcing vector
+%   b       [n x 1] periodic offset vector
+%   T       scalar period (s)
 %
-%   Features:
-%     - Works even when I - Phi is singular, nearly singular, or incompatible.
-%     - Returns a minimum-norm solution if infinite solutions exist.
-%     - Returns a least-squares solution if no exact solution exists.
-%     - Uses SVD-based robust fallback to handle ill-conditioning.
+% OUTPUTS
+%   y0      [n x 1] initial state with y(0) = y(T) + b, or an approximate
+%           solution when I - Phi is ill-conditioned
 %
-%   Inputs:
-%     A : (n x n) ODE operator matrix
-%     c : (n x 1) constant forcing vector
-%     b : (n x 1) periodic offset vector
-%     T : scalar period
+% NOTES
+%   - Prints the condition number of I - Phi. If it is below 1e15, y0 is
+%     found by a direct (backslash) solve.
+%   - Otherwise A is replaced by reconditionODEoperator(A), which sets
+%     every eigenvalue with Re(lam) >= 0 to -0.1 1/s; Phi and eta are
+%     recomputed and y0 comes from an SVD pseudo-inverse with the
+%     singular values floored at max(1e-12, eps*max(s)). A warning is
+%     issued.
+%   - Stability: unlike negateGrowingModes, this fallback replaces
+%     non-decaying modes by a fixed decay rate of 0.1 1/s and drops their
+%     imaginary parts, so it is not consistent with analyticSolveIVP.
 %
-%   Output:
-%     y0 : (n x 1) initial condition vector satisfying y(0) = y(T) + b
-%          (or best approximate if exact solution does not exist)
+% EXAMPLE
+%   y0 = computePeriodicInitialCondition(A, c, b, T);
 %
-%   Notes:
-%     - For well-conditioned I - Phi, a direct backslash solve is used.
-%     - For rank-deficient or ill-conditioned cases, the function uses SVD
-%       to compute minimum-norm or least-squares solutions.
-%     - Warnings are issued when fallback solutions are used.
+% SEE ALSO
+%   computePeriodicInitialConditionBalanced, reconditionODEoperator, expm,
+%   svd
 %
-%   Example:
-%       y0 = computePeriodicInitialCondition(A, c, b, T);
-%
-%   See also expm, svd, pinv
+% AUTHORS
+%   Rishav Mallick, 2025
 
 n = size(A,1);
 

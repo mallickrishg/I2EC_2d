@@ -1,53 +1,53 @@
 function [Disp] = LDdispHS(x,y,xe,ye,a,Beta,Ds,Dn,nu)
-% LDdispHS: LineDisplacementInducedDisplacementHalfSpace Computes the 
-%               influence (displacement) of a single planar line crack
-%               shearing and/or opening on the surronding points. Half
-%               space at 0.
+% LDDISPHS  Half-space displacement from a line dislocation (crack).
 %
-% usage #1:
-%[Disp] = LDdispHS(x,y,xe,ye,a,Beta,Ds,Dn,nu)
+%   Disp = geometry.LDdispHS(x, y, xe, ye, a, Beta, Ds, Dn, nu)
 %
-% Arguments: (input)
-%      x & y  - The observation points locations in real Cartesian coords.
-%              (y must be below 0)
+%   Displacement at the observation points due to a single straight
+%   element of a 2-D displacement-discontinuity boundary element, with
+%   uniform shear and opening, in a homogeneous elastic half-space whose
+%   free surface is y = 0 (source plus image terms).
 %
-%     xe & ye - The element midpoint location in real coords. 
-%              (must have a ye below 0). 
+% INPUTS
+%   x, y    [Nobs x 1] observation points (m); y must be <= 0
+%   xe, ye  [1 x 1] element midpoint (m); ye must be below 0
+%   a       [1 x 1] element half-length (m)
+%   Beta    [1 x 1] angle of the element from the x axis (radians); 0 when
+%           the normal points down (-y). I2EC passes -deg2rad(dip).
+%   Ds      [1 x 1] shear displacement discontinuity (m); positive is left
+%           lateral
+%   Dn      [1 x 1] normal displacement discontinuity (m); positive is
+%           opening
+%   nu      [1 x 1] Poisson's ratio
 %
-%       a     - The elements half length.
+% OUTPUTS
+%   Disp    [Nobs x 2] displacement [Ux, Uy] at the observation points (m)
 %
-%       Beta  - The angle of the element away from the x-axis (radians).
-%               When the normal in the -y axis down this is 0. In degrees
-%               when the normal points east this is 90, west -90 and north
-%               180.
+% NOTES
+%   - Stops with an error if any observation point has y > 0.
+%   - The displacement does not depend on the elastic modulus, so none is
+%     passed.
 %
-%     Dn,Ds   - The defined displacement of each element.(normal and shear).
-%               Dn+ is opening, Ds+ is left lateral shearing. 
+% EXAMPLE
+%   [x, y] = meshgrid(-2:0.05:2, -4:0.05:0);
+%   Disp = geometry.LDdispHS(x(:), y(:), 0, -2, 1, 0, 0, 1, 0.25);
+%   quiver(x(:), y(:), Disp(:,1), Disp(:,2));
 %
-%       nu    - The Poisson's ratio.
+% SEE ALSO
+%   geometry.LDstressHS, geometry.computeFaultDisplacementKernels
 %
-%       E     - The Young's modulus.
+% REFERENCES
+%   Crouch, S. L. & Starfield, A. M. (1983). Boundary Element Methods in
+%   Solid Mechanics.
+%   Ritz, E. & Pollard, D. D. (2012) (notation).
 %
-% Arguments: (output)
-% Disp        - Is the displacement caused by the movement of the
-%             dislocation at the observataion points. [Ux,Uy].
-%
-% Example usage:
-% 
-%  [x,y]=meshgrid(-2:0.05:2,-4:0.05:0);
-%  dimx = length(x(:,1)); 
-%  dimy = length(x(1,:)); 
-%  Ds=0; Dn=1;
-%  [Disp] = LDdispHS(x(:),y(:),0,-2,1,0,Ds,Dn,0.25);
-%  [ Ux,Uy ] = ExtractCols( Disp );
-%  [Ux,Uy]=ReshapeData2d( dimx,dimy,Ux,Uy );
-%  figure,quiver(x(:),y(:),Ux(:),Uy(:));
-%
-%  Author: Tim Davis/Steve Martel
-%  Copyright 2017, Tim Davis, Potsdam University\The University of Aberdeen
-%  Modified form of Steve Martels BEM scripts from:
-%  http://www.soest.hawaii.e.du/martel/Martel.BEM_dir/
-%  Also includes some notation from Ritz & Pollard 2012.
+% AUTHORS
+%   Tim Davis/Steve Martel
+%   Copyright 2017, Tim Davis, Potsdam University\The University of Aberdeen
+%   Modified form of Steve Martels BEM scripts from:
+%   http://www.soest.hawaii.e.du/martel/Martel.BEM_dir/
+%   Also includes some notation from Ritz & Pollard 2012.
+%   Added to I2EC by Rishav Mallick, 2023
 
 
 if any(y>0)

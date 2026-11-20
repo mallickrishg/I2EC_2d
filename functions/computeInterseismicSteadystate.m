@@ -1,23 +1,61 @@
 function [sol_f,sol_22,sol_23] = computeInterseismicSteadystate(rcv,shz,evl_orig,Vpl,lambda)
-% Earthquake cycle calculation using semi-analytical solutions to elastic
-% boundary value problem
-% INPUTS:
-% rcv,shz - geometry objects for fault & shear zone
-% evl - full stress interaction kernels
-% Vpl - relative plate convergence velocity
-% lambda - regularization parameter (typically in the range 0.1 to 10,
-%                                    default value if 10)
-% OUTPUTS:
-% sol_f - BEM solution for fault
-% sol_22,sol_23 - BEM solution for two deviatoric components (viscous shearzones)
-% 
-% AUTHOR:
-% Rishav Mallick, JPL 2024
+% COMPUTEINTERSEISMICSTEADYSTATE  Steady interseismic rates with locking.
+%
+%   [sol_f, sol_22, sol_23] = computeInterseismicSteadystate(rcv, shz, ...
+%                                                   evl_orig, Vpl, lambda)
+%
+%   Solves for the fully relaxed (t -> infinity) interseismic state of the
+%   linear system when part of the megathrust is locked: the slip rate on
+%   the creeping patches and the mantle strain rates for which the
+%   stressing rate vanishes,
+%       K(x_i; x_i)*[v; e22; e23] = K(x_i; x)*[Vpl; e22pl; e23pl],
+%   where x_i are the unlocked degrees of freedom. K(x_i; x_i) is
+%   singular, so the system is solved in the least-squares sense with a
+%   zeroth-order Tikhonov penalty lambda*||[e22; e23]|| on the mantle
+%   strain rates.
+%
+% INPUTS
+%   rcv       geometry.receiver object: megathrust patches
+%             .N               number of patches
+%             .dip             [N x 1] dip (degrees); dip(1) is used
+%             .pinnedPosition  [N x 1] logical, true for locked patches
+%   shz       geometry.shearZoneReceiver object: mantle cells
+%             .N               number of cells
+%   evl_orig  struct of stress kernels (.KK, .KL, .LK, .LL) from
+%             computeAllStressKernelsBem (default: certified, unmodified)
+%   Vpl       scalar plate rate (m/s)
+%   lambda    scalar Tikhonov weight, typically 0.1 to 10
+%
+% OUTPUTS
+%   sol_f     [N x 1] fault slip rate (m/s); zero on locked patches
+%   sol_22    [M x 1] deviatoric strain rate e22 (1/s)
+%   sol_23    [M x 1] shear strain rate e23 (1/s)
+%
+% NOTES
+%   - Stability: the regularisation removes the null space of K(x_i; x_i)
+%     by pulling the mantle strain rates towards zero (not towards their
+%     long-term values); fault slip rates are not penalised.
+%   - The long-term strain rates come from getStrainratesLongterm with
+%     fixed corner-flow offsets [0, 20e3] and [-140e3, 35e3] (m) and the
+%     dip of the first patch.
+%   - Side effects: sets rcv.Vpl, shz.e22pl and shz.e23pl on the (handle)
+%     objects passed in.
+%   - The locked rows are removed as the first numel(find(locked)) rows,
+%     so the locked patches must be the first patches of rcv.
+%   - Known issue: getStrainratesLongterm is called with four arguments,
+%     but it needs a fifth (the power-law exponent n), so this function
+%     errors as written.
+%
+% SEE ALSO
+%   getStrainratesLongterm, computeAllStressKernelsBem, assembleStressKernel
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2024
 
 rcv.Vpl = Vpl.*ones(rcv.N,1);
 
 % Long-term strain rate calculation
-[e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3]);
+[e22_dev, e23] = getStrainratesLongterm(shz,rcv.dip(1)*pi/180,[0,20e3],[-140e3,35e3],1);
 shz.e22pl = e22_dev.*Vpl;% 1/s
 shz.e23pl = -e23.*Vpl;% 1/s
 %% compute stress interaction kernels
@@ -27,9 +65,8 @@ shz.e23pl = -e23.*Vpl;% 1/s
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
-% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
-% evl = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',1);
-% load('kernels/evl_orig.mat','evl_orig');
+% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
+% evl_orig = loadKernels('kernels/evl_orig.h5');
 
 %% compute quasi-steady rates for 
 

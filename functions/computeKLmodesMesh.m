@@ -1,22 +1,43 @@
 function [V, Vx, Vy, lambda] = computeKLmodesMesh(mesh, L, m)
-% COMPUTE_EIGMODES_MESH  Build kernel eigenbasis and derivative operators.
-%   [V, Vx, Vy, lambda] = compute_eigmodes_mesh(mesh, L)
-%   [V, Vx, Vy, lambda] = compute_eigmodes_mesh(mesh, L, m)
+% COMPUTEKLMODESMESH  Eigenmodes of a Gaussian kernel on mesh centroids.
 %
-% INPUT
-%   mesh.xc          : (N x 2) centroid coords ([x,z])
-%   L                : kernel length scale
-%   m (optional)     : number of modes to return (default: all)
+%   [V, Vx, Vy, lambda] = computeKLmodesMesh(mesh, L)
+%   [V, Vx, Vy, lambda] = computeKLmodesMesh(mesh, L, m)
 %
-% OUTPUT
-%   V   : (N x m) mode matrix (columns orthonormal)
-%   Vx  : (N x m) ∂/∂x of modes
-%   Vy  : (N x m) ∂/∂y of modes
-%   lambda : (m x 1) singular values ( = eigenvalues for symmetric PD K )
+%   Builds the Gaussian kernel k(r) = exp(-(r/L)^2) between all cell
+%   centroids, takes its leading eigenvectors (Karhunen-Loeve modes) by
+%   SVD, and evaluates the x and z derivatives of each mode by
+%   differentiating the kernel expansion
+%       v_k(x) = (1/lambda_k) * sum_j k(x, x_j) v_k(x_j).
+%   Modes are returned in order of decreasing lambda.
 %
-% NOTES:
-%   - Kernel: k(r) = exp(-(r/L)^2)
-%   - If you want full set of N modes omit m or set m = N (but consider memory/time).
+% INPUTS
+%   mesh    object or struct with field
+%           .xc      [M x 2] cell centroids [x, z] (m)
+%   L       scalar kernel length scale (m)
+%
+% OPTIONS
+%   m       number of modes to return; empty or omitted for all  [all]
+%
+% OUTPUTS
+%   V       [M x m] modes, orthonormal columns
+%   Vx      [M x m] derivative of each mode with respect to x (1/m)
+%   Vy      [M x m] derivative of each mode with respect to the second
+%           coordinate, z (1/m)
+%   lambda  [m x 1] singular values of the kernel (the eigenvalues, since
+%           the kernel is symmetric positive semi-definite)
+%
+% NOTES
+%   - The full set uses svd(K, 'econ'); a truncated set uses svds. K is a
+%     dense M x M matrix, so memory grows as M^2.
+%   - Modes with lambda = 0 get zero derivatives.
+%   - Not called by the driver scripts.
+%
+% SEE ALSO
+%   svd, svds
+%
+% AUTHORS
+%   Rishav Mallick, 2025
 
 if nargin < 3 || isempty(m)
     m = []; % empty -> compute full

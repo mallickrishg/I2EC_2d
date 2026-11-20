@@ -1,30 +1,55 @@
 function LL = computeShzStressKernels(src,shz)
-% half-space stress kernel computation in 2-d plane strain returns stress/traction kernels: 
-% each kernel is a component of the full 2-d stress tensor [sxx,sxz,szz] 
-%                                 or fault-shear tractions [tau_s]
-% in response to each non-elastic strain component [exx,exz,ezz] 
-% (note: this ordering of components is different from  computeFaultTractionKernels)
-% 
-% OUTPUTS:
-% LL is a [Nshz x Nsrc x 3 x 3] matrix (when shz is shearZoneReceiver)
-% LL is a [Nshz x Nsrc x 3] matrix (when shz is receiver)
-% for shearZoneReceiver: 
-%          4th index is for eigen strain source
-%          3rd index is for the stress component
-% if we want a kernel for - 
-% exz source resulting in szz
-% in the N x M X 3 x 3 matrix this would be
-% position [N x M x 3-row,2-column]
-% for receiver:
-%          4th index is for eigen strain source
-%          3rd index is for the traction component
-% if we want a kernel for - 
-% ezz source resulting in tau_n
-% in the N x M X 2 x 3 matrix this would be 
-% position [N x M x 2-row,3-column]
-% 
-% Author:
-% Rishav Mallick, JPL, 2023
+% COMPUTESHZSTRESSKERNELS  Half-space stress from strain in triangular zones.
+%
+%   LL = geometry.computeShzStressKernels(src, shz)
+%
+%   Stress (or fault traction) at the receivers due to a unit eigenstrain
+%   in each triangle of src, in a homogeneous elastic half-space. Each
+%   source triangle is loaded with unit exx, exz and ezz in turn, and the
+%   stress is evaluated at the receiver centres with
+%   computeStressPlaneStrainTriangleShearZoneFiniteDifference (Barbot,
+%   2018). If the receivers are fault patches, the stress is projected to
+%   shear and normal traction.
+%
+% INPUTS
+%   src     geometry.shearZoneReceiver object: source triangles
+%           .N           [1 x 1] number of triangles
+%           .A, .B, .C   [M x 2] triangle vertices (m, z negative)
+%           .earthModel  geometry.LDhs object (uses .G, .nu)
+%   shz     receivers: geometry.shearZoneReceiver (stress at the triangle
+%           centroids) or geometry.receiver (traction on the patches)
+%           .N           [1 x 1] number of receivers
+%           .xc          [Nr x 2] receiver points (m, z negative)
+%           .dv, .nv     [Nr x 2] unit dip and normal vectors (patches
+%                        only)
+%
+% OUTPUTS
+%   LL      [Nr x M x 3 x 3] kernel (MPa per unit strain). The 4th index is
+%           the source strain (1: exx, 2: exz, 3: ezz). The 3rd index is
+%           the stress component (1: sxx, 2: sxz, 3: szz) for
+%           shearZoneReceiver receivers, or (1: shear traction, 2: normal
+%           traction, 3: zero) for receiver patches. Example: LL(:,:,3,2)
+%           is szz due to exz.
+%
+% NOTES
+%   - Stress comes from finite-difference derivatives of the analytical
+%     displacement field, not from a closed-form stress solution (see
+%     computeStressPlaneStrainTriangleShearZoneFiniteDifference).
+%   - Depths are made positive (z -> -z) for the source vertices and
+%     receiver points before the call, as that function expects.
+%   - The component order is [sxx, sxz, szz]; geometry.computeFaultStressKernels
+%     uses [sxx, szz, sxz].
+%   - Uses parfor (parallel if a pool is available).
+%
+% SEE ALSO
+%   computeStressPlaneStrainTriangleShearZoneFiniteDifference,
+%   computeShzStressKernelsBem, geometry.computeShzDisplacementKernels
+%
+% REFERENCES
+%   Barbot, S. (2018). Bull. Seismol. Soc. Am., doi:10.1785/0120180058
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 mu = src.earthModel.G;
 nu = src.earthModel.nu;

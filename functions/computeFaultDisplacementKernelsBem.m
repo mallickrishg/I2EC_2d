@@ -1,18 +1,35 @@
 function [Gx,Gz] = computeFaultDisplacementKernelsBem(src,obs,boundary,scalar_value)
-% traction or shear kernel computation for a given source and receiver object pair
+% COMPUTEFAULTDISPLACEMENTKERNELSBEM  Displacement kernels due to fault slip, BEM-corrected.
+%
+%   [Gx, Gz] = computeFaultDisplacementKernelsBem(src, obs, boundary, scalar_value)
+%
+%   For dip slip of size scalar_value on each source patch, computes the
+%   half-space displacement at the observation points and adds the
+%   response to the model boundary, found by a boundary element solve.
+%
 % INPUTS
-% src - object or data structure containing fault mesh 
-%           (end points and center nodes)
-% obs - observation points as [x,z] coordinates
-% boundary - object or data structure containing boundary mesh for BEM
-% 
-% OUTPUTS 
-% returns half-space kernels 
-% ONLY resulting from shear slip on a source  
-% 2 x [N x N] matrices containing displacement kernels
-% 
-% Author:
-% Rishav Mallick, JPL, 2023
+%   src           geometry.receiver object: source fault patches (Ns)
+%   obs           [Nobs x 2] observation points [x, z] (m)
+%   boundary      geometry.receiver object: model boundary patches
+%                 .Vpl  0: zero displacement; 1: zero traction
+%   scalar_value  slip on each source patch (m); 1 gives kernels per unit
+%                 slip
+%
+% OUTPUTS
+%   Gx            [Nobs x Ns] horizontal displacement (m)
+%   Gz            [Nobs x Ns] vertical displacement (m)
+%
+% NOTES
+%   - Boundary correction as in computeFaultTractionKernelsBem, but with
+%     zero displacement on Dirichlet patches (boundary.Vx, .Vz are not
+%     used).
+%   - The driver scripts also use it for the kinematic hinge fault.
+%
+% SEE ALSO
+%   computeAllDisplacementKernelsBem, computeFaultTractionKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 Nobs = length(obs(:,1));
 
@@ -57,9 +74,8 @@ for i = 1:src.N
     idirichlet = boundary.Vpl == 0;
     ineumann = boundary.Vpl == 1;
 
-    % displacement BC
-    BC([idirichlet;idirichlet]) = 0.*[boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                  [ux_source(idirichlet);uz_source(idirichlet)];
+    % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+    BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
     % traction BC
     BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];        
     

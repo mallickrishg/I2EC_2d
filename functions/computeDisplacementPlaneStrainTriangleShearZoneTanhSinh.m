@@ -1,44 +1,71 @@
 function [u2,u3]=computeDisplacementPlaneStrainTriangleShearZoneTanhSinh( ...
     x2,x3,A,B,C,e22,e23,e33,nu,varargin)
-% function COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONETANHSINH computes the
-% displacement field associated with deforming triangle strain volume
-% considering the following geometry using the tanh-sinh numerical
-% quadrature.
+% COMPUTEDISPLACEMENTPLANESTRAINTRIANGLESHEARZONETANHSINH  Displacement due to a strained triangle, by tanh-sinh quadrature.
 %
-%              surface
-%      -------------+-------------- E (x2)
-%                   |
-%                   |     + A
-%                   |    /  . 
-%                   |   /     .  
-%                   |  /        .            
-%                   | /           .      
-%                   |/              + B
-%                   /            .
-%                  /|          /  
-%                 / :       .
-%                /  |    /
-%               /   : .
-%              /   /|
-%             / .   :
-%            +      |
-%          C        :
-%                   |
-%                   D (x3)
+%   [u2, u3] = computeDisplacementPlaneStrainTriangleShearZoneTanhSinh(x2, x3, A, B, C, e22, e23, e33, nu)
+%   [u2, u3] = computeDisplacementPlaneStrainTriangleShearZoneTanhSinh(..., 'precision', h, 'bound', b)
 %
+%   Computes the same displacement as
+%   computeDisplacementPlaneStrainTriangleShearZone by integrating the
+%   half-space Green's functions along the three edges of the triangle
+%   with double-exponential (tanh-sinh) quadrature. I2EC uses it only at
+%   points where the closed form is not finite. Geometry (x3 is depth,
+%   positive down):
 %
-% Input:
-% x2, x3             east coordinates and depth of the observation point,
-% A, B, C            east and depth coordinates of the vertices,
-% eij                source strain component 22, 23 and 33 in the strain
-%                    volume,
-% nu                 Poisson's ratio in the half space.
+%                 surface
+%         -------------+-------------- E (x2)
+%                      |
+%                      |     + A
+%                      |    /  .
+%                      |   /     .
+%                      |  /        .
+%                      | /           .
+%                      |/              + B
+%                      /            .
+%                     /|          /
+%                    / :       .
+%                   /  |    /
+%                  /   : .
+%                 /   /|
+%                / .   :
+%               +      |
+%             C        :
+%                      |
+%                      D (x3)
 %
-% Output:
-% u2                 displacement component in the east direction,
-% u3                 displacement component in the down direction.
+% INPUTS
+%   x2, x3          observation points: horizontal position and depth
+%                   (m, x3 >= 0)
+%   A, B, C         [1 x 2] triangle vertices [x2, x3] (m)
+%   e22, e23, e33   eigenstrain components in the triangle (tensor
+%                   components)
+%   nu              Poisson's ratio
 %
-% Author: Sylvain Barbot (sbarbot@ntu.edu.sg) - Feb 9, 2018, Los Angeles.
+% OPTIONS
+%   precision       quadrature step h  [0.001]
+%   bound           range of the transformed variable; the sum runs over
+%                   k = -n..n with n = fix(bound/h)  [3.5]
+%
+% OUTPUTS
+%   u2              displacement in the x2 (east) direction, same size as
+%                   x2 (m)
+%   u3              displacement in the x3 (down) direction (m)
+%
+% NOTES
+%   - The displacement depends on Poisson's ratio only, not on the shear
+%     modulus.
+%   - x3 must be non-negative (assertion).
+%
+% SEE ALSO
+%   computeDisplacementPlaneStrainTriangleShearZone
+%
+% REFERENCES
+%   Barbot, S. (2018). Deformation of a half-space from anelastic strain
+%   confined in a tetrahedral volume. Bulletin of the Seismological Society
+%   of America, 108(5A), 2687-2712. doi:10.1785/0120180058
+%
+% AUTHORS
+%   Sylvain Barbot (sbarbot@ntu.edu.sg) - Feb 9, 2018, Los Angeles.
 
 assert(min(x3(:))>=0,'depth must be positive.');
 

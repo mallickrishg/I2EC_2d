@@ -1,4 +1,19 @@
 classdef earthModel < handle
+% EARTHMODEL  Empty base class for elastic earth models.
+%
+%   o = geometry.earthModel()
+%
+%   Base class of the earth models used by the patch classes. It holds no
+%   properties or methods; geometry.LDhs is the subclass used in I2EC.
+%
+% PROPERTIES
+%   none
+%
+% SEE ALSO
+%   geometry.LDhs
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
     methods
         %% % % % % % % % % % % % % % % % % %
@@ -7,15 +22,29 @@ classdef earthModel < handle
         %                                  %
         % % % % % % % % % % % % % % % % % %%
         function o=earthModel()
-            % EARTHMODEL is an empty class definition for earth models
-            % subclasses like greens.okada92 and greens.gimbutas12.
+            % EARTHMODEL  Create an empty earth model.
             %
-            % SEE ALSO: unicycle
-            
+            %   o = geometry.earthModel()
+            %
+            %   Returns an empty object. Subclasses such as geometry.LDhs
+            %   add the elastic properties.
+            %
+            % INPUTS
+            %   none
+            %
+            % OUTPUTS
+            %   o       geometry.earthModel object
+            %
+            % SEE ALSO
+            %   geometry.LDhs
+            %
+            % AUTHORS
+            %   Rishav Mallick, 2023
+
             if (0==nargin)
                 return
             end
-            
+
         end
     end % methods
 end % class definition

@@ -1,52 +1,59 @@
 function [V, lambda, A_neg] = negateGrowingModes(A)
-%NEGATEGROWINGMODES  Eigendecomposition of A with growing modes negated.
+% NEGATEGROWINGMODES  Eigendecompose A and negate its growing modes.
 %
 %   [V, lambda] = negateGrowingModes(A)
 %   [V, lambda, A_neg] = negateGrowingModes(A)
 %
-% Balances A (MATLAB balance), computes its eigendecomposition and replaces
-% every eigenvalue with Re(lam) > 0 by -lam.  The eigenvectors are kept, so
-% A_neg = V diag(lambda) V^-1 has the same modes as A, with the growing
-% ones turned into decaying ones.  A_neg is real because the eigenvalues
-% stay in complex-conjugate pairs after negation.
+%   Balances A (MATLAB balance), computes the eigendecomposition of the
+%   balanced matrix and replaces every eigenvalue with Re(lam) > 0 by
+%   -lam. The eigenvectors are kept, so
+%       A_neg = V*diag(lambda)/V
+%   has the same modes as A, with the growing ones turned into decaying
+%   ones.
 %
-% This assumes that every eigenvalue with Re(lam) > 0 is spurious: such
-% eigenvalues arise from the spatial discretisation (they depend on the
-% mesh).  Negating them is a regularisation, not a claim about the true
-% continuum physics.
+%   Opt-in. The default kernels of computeAllStressKernelsBem are
+%   cell-averaged and certified, so the operator has no growing modes and
+%   needs no negation; analyticSolveIVP and
+%   computePeriodicInitialConditionBalanced do not negate and raise an
+%   error if the operator has growing modes. For centroid kernels
+%   ('cellaverage', 1) negate explicitly and pass A_neg to the solvers:
+%       [~, ~, A] = negateGrowingModes(A);   % then build c with this A
 %
-% analyticSolveIVP and computePeriodicInitialConditionBalanced call this
-% function, so both treat eigenvalues identically.  Build any forcing
-% term that contains the operator with A_neg, e.g. the long-term loading
-%   edot_lt = -A_neg * y_pl,
-% so that the long-term (plate-rate) state y_pl stays the steady state of
-% the evolved system dy/dt = A_neg (y - y_pl) + ...  With -A * y_pl
-% instead, the difference (A_neg - A) * y_pl acts as an extra constant
-% forcing on the negated modes, and y_pl is no longer steady.
-% Passing A_neg back to the solvers changes it only by round-off.
+% INPUTS
+%   A       [n x n] real ODE operator matrix (1/s)
 %
-% Inputs:
-%   A : (n x n) real ODE operator matrix
+% OUTPUTS
+%   V       [n x n] eigenvectors of A (V = T*Vb, with T from balance)
+%   lambda  [n x 1] eigenvalues of A, with Re(lam) > 0 negated (1/s)
+%   A_neg   [n x n] real negated operator V*diag(lambda)/V; computed only
+%           when requested
 %
-% Outputs:
-%   V      : (n x n) eigenvectors of A (V = T * Vb, T from balance)
-%   lambda : (n x 1) eigenvalues, with Re(lam) > 0 negated
-%   A_neg  : (n x n) real negated operator V diag(lambda) V^-1
-%            (computed only when requested)
+% NOTES
+%   - Stability: this was the damping rule of the semi-analytical path
+%     before certified kernels. It assumes every eigenvalue with
+%     Re(lam) > 0 is spurious, i.e. a
+%     product of the spatial discretisation (such eigenvalues depend on
+%     the mesh). Negating them is a regularisation, not a claim about the
+%     true continuum physics.
+%   - A_neg is real because the eigenvalues stay in complex-conjugate
+%     pairs after negation. Passing A_neg back to the solvers changes it
+%     only by round-off.
+%   - Build every forcing term that contains the operator with A_neg,
+%     e.g. the long-term loading edot_lt = -A_neg*y_pl, so that the
+%     plate-rate state y_pl stays the steady state of
+%     dy/dt = A_neg*(y - y_pl) + ... With -A*y_pl instead,
+%     (A_neg - A)*y_pl acts as an extra constant forcing on the negated
+%     modes.
 %
-% See also analyticSolveIVP, computePeriodicInitialConditionBalanced
+% SEE ALSO
+%   eigBalanced, analyticSolveIVP, computePeriodicInitialConditionBalanced,
+%   computeAllStressKernelsBem, modifyGrowingModes
 %
-% Author: Sharadha Sathiakumar, EOS, 2026
+% AUTHORS
+%   Sharadha Sathiakumar (EOS), 2026
 
-% ---- Balancing for numerical conditioning ----
-[T_bal, Ab] = balance(A);
-
-% ---- Eigendecomposition of balanced matrix ----
-[Vb, Db] = eig(Ab);
-lambda = diag(Db);
-
-% ---- Recover physical eigenvectors: A = T_bal * Ab / T_bal ----
-V = T_bal * Vb;
+% ---- Balanced eigendecomposition (A = V*diag(lambda)/V) ----
+[V, lambda] = eigBalanced(A);
 
 % ---- Negate growing eigenvalues ----
 pos = real(lambda) > 0;

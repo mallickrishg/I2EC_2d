@@ -1,15 +1,40 @@
 function LO = computeShzDisplacementKernels(shz,obs)
-% Compute displacement kernels for shear zones 
-% each kernel is a 2-component displacement field [ux,uz]
-% in response to applied strain components [exx,exz,ezz]
-% 
-% OUTPUTS:
-% LL is a [Nobs x Nshz x 2 x 3] matrix
-% if we want a kernel for ezz source resulting in ux displacements
-% this would be position [Nobs x Nshz x 1-row,3-column]
-% 
-% Author:
-% Rishav Mallick, JPL, 2023
+% COMPUTESHZDISPLACEMENTKERNELS  Half-space displacement from zone strain.
+%
+%   LO = geometry.computeShzDisplacementKernels(shz, obs)
+%
+%   Displacement at the observation points due to a unit eigenstrain in
+%   each triangle of shz, in a homogeneous elastic half-space. Each
+%   triangle is loaded with unit exx, exz and ezz in turn, using
+%   computeDisplacementPlaneStrainTriangleShearZone (Barbot, 2018).
+%
+% INPUTS
+%   shz     geometry.shearZoneReceiver object: source triangles
+%           .N           [1 x 1] number of triangles
+%           .A, .B, .C   [M x 2] triangle vertices (m, z negative)
+%           .earthModel  geometry.LDhs object (uses .nu)
+%   obs     [Nobs x 2] observation points (x, z) (m, z <= 0)
+%
+% OUTPUTS
+%   LO      [Nobs x M x 2 x 3] displacement per unit strain (m). The 3rd
+%           index is the component (1: x, 2: z, positive up); the 4th is
+%           the source strain (1: exx, 2: exz, 3: ezz). Example:
+%           LO(:,:,1,3) is the x displacement due to ezz.
+%
+% NOTES
+%   - Depths are made positive for the call, and the vertical
+%     displacement is flipped back so that z is positive up.
+%   - Uses parfor (parallel if a pool is available).
+%
+% SEE ALSO
+%   computeDisplacementPlaneStrainTriangleShearZone,
+%   computeShzDisplacementKernelsBem, geometry.computeShzStressKernels
+%
+% REFERENCES
+%   Barbot, S. (2018). Bull. Seismol. Soc. Am., doi:10.1785/0120180058
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 Nobs = length(obs(:,1));
 nu = shz.earthModel.nu;

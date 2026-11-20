@@ -1,19 +1,36 @@
 function [Vx,Vz] = compute_cornerflow_velocityfield(dip,x,z)
-% Newtonian fluid corner flow solutions subject to 2 different sets of
-% boundary conditions: 
-% (1) continental arc
-% (2) oceanic mantle
-% INPUTS:
-% dip - slab dip angle in radians
-% x,z - normalized distance from slab (z is negative inside the Earth)
-%       provide them as [Nx1] vectors
-% OUTPUTS:
-% Vx,Vz - corner flow velocity field as [Nx2] matrices for each component
-% Vx(:,1) - continental arc solution
-% Vx(:,2) - oceanic mantle solution
-% similarly for Vz
-% 
-% Rishav Mallick, JPL, 2023
+% COMPUTE_CORNERFLOW_VELOCITYFIELD  Evaluate Newtonian subduction corner flow.
+%
+%   [Vx, Vz] = compute_cornerflow_velocityfield(dip, x, z)
+%
+%   Closed-form Newtonian (isoviscous) corner flow for a unit plate speed,
+%   for two sets of boundary conditions: the mantle wedge (continental
+%   arc) and the oceanic mantle below the slab. Both solutions are
+%   evaluated at every point.
+%
+% INPUTS
+%   dip     slab dip (radians)
+%   x, z    [N x 1] coordinates in the corner-flow frame (z negative
+%           inside the Earth)
+%
+% OUTPUTS
+%   Vx      [N x 2] horizontal velocity per unit plate speed;
+%           column 1 mantle wedge (arc), column 2 oceanic mantle
+%   Vz      [N x 2] vertical velocity per unit plate speed;
+%           column 1 mantle wedge (arc), column 2 oceanic mantle
+%
+% NOTES
+%   - The solution is singular at the corner (origin), where it returns
+%     NaN. computeLongTermVelocity translates the coordinates of each
+%     region (ocean/continental translate parameters) to keep points away
+%     from it.
+%   - Newtonian only; computeCornerflowVelocityfield also handles n = 3.
+%
+% SEE ALSO
+%   computeCornerflowVelocityfield, computeLongTermVelocity
+%
+% AUTHORS
+%   Rishav Mallick (JPL), 2023
 
 constants_arc = ...
     [0,...

@@ -1,4 +1,37 @@
 function LL_bem = computeShzDisplacementKernelsBem(src,obs,boundary,scalar_value)
+% COMPUTESHZDISPLACEMENTKERNELSBEM  Displacement kernels due to shear-zone strain, BEM-corrected.
+%
+%   LL_bem = computeShzDisplacementKernelsBem(src, obs, boundary, scalar_value)
+%
+%   For an eigenstrain of size scalar_value in each source triangle, one
+%   strain component at a time, computes the half-space displacement at
+%   the observation points and adds the response to the model boundary,
+%   found by a boundary element solve.
+%
+% INPUTS
+%   src           geometry.shearZoneReceiver object: source triangles (Ns)
+%   obs           [Nobs x 2] observation points [x, z] (m)
+%   boundary      geometry.receiver object: model boundary patches
+%                 .Vpl  0: zero displacement; 1: zero traction
+%   scalar_value  strain in each source triangle; 1 gives kernels per unit
+%                 strain
+%
+% OUTPUTS
+%   LL_bem        [Nobs x Ns x 2 x 3] displacement (m); 3rd index =
+%                 displacement component (ux, uz), 4th index = source
+%                 strain component (e22, e23, e33)
+%
+% NOTES
+%   - Boundary correction as in computeFaultDisplacementKernelsBem (zero
+%     displacement on Dirichlet patches; boundary.Vx, .Vz are not used).
+%   - computeAllDisplacementKernelsBem combines the components into
+%     deviatoric kernels (e33 = -e22).
+%
+% SEE ALSO
+%   computeAllDisplacementKernelsBem, computeShzStressKernelsBem
+%
+% AUTHORS
+%   Rishav Mallick, 2023
 
 % these are [2 x 3] stress kernels
 Nobs = length(obs(:,1));
@@ -45,9 +78,8 @@ for component = 1:3
         idirichlet = boundary.Vpl == 0;
         ineumann = boundary.Vpl == 1;
 
-        % displacement BC
-        BC([idirichlet;idirichlet]) = 0.*[boundary.Vx(idirichlet);boundary.Vz(idirichlet)] - ...
-                                      [ux_source(idirichlet);uz_source(idirichlet)];
+        % displacement BC: homogeneous (boundary.Vx, Vz are not used)
+        BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
         % traction BC
         BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
 

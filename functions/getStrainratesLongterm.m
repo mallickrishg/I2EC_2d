@@ -1,75 +1,71 @@
 function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,continental_translate_params,n)
-% GETSTRAINRATESLONGTERM Compute long-term strain rates in subduction zone shear zones
+% GETSTRAINRATESLONGTERM  Compute long-term mantle strain rates (corner flow).
 %
-%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ocean_translate_params, ...
-%                                                continental_translate_params, n)
+%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ...
+%       ocean_translate_params, continental_translate_params, n)
 %
-%   Calculates deviatoric strain rate components for triangular mesh elements in 
-%   a subduction zone by evaluating analytical corner flow velocity fields and 
-%   computing spatial velocity gradients. The function handles both continental 
-%   mantle wedge and oceanic sub-slab mantle regions with appropriate coordinate 
-%   transformations.
+%   Evaluates the analytical corner-flow velocity field (unit plate speed)
+%   at the three vertices and the centroid of every shear-zone triangle,
+%   fits a planar velocity field to these four points by least squares,
+%   and returns the deviatoric strain rates of that planar field. Cells
+%   above the slab use the mantle-wedge (continental arc) solution, cells
+%   below it the oceanic-mantle solution. The result is the long-term
+%   (background) viscous strain rate that loads the earthquake-cycle model.
 %
-% METHODOLOGY:
-%   1. Determines whether each mesh element lies in continental or oceanic mantle
-%      based on its position relative to the dipping slab interface
-%   2. Applies region-specific coordinate translations to align with corner flow
-%      coordinate system (origin at trench, with small offset to avoid singularity)
-%   3. Evaluates corner flow velocity at triangle vertices using analytical solutions
-%   4. Fits a planar velocity field to the three vertices to obtain velocity gradients
-%   5. Computes strain rate tensor components from velocity gradient tensor
+% INPUTS
+%   shz                           geometry.shearZoneReceiver object:
+%                                 mantle cells
+%                                 .N        number of triangles M
+%                                 .xc       [M x 2] centroids [x, z] (m)
+%                                 .A, .B, .C  [M x 2] vertices [x, z] (m)
+%   dip                           slab dip (radians)
+%   ocean_translate_params        [1 x 2] shift [dx, dz] (m) added to the
+%                                 coordinates of oceanic-mantle cells
+%   continental_translate_params  [1 x 2] shift [dx, dz] (m) added to the
+%                                 coordinates of mantle-wedge cells
+%   n                             power-law exponent: 1 (Newtonian) or 3.
+%                                 Optional, default 1
 %
-% INPUTS:
-%   shz - Shear zone structure containing mesh geometry with fields:
-%         .N       - Number of triangular elements
-%         .xc      - [N x 2] element centroids [x, z]
-%         .A,.B,.C - [N x 2] vertex coordinates for each triangle [x, z]
+% OUTPUTS
+%   e22_dev                       [M x 1] deviatoric normal strain rate,
+%                                 0.5*(du/dx - dv/dz), per unit plate
+%                                 speed (1/m)
+%   e23                           [M x 1] shear strain rate,
+%                                 0.5*(du/dz + dv/dx), per unit plate
+%                                 speed (1/m)
 %
-%   dip - Slab dip angle in radians (e.g., pi/4 for 45°)
+% NOTES
+%   - A cell is in the mantle wedge if z + x*tan(dip) >= 0 at its centroid
+%     (x positive away from the trench, z negative below the surface), and
+%     in the oceanic mantle otherwise.
+%   - The corner-flow solutions are singular at their origin (the corner).
+%     The two translations move each region into the corner-flow frame and
+%     keep the evaluation points away from that singularity; 1 m is also
+%     subtracted from both z shifts. Tune them to the mesh.
+%   - Wedge cells use column 1 (continental arc) of
+%     computeCornerflowVelocityfield, oceanic cells column 2.
+%   - The planar fit assumes the velocity varies little across a cell, so
+%     it is accurate for cells that are small compared with their distance
+%     from the corner.
+%   - Rates are for a unit plate speed: the driver scripts multiply by Vpl
+%     and use -e23 as the long-term shear strain rate (shz.e23pl).
 %
-%   ocean_translate_params - [1 x 2] translation vector [dx, dz] for oceanic mantle
-%                            Shifts coordinates to corner flow reference frame
-%                            (origin nominally at trench, offset by ~plate thickness)
+% EXAMPLE
+%   dip = 45*pi/180;
+%   ocean_trans = [0, -20e3];       % oceanic lithosphere ~20 km thick
+%   cont_trans = [-140e3, -35e3];   % offset from trench, ~35 km thick
+%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ocean_trans, ...
+%                                           cont_trans, 1);
 %
-%   continental_translate_params - [1 x 2] translation vector [dx, dz] for continental wedge
-%                                  Shifts coordinates to avoid singularity at (0,0)
+% SEE ALSO
+%   computeCornerflowVelocityfield, computeLongTermVelocity
 %
-%   n - Power-law rheology exponent: 1 (Newtonian) or 3 (power-law viscous)
-%
-% OUTPUTS:
-%   e22_dev - [N x 1] Deviatoric normal strain rate component ε̇_xx^dev
-%             Computed as 0.5*(∂u/∂x - ∂v/∂z)
-%
-%   e23     - [N x 1] Shear strain rate component ε̇_xz  
-%             Computed as 0.5*(∂u/∂z + ∂v/∂x)
-%
-% COORDINATE SYSTEM:
-%   - x: horizontal (positive away from trench)
-%   - z: vertical (negative downward into Earth)
-%   - Slab dips at angle 'dip' from horizontal
-%   - Continental mantle: above slab (z + x*tan(dip) ≥ 0)
-%   - Oceanic mantle: below slab (z + x*tan(dip) < 0)
-%
-% DEPENDENCIES:
-%   computeCornerflowVelocityfield - Analytical corner flow velocity solver
-%
-% NOTES:
-%   - Translation parameters should be tuned to mesh geometry to avoid 
-%     evaluation at or too near the corner flow singularity at (0,0)
-%   - The -1 offset in z-translations approximates shifting by plate thickness
-%   - Planar velocity assumption is valid for sufficiently small elements
-%
-% EXAMPLE:
-%   dip = 45 * pi/180;  % 45-degree dipping slab
-%   ocean_trans = [0, -20e3];     % oceanic lithosphere ~20 km thick
-%   cont_trans = [-140e3, -35e3]; % offset from trench, ~35 km thick
-%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ocean_trans, cont_trans, 1);
-%
-% AUTHORS:
+% AUTHORS
 %   Rishav Mallick (EOS), 2025
-%
-% SEE ALSO:
-%   computeCornerflowVelocityfield
+
+if nargin < 5
+    n = 1;
+end
 
 % rescale parameters: move the shz the x and z coordinates because corner flow solutions are at (0,0)
 % Note: Don't move to 0 because solutions are not well defined at 0,0. These
