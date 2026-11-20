@@ -38,7 +38,7 @@ Thumbs.db
 *.asv
 *.asv
 *.seg
-inputs/megathrust2d.seg
+examples/inputs/megathrust2d.seg
 experiments/*
 expt*
 .ipynb_checkpoints/

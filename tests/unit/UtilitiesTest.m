@@ -80,7 +80,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) UtilitiesTest < matlab.unittes
     methods (Test, TestTags = {'KnownIssue'})
         function createMegathrustLeavesWorkingFolderClean(tc)
             % writes megathrust2d.seg into the current folder: run from the
-            % repository root it creates a stray file next to inputs/
+            % repository root it creates a stray file there
             folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
             tc.applyFixture(matlab.unittest.fixtures.CurrentFolderFixture(folder));
             create_megathrust(tc.Ex.em, 0, 10, 14, 1e5, 10);

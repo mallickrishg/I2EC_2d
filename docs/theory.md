@@ -137,7 +137,7 @@ the default mantle kernels guarantee (see [Mantle kernels](#mantle-kernels)).
 plane-strain line-dislocation solutions of Davis & Martel (`LDstressHS`,
 `LDdispHS`); mantle kernels use the triangle strain-volume solutions of
 Barbot (2018). Both are for a half-space. The finite model box
-(`inputs/boundary2d.seg`) is imposed afterwards by a boundary-element solve
+(`examples/inputs/boundary2d.seg`) is imposed afterwards by a boundary-element solve
 ({mat:func}`computeShzStressKernelsBem`, {mat:func}`computeFaultTractionKernelsBem`):
 zero displacement where `boundary.Vpl == 0` (Dirichlet) and zero traction where
 `boundary.Vpl == 1` (Neumann). The boundary slip that cancels a mantle source
@@ -206,7 +206,7 @@ the negated operator too.
   each cell comes from a planar fit of the velocity at its three vertices. The
   shifts are tuning choices that should match the mesh.
 - **Hinge fault.** Surface velocities and displacements include a vertical
-  "hinge" fault (`inputs/hinge2d.seg`) that stands in for plate bending. It is
+  "hinge" fault (`examples/inputs/hinge2d.seg`) that stands in for plate bending. It is
   kinematic: it is added to the surface predictions only and is not part of
   the dynamical system.
 - **Imposed, characteristic earthquakes.** Events are prescribed (slip, timing),

@@ -5,16 +5,16 @@ function m = exampleModel(varargin)
 %   m = exampleModel('Name', Value, ...)
 %
 %   Adds the I2EC folders to the path and loads the example subduction
-%   zone: the megathrust (inputs/megathrust2d.seg), the model boundary
-%   (inputs/boundary2d.seg), the kinematic hinge fault (inputs/hinge2d.seg)
-%   and a mantle mesh (default inputs/shearzone). With 'StressKernels' or
+%   zone: the megathrust (examples/inputs/megathrust2d.seg), the model boundary
+%   (examples/inputs/boundary2d.seg), the kinematic hinge fault (examples/inputs/hinge2d.seg)
+%   and a mantle mesh (default examples/inputs/shearzone). With 'StressKernels' or
 %   'DisplacementKernels' true it also returns the default kernels: loaded
 %   from the cache in kernels/ when they match the meshes, computed (and
 %   not saved) otherwise.
 %
 % OPTIONS (name-value)
 %   'ShearZone'            mesh prefix, relative to the repository root
-%                          ['inputs/shearzone']
+%                          ['examples/inputs/shearzone']
 %   'StressKernels'        return m.evl (computeAllStressKernelsBem,
 %                          default options)  [false]
 %   'DisplacementKernels'  return m.devl and the hinge kernels m.Ghx,
@@ -37,7 +37,7 @@ function m = exampleModel(varargin)
 % NOTES
 %   - The cached kernels are kernels/evl_orig.h5 (stress, default options)
 %     and kernels/devl.h5 (displacement at m.obs), both for
-%     inputs/shearzone. They are used only when their sizes match the
+%     examples/inputs/shearzone. They are used only when their sizes match the
 %     meshes; a different mantle mesh gets its kernels computed.
 %   - rcv, shz and the other receivers are handle objects: examples set
 %     their rheology on the returned objects.
@@ -47,7 +47,7 @@ function m = exampleModel(varargin)
 %   computeAllDisplacementKernelsBem
 
 p = inputParser;
-p.addParameter('ShearZone', fullfile('inputs', 'shearzone'));
+p.addParameter('ShearZone', fullfile('examples', 'inputs', 'shearzone'));
 p.addParameter('StressKernels', false);
 p.addParameter('DisplacementKernels', false);
 p.parse(varargin{:});
@@ -63,11 +63,11 @@ m.Vpl = 1e-9;     % m/s
 m.yr = 3.15e7;    % s
 
 m.earthModel = geometry.LDhs(m.mu, m.nu);
-m.rcv = geometry.receiver(fullfile(m.root, 'inputs', 'megathrust2d.seg'), m.earthModel);
+m.rcv = geometry.receiver(fullfile(m.root, 'examples', 'inputs', 'megathrust2d.seg'), m.earthModel);
 % Vpl column of the boundary file = boundary-condition type (0: zero
 % displacement, 1: zero traction); the kernels solve the homogeneous problem
-m.boundary = geometry.receiver(fullfile(m.root, 'inputs', 'boundary2d.seg'), m.earthModel);
-m.hinge = geometry.receiver(fullfile(m.root, 'inputs', 'hinge2d.seg'), m.earthModel);
+m.boundary = geometry.receiver(fullfile(m.root, 'examples', 'inputs', 'boundary2d.seg'), m.earthModel);
+m.hinge = geometry.receiver(fullfile(m.root, 'examples', 'inputs', 'hinge2d.seg'), m.earthModel);
 shzPrefix = opt.ShearZone;
 if ~isfile([shzPrefix '_vertices.dat'])
     shzPrefix = fullfile(m.root, shzPrefix);
@@ -85,7 +85,7 @@ if opt.StressKernels
     %                                    'kernelcertify',false,'kernelmodify',1);
     % ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
     % semi-analytical solvers use negateGrowingModes on the operator instead.)
-    % kernels/evl_orig.h5 holds the default kernels for inputs/shearzone
+    % kernels/evl_orig.h5 holds the default kernels for examples/inputs/shearzone
     % (HDF5, written by saveKernels; readable outside MATLAB):
     %   evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
     %   saveKernels('kernels/evl_orig.h5', evl_orig, 'rcv', rcv, 'shz', shz);

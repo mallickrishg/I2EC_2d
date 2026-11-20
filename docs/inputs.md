@@ -1,6 +1,6 @@
 # Prepare the model geometry
 
-Example inputs are in `inputs/`. Lengths are in metres.
+Example inputs are in `examples/inputs/`. Lengths are in metres.
 
 ## Faults and boundaries (`.seg` files)
 
@@ -9,8 +9,8 @@ patches. Read them with {mat:class}`geometry.receiver <receiver>`:
 
 ```matlab
 earthModel = geometry.LDhs(mu, nu);
-rcv      = geometry.receiver('inputs/megathrust2d.seg', earthModel);
-boundary = geometry.receiver('inputs/boundary2d.seg',   earthModel);
+rcv      = geometry.receiver('examples/inputs/megathrust2d.seg', earthModel);
+boundary = geometry.receiver('examples/inputs/boundary2d.seg',   earthModel);
 ```
 
 Lines starting with `#` are comments. Each data line has ten columns:
@@ -27,7 +27,7 @@ Lines starting with `#` are comments. Each data line has ten columns:
 | `bcx`, `bcz` | Boundary-condition velocities in *x* and *z* (for the model boundary; scaled by the plate rate in the driver scripts). |
 
 {mat:func}`geometry.flt2flt <flt2flt>` splits each segment into patches. For
-example, `inputs/boundary2d.seg`:
+example, `examples/inputs/boundary2d.seg`:
 
 ```text
 # n  Vpl     x       z     Width    Dip    W0   qW    bcx      bcz
@@ -52,7 +52,7 @@ Load them by passing the prefix to
 {mat:class}`geometry.shearZoneReceiver <shearZoneReceiver>`:
 
 ```matlab
-shz = geometry.shearZoneReceiver('inputs/shearzone', earthModel);
+shz = geometry.shearZoneReceiver('examples/inputs/shearzone', earthModel);
 ```
 
 New meshes can be made with `meshing/createShearZoneMesh.m`, which meshes the
@@ -60,7 +60,7 @@ oceanic mantle and the mantle wedge with the PDE Toolbox and writes both files:
 
 ```matlab
 addpath meshing
-createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine');   % inputs/shearzone_fine_*.dat
+createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine');   % examples/inputs/shearzone_fine_*.dat
 ```
 
 Its default polygons are the outline of the example mesh. The example mesh was

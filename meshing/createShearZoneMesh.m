@@ -19,7 +19,7 @@ function [vert, tri] = createShearZoneMesh(varargin)
 %                   Default 20
 %   'Oceanic'       [N x 2] oceanic-mantle polygon [x, z] (km)
 %   'Wedge'         [N x 2] mantle-wedge polygon [x, z] (km)
-%   'OutputFolder'  folder for the .dat files. Default: inputs/ of the
+%   'OutputFolder'  folder for the .dat files. Default: examples/inputs/ of the
 %                   repository. Pass '' to write nothing
 %   'Name'          file name prefix. Default 'shearzone'
 %   'Plot'          true to plot the mesh. Default false
@@ -29,10 +29,10 @@ function [vert, tri] = createShearZoneMesh(varargin)
 %   tri             [M x 3] vertex indices of each triangle
 %
 % NOTES
-%   - The default polygons are the outline of the example mesh in inputs/
+%   - The default polygons are the outline of the example mesh in examples/inputs/
 %     (slab dip atan(0.25) = 14.04 deg, oceanic plate 20 km and upper
 %     plate 35 km thick, domain to x = 450 km and z = -200 km).
-%   - The example mesh in inputs/ was made with the PDE Toolbox, but the
+%   - The example mesh in examples/inputs/ was made with the PDE Toolbox, but the
 %     exact settings were not recorded: 'Hmax' = 20 gives 495 triangles,
 %     close to its 521 but not the same mesh. Rebuild the cached kernels
 %     in kernels/ after replacing it.
@@ -42,7 +42,7 @@ function [vert, tri] = createShearZoneMesh(varargin)
 % EXAMPLE
 %   % finer mesh written next to the example one
 %   createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine', 'Plot', true);
-%   shz = geometry.shearZoneReceiver('inputs/shearzone_fine', geometry.LDhs(30e3, 0.25));
+%   shz = geometry.shearZoneReceiver('examples/inputs/shearzone_fine', geometry.LDhs(30e3, 0.25));
 %
 % SEE ALSO
 %   geometry.shearZoneReceiver, generateMesh
@@ -51,7 +51,7 @@ p = inputParser;
 p.addParameter('Hmax', 20, @(h) isnumeric(h) && any(numel(h) == [1 2]) && all(h > 0));
 p.addParameter('Oceanic', [-100 -20; -100 -200; 450 -200; 450 -132.5; 0 -20], @isPolygon);
 p.addParameter('Wedge', [201 -50; 450 -112.5; 450 -35; 201 -35], @isPolygon);
-p.addParameter('OutputFolder', fullfile(fileparts(fileparts(mfilename('fullpath'))), 'inputs'), ...
+p.addParameter('OutputFolder', fullfile(fileparts(fileparts(mfilename('fullpath'))), 'examples', 'inputs'), ...
     @(s) ischar(s) || isstring(s));
 p.addParameter('Name', 'shearzone', @(s) ischar(s) || isstring(s));
 p.addParameter('Plot', false, @islogical);

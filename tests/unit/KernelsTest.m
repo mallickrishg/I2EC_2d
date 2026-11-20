@@ -304,7 +304,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function cachedKernelsMatchCurrentMesh(tc)
-            % kernels/*.h5 must be built on the meshes in inputs/
+            % kernels/*.h5 must be built on the meshes in examples/inputs/
             e = tc.Ex.evl;
             tc.verifySize(e.KK, [tc.Ex.rcv.N tc.Ex.rcv.N]);
             tc.verifySize(e.LL, [tc.Ex.shz.N tc.Ex.shz.N 2 2]);
@@ -338,7 +338,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
 
     methods (Test, TestTags = {'Slow'})
         function cachedStressKernelsAreReproducible(tc)
-            % rebuild evl_orig (default: certified 3-point) from inputs/ and
+            % rebuild evl_orig (default: certified 3-point) from examples/inputs/ and
             % compare to kernels/evl_orig.h5
             % (minutes; catches a stale cache after a mesh or kernel change)
             m = tc.Ex;

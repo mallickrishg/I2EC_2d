@@ -2,7 +2,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
     %EXAMPLESCRIPTSTEST  End-to-end runs of the examples in examples/ (slow).
     %
     % Each script runs from the repository root (they use relative paths
-    % such as 'inputs/...') in its own function workspace, so their
+    % such as 'examples/inputs/...') in its own function workspace, so their
     % 'clear' does not touch the test.  Figures stay invisible.
 
     methods (TestMethodSetup)

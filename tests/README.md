@@ -72,7 +72,7 @@ Most tests check physical identities that hold whatever the sign convention, so 
 - **Two solution routes agree**: with a locked fault and a Newtonian mantle the ODE path (`ode45`) is linear and must match `analyticSolveIVP`, through a coseismic step.
 - **References**: the semi-analytical solvers are checked against `expm` of the augmented system.
 
-Fast tests use a 10-patch / 24-triangle synthetic model (`helpers/makeSmallModel.m`), so the full BEM pipeline runs in about a second. Tests on the example mesh use `inputs/` and the cached `kernels/*.h5`.
+Fast tests use a 10-patch / 24-triangle synthetic model (`helpers/makeSmallModel.m`), so the full BEM pipeline runs in about a second. Tests on the example mesh use `examples/inputs/` and the cached `kernels/*.h5`.
 
 ## Adding a test
 

@@ -3,7 +3,7 @@
 % Draws the triangulated mantle (oceanic mantle and mantle wedge) and the
 % megathrust with its locked zone from the example inputs, and writes
 % docs/_static/overview.png (white background, 150 dpi). The model boundary
-% (inputs/boundary2d.seg) lies far outside this window and is not drawn.
+% (examples/inputs/boundary2d.seg) lies far outside this window and is not drawn.
 %
 % Run from any folder:
 %   run docs/figures/make_overview.m
@@ -15,8 +15,8 @@ outfile = fullfile(root, 'docs', '_static', 'overview.png');
 
 % ---- geometry (as in examples/exampleModel.m and newtonianCycle.m)
 earthModel = geometry.LDhs(30e3, 0.25);
-rcv      = geometry.receiver(fullfile(root, 'inputs', 'megathrust2d.seg'), earthModel);
-shz      = geometry.shearZoneReceiver(fullfile(root, 'inputs', 'shearzone'), earthModel);
+rcv      = geometry.receiver(fullfile(root, 'examples', 'inputs', 'megathrust2d.seg'), earthModel);
+shz      = geometry.shearZoneReceiver(fullfile(root, 'examples', 'inputs', 'shearzone'), earthModel);
 
 locked  = abs(rcv.xc(:,2)) < 30e3;                          % locked zone: 0-30 km depth
 oceanic = shz.xc(:,1) < -shz.xc(:,2) / tand(rcv.dip(1));    % below the slab

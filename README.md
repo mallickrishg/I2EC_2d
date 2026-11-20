@@ -69,7 +69,7 @@ description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.h
 | `functions/` | Solvers, kernel assembly, long-term loading, plotting helpers |
 | `+geometry/` | Earth model, fault and shear-zone classes, Green's functions |
 | `examples/` | The four examples and their shared model setup |
-| `inputs/` | Geometry of the example subduction zone |
+| `examples/inputs/` | Geometry of the example subduction zone |
 | `kernels/` | Pre-computed kernels of the example model (HDF5) |
 | `meshing/` | `createShearZoneMesh`, to build new mantle meshes |
 | `tests/` | `matlab.unittest` test suite |

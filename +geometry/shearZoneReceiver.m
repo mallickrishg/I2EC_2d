@@ -56,9 +56,9 @@ classdef shearZoneReceiver < geometry.shzpatch
             %   alpha, n, e22pl and e23pl to zero and dgf = 2.
             %
             % INPUTS
-            %   filename    mesh prefix, e.g. 'inputs/shearzone' for
-            %               inputs/shearzone_vertices.dat and
-            %               inputs/shearzone_triangulation.dat; a cell array
+            %   filename    mesh prefix, e.g. 'examples/inputs/shearzone' for
+            %               examples/inputs/shearzone_vertices.dat and
+            %               examples/inputs/shearzone_triangulation.dat; a cell array
             %               is accepted, but only its last mesh is kept
             %   earthModel  geometry.LDhs object with the elastic properties
             %
@@ -67,7 +67,7 @@ classdef shearZoneReceiver < geometry.shzpatch
             %
             % EXAMPLE
             %   earthModel = geometry.LDhs(30e3, 0.25);
-            %   shz = geometry.shearZoneReceiver('inputs/shearzone', earthModel);
+            %   shz = geometry.shearZoneReceiver('examples/inputs/shearzone', earthModel);
             %
             % SEE ALSO
             %   geometry.shzpatch, createShearZoneMesh

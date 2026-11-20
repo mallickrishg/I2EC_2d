@@ -41,6 +41,7 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
 - [ ] §6: a regeneration script or hash check for `kernels/*.h5`.
 - [ ] §7: one `setup.m`.
+- [x] ~~Move the example geometry from `inputs/` to `examples/inputs/`, next to the driver scripts that use it.~~ *Done (2026-11-21); `createShearZoneMesh` now writes there by default.*
 - [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
 - [x] ~~§9: one help-block format; README dependency list.~~ *Done: every help block has an H1 line and INPUTS/OUTPUTS; the README no longer has a dependency list (rewritten in #13).*
 

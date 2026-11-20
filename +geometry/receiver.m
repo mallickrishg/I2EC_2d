@@ -102,7 +102,7 @@ classdef receiver < geometry.fpatch
             %
             % EXAMPLE
             %   earthModel = geometry.LDhs(30e3, 0.25);
-            %   rcv = geometry.receiver('inputs/megathrust2d.seg', earthModel);
+            %   rcv = geometry.receiver('examples/inputs/megathrust2d.seg', earthModel);
             %
             % SEE ALSO
             %   geometry.fpatch, geometry.flt2flt

@@ -1,7 +1,7 @@
 # Examples
 
 The scripts in `examples/` run complete earthquake-cycle models on the example
-subduction zone in `inputs/`. Each runs from any folder, for example
+subduction zone in `examples/inputs/`. Each runs from any folder, for example
 
 ```matlab
 run examples/example1_numericalPowerLaw
@@ -45,7 +45,7 @@ Two helper functions in `examples/` set this up:
 
 - `exampleModel` loads the earth model, the megathrust, the model boundary,
   the kinematic hinge fault and a mantle mesh (`'ShearZone'`, default
-  `inputs/shearzone`). With `'StressKernels', true` or
+  `examples/inputs/shearzone`). With `'StressKernels', true` or
   `'DisplacementKernels', true` it also returns the kernels: loaded from
   `kernels/` when they match the meshes, computed otherwise.
 - `newtonianCycle` sets the rheology of examples 2–4 (uniform viscosity
