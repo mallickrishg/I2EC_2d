@@ -1,6 +1,9 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) BoundaryCorrectionTest < matlab.unittest.TestCase
     %BOUNDARYCORRECTIONTEST  The BEM box correction in computeShzStressKernelsBem.
     %
+    % Also checks that the precomputed correction
+    % (computeShzBoundaryCorrection) gives the same kernels.
+    %
     % computeShzStressKernelsBem adds two parts: the analytic half-space
     % stress of each triangle (geometry.computeShzStressKernels) and the
     % stress of the slip on the box walls that enforces the box conditions
@@ -51,6 +54,34 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) BoundaryCorrectionTest < matla
                 tc.verifyGreaterThan(norm(reshape(C(:,:,p,:), [], 1)), ...
                     1e-6 * norm(reshape(Lhs(:,:,p,:), [], 1)), sprintf('component %d', p));
             end
+        end
+
+        function precomputedCorrectionGivesSameKernels(tc)
+            % computeShzBoundaryCorrection is receiver-independent: passing
+            % it in must give the kernels computed inside the call, for
+            % mantle and fault receivers and for moved receiver points
+            % (cell quadrature moves shz.xc between calls)
+            m = makeSmallModel(tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder);
+            [~, bc] = evalc('computeShzBoundaryCorrection(m.shz, m.bnd)');
+            tc.verifySize(bc.slip, [2*m.bnd.N m.shz.N 3]);
+            rcvs = {m.shz, m.rcv};
+            for k = 1:2
+                [~, L0] = evalc('computeShzStressKernelsBem(m.shz, rcvs{k}, m.bnd)');
+                [~, L1] = evalc('computeShzStressKernelsBem(m.shz, rcvs{k}, m.bnd, bc)');
+                tc.verifyEqual(L1, L0, 'AbsTol', 1e-12 * max(abs(L0(:))), sprintf('receiver set %d', k));
+            end
+            xc0 = m.shz.xc;
+            m.shz.xc = xc0 + [300 -200];
+            [~, L0] = evalc('computeShzStressKernelsBem(m.shz, m.shz, m.bnd)');
+            [~, L1] = evalc('computeShzStressKernelsBem(m.shz, m.shz, m.bnd, bc)');
+            m.shz.xc = xc0;
+            tc.verifyEqual(L1, L0, 'AbsTol', 1e-12 * max(abs(L0(:))), 'moved receivers');
+        end
+
+        function correctionForOtherSourcesIsRejected(tc)
+            m = tc.Sm;
+            bc = struct('slip', zeros(2*m.bnd.N, m.shz.N + 1, 3), 'Ns', m.shz.N + 1, 'Nb', m.bnd.N);
+            tc.verifyError(@() computeShzStressKernelsBem(m.shz, m.shz, m.bnd, bc), ?MException);
         end
     end
 end

@@ -59,7 +59,7 @@ function [u2,u3]=computeDisplacementPlaneStrainTriangleShearZone( ...
 %
 % SEE ALSO
 %   computeDisplacementPlaneStrainTriangleShearZoneTanhSinh,
-%   computeStressPlaneStrainTriangleShearZoneFiniteDifference
+%   computeStressPlaneStrainTriangleShearZone
 %
 % REFERENCES
 %   Barbot, S. (2018). Deformation of a half-space from anelastic strain

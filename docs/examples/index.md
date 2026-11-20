@@ -10,13 +10,13 @@ run examples/example1_numericalPowerLaw
 and adds the I2EC folders to the path itself. All of them use the default
 stress kernels: averaged over each mantle cell and certified free of growing
 modes (see [Kernel options](../quickstart.md#kernel-options) and
-{ref}`caveats-keeping-the-system-damped`), loaded from `kernels/evl_orig.h5`.
+{ref}`mantle-kernels`), loaded from `kernels/evl_orig.h5`.
 
 | Example | Rheology | Solver | Run time |
 | --- | --- | --- | --- |
 | {doc}`example1` | power-law mantle ($n = 3$), rate-strengthening fault | numerical (`ode45`), 15-cycle spin-up | 1–2 min |
 | {doc}`example2` | Newtonian mantle ($n = 1$), linear viscous fault | semi-analytical | 1–2 min |
-| {doc}`example3` | as example 2, on three mantle meshes | semi-analytical | about 1 min (about 15 min the first time) |
+| {doc}`example3` | as example 2, on three mantle meshes | semi-analytical | about 1 min (2 min the first time) |
 | {doc}`example4` | as example 2 | both, compared | 1–2 min |
 
 The figures in these pages are made by `docs/figures/make_examples.m`, which

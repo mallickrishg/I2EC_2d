@@ -1,17 +1,15 @@
 # Theory and methods
 
-This page summarises the method and, just as important, the numerical
-treatments that keep the discretised system stable. Read
-[Caveats](#caveats-keeping-the-system-damped) before interpreting fine-scale
-features of a solution. The full derivation is in Mallick & Sathiakumar (2026),
-listed on the {doc}`contributors` page.
+This page summarises the model, the solvers and how the kernels are computed.
+The full derivation is in Mallick & Sathiakumar (2026), listed on the
+{doc}`contributors` page.
 
 ## Splitting the deformation
 
 Deformation is split into two parts:
 
 1. **Long-term component**: a quasi-static boundary value problem for the
-   background flow (Newtonian corner flow, see
+   background flow (corner flow, Newtonian or power-law with $n = 3$, see
    {mat:func}`getStrainratesLongterm`) and steady fault slip at the plate rate
    $v^{\infty}$. At this timescale the elastic plates behave rigidly.
 2. **Earthquake-cycle component**: a time-dependent perturbation about the
@@ -126,156 +124,86 @@ $y(0) = y(T) + b$. In modal coordinates each mode gives
 $z_k(0) = \bigl(g_k(T)\,c_k + b_k\bigr)/\bigl(1 - e^{\lambda_k T}\bigr)$
 ({mat:func}`computePeriodicInitialConditionBalanced`), so no spin-up is needed.
 This is well defined only if every mode decays, $|e^{\lambda_k T}| < 1$, which
-is what the treatments below guarantee.
+the default mantle kernels guarantee (see [Mantle kernels](#mantle-kernels)).
 
-(caveats-keeping-the-system-damped)=
-## Caveats: keeping the system damped
+(kernels)=
+## Kernels
 
-Physically, $A$ describes a damped system: any perturbation relaxes back to the
-long-term state, so every eigenvalue should have $\mathrm{Re}(\lambda) < 0$.
-The discretised kernels do not quite honour this. Several treatments, applied
-at different stages and in different combinations by the two solvers, make the
-system damped again. They are regularisations, not physics.
+**Half-space solutions plus a boundary correction.** Fault kernels use the
+plane-strain line-dislocation solutions of Davis & Martel (`LDstressHS`,
+`LDdispHS`); mantle kernels use the triangle strain-volume solutions of
+Barbot (2018). Both are for a half-space. The finite model box
+(`inputs/boundary2d.seg`) is imposed afterwards by a boundary-element solve
+({mat:func}`computeShzStressKernelsBem`, {mat:func}`computeFaultTractionKernelsBem`):
+zero displacement where `boundary.Vpl == 0` (Dirichlet) and zero traction where
+`boundary.Vpl == 1` (Neumann). The boundary slip that cancels a mantle source
+does not depend on where the stress is evaluated, so it is solved once for all
+sources ({mat:func}`computeShzBoundaryCorrection`, one factorisation) and
+reused for every receiver set. There is no topography.
 
-### 1. How the kernels are computed
+**Homogeneous boundary problem.** All the BEM kernels (stress, traction and
+displacement) have zero displacement on Dirichlet patches and zero traction on
+Neumann patches. The prescribed boundary motion in the `.seg` file (`bcx`,
+`bcz`) is not used: the background rate comes from the long-term solution.
 
-- **Half-space solutions plus a boundary correction.** Fault kernels use the
-  plane-strain line-dislocation solutions of Davis & Martel (`LDstressHS`,
-  `LDdispHS`); mantle kernels use the triangle strain-volume solutions of
-  Barbot (2018). Both are for a half-space. The finite model box
-  (`inputs/boundary2d.seg`) is imposed afterwards by a boundary-element solve
-  for each source ({mat:func}`computeShzStressKernelsBem`,
-  {mat:func}`computeFaultTractionKernelsBem`): prescribed displacement where
-  `boundary.Vpl == 0` (Dirichlet) and zero traction where `boundary.Vpl == 1`
-  (Neumann). There is no topography.
-- **Homogeneous boundary problem.** All the BEM kernels (stress, traction and
-  displacement) solve the homogeneous problem: zero displacement on Dirichlet
-  patches and zero traction on Neumann patches. The prescribed boundary motion
-  in the `.seg` file (`bcx`, `bcz`, read into `boundary.Vx`, `boundary.Vz`) is
-  not used. It would add a particular solution, superposed once on the cycle
-  response; the code does not compute it, and the background rate comes from
-  the long-term solution instead.
-- **Mantle stress by finite differences.** The stress kernels of a triangle are
-  not evaluated from closed-form stresses: they are computed from the analytic
-  *displacement* by finite differences with a step of $10^{-6}$ times the
-  triangle's shortest edge (central in $x_2$, one-sided in $x_3$), at the cell
-  centroids, with the source's own anelastic strain removed inside the source
-  triangle ({mat:func}`computeStressPlaneStrainTriangleShearZoneFiniteDifference`).
-  Where the closed-form displacement is not finite (on edges or vertices),
-  tanh-sinh quadrature is used instead
-  ({mat:func}`computeDisplacementPlaneStrainTriangleShearZoneTanhSinh`).
-  This is the "regularised" stress kernel: it avoids the hypersingular
-  closed-form evaluation, but self- and neighbour interactions remain the
-  least accurate entries.
-- **Deviatoric projection.** `KL`, `LK` and `LL` are combinations of the full
-  $\sigma_{22}, \sigma_{23}, \sigma_{33}$ kernels with $\epsilon_{33} =
-  -\epsilon_{22}$ imposed. The source code flags the index construction of
-  the deviatoric `LL` kernel as still to be verified.
+**Analytic mantle stress.** The stress of a uniformly strained triangle is the
+exact derivative of Barbot's (2018) closed-form displacement, generated with
+the Symbolic Math Toolbox (`derivation/generateTriangleStress.m`), with the
+source's own anelastic strain removed inside the triangle
+({mat:func}`computeStressPlaneStrainTriangleShearZone`). Some terms, such as
+$\arctan(N/D)/D$, cancel only between the two ends of an edge and lose
+precision close to the lines through image edges and through horizontal or
+vertical edges; there that edge's contribution is integrated numerically
+(Gauss-Legendre or tanh-sinh quadrature). The stress agrees with an independent
+quadrature to about $10^{-12}$, satisfies Betti reciprocity and the
+traction-free surface to rounding, and is singular only on the triangle's own
+edges, where cell-averaged kernels never evaluate it.
 
-### 2. Spurious growing modes
+**Deviatoric projection.** `KL`, `LK` and `LL` are combinations of the full
+$\sigma_{22}, \sigma_{23}, \sigma_{33}$ kernels with $\epsilon_{33} =
+-\epsilon_{22}$ imposed. The source code flags the index construction of the
+deviatoric `LL` kernel as still to be verified.
 
-The continuous operator from a deviatoric eigenstrain to the stress it
-causes is symmetric and negative semidefinite: the elastic energy of any
-eigenstrain distribution is non-negative, so stress always opposes the
-eigenstrain, and viscous relaxation can only decay. A *centroid-collocated*
-`LL` kernel (stress sampled at each cell's centroid) breaks both properties
-for neighbouring cells, and has a few eigenvalues with
-$\mathrm{Re}(\lambda) > 0$ (43 on the example mesh), on every mesh tried,
-including structured meshes of uniform cells. Left alone, each would grow as
-$e^{\lambda t}$ and the periodic condition above would be meaningless.
+(mantle-kernels)=
+### Mantle kernels: cell-averaged and certified
 
-- **Prevent them (default)** — {mat:func}`computeAllStressKernelsBem`
-  averages the stress over each receiving mantle cell (3-point quadrature,
-  option `cellaverage`) instead of sampling it at the centroid. With
-  piecewise-constant strain this is a Galerkin discretisation, which keeps
-  the symmetry and the sign of the continuous operator. The area-weighted
-  `LL` is then symmetrised (removing quadrature error, about 1%) and checked
-  to be negative semidefinite ({mat:func}`certifyMantleKernel`, option
-  `kernelcertify`); the build errors if the check fails. A certified kernel
-  has no growing modes for any viscosity distribution and any power-law
-  exponent, at any stress state, so no modification is needed in either
-  solver. On the example mesh the certified kernel changes surface velocities
-  by about 1-2% relative to the centroid kernel and makes the `ode45` runs
-  about 3.6 times faster. The fault blocks (`KK`, `LK`) are not averaged:
-  the straight, non-interacting faults used here are already well behaved.
+The continuous operator from a deviatoric eigenstrain to the stress it causes
+is symmetric and negative semidefinite: stress always opposes the eigenstrain,
+so viscous relaxation can only decay. Sampling the stress at each cell's
+centroid (collocation) breaks both properties between neighbouring cells and
+gives a few spurious growing modes (43 on the example mesh), however exactly
+the stress is computed.
 
-The earlier treatments remain for centroid kernels
-(`'cellaverage', 1, 'kernelcertify', false`):
+{mat:func}`computeAllStressKernelsBem` therefore averages the stress over each
+receiving cell (3-point rule, option `cellaverage`). With piecewise-constant
+strain this is a Galerkin discretisation, which keeps the symmetry and sign of
+the continuous operator. The area-weighted `LL` is then symmetrised and checked
+to be negative semidefinite ({mat:func}`certifyMantleKernel`, option
+`kernelcertify`); the build fails if the check fails. A certified kernel has no
+growing modes for any viscosity and any power-law exponent, so both solvers use
+it as it is. The fault blocks (`KK`, `LK`) are not averaged.
 
-- **Change them in the kernel (numerical solves)** —
-  {mat:func}`modifyGrowingModes`, also the `kernelmodify` option of
-  {mat:func}`computeAllStressKernelsBem` (default `0`). Eigendecomposes the
-  $2M \times 2M$ deviatoric `LL` kernel, changes the eigenvalues with
-  $\mathrm{Re}(\lambda) > 0$ and rebuilds `LL`. Acts on the kernel alone,
-  before viscosities are applied, so it works for any power-law exponent: for
-  a reciprocal kernel the linearised mantle system has as many growing modes
-  as `LL`, whatever $n$ and the stress state. Two choices:
-  - `kernelmodify = 1` sets them to **zero**. The modes become neutral;
-    nothing restores them, so in a spun-up cycle they hold cell-scale noise.
-    With a Maxwell time of 0.001 recurrence intervals the late-interseismic
-    strain rate of the example was 2.7 times that of the certified kernel
-    (median), with a speckled pattern; at 1000 recurrence intervals the
-    difference was confined to slowly deforming regions.
-  - `kernelmodify = 2` sets them to $-\max|\lambda|$ (**damped**). They decay
-    at the fastest rate the kernel has. Prefer this for long spin-ups and for
-    power-law ($n = 3$) runs.
+**Centroid kernels** (`'cellaverage', 1, 'kernelcertify', false`) remain
+available for comparison, with the earlier fixes for their growing modes:
+`kernelmodify` 1 or 2 ({mat:func}`modifyGrowingModes`) sets them to zero or
+damps them in `LL` before an `ode45` run, and {mat:func}`negateGrowingModes`
+negates them in the operator $A$ for the semi-analytical solvers. These are
+regularisations: results at the cell scale depend on the fix and should not be
+interpreted, and with a negated operator every forcing term that contains it
+(such as $c = \dot\epsilon_\text{lock} - A_\text{neg}\,y_\text{pl}$) must use
+the negated operator too.
 
-  *Used by* the numerical integration (`examples/example1_numericalPowerLaw.m`). Not for
-  the semi-analytical solvers, which take the full kernel.
-- **Negate them in the operator (semi-analytical solves)** —
-  {mat:func}`negateGrowingModes`. Balances $A$, eigendecomposes it and
-  replaces each $\lambda$ with $\mathrm{Re}(\lambda) > 0$ by $-\lambda$,
-  keeping its eigenvector. Acts on the full coupled operator, after
-  viscosities are applied. Opt-in: call it on the operator yourself and pass
-  the result to {mat:func}`analyticSolveIVP` and
-  {mat:func}`computePeriodicInitialConditionBalanced`, which no longer negate
-  and raise an error when the operator has growing modes.
-- **Replace them by a fast decay** — {mat:func}`reconditionODEoperator`. Sets
-  eigenvalues with $\mathrm{Re}(\lambda) \ge 0$ to the real value
-  $-0.1\ \mathrm{s^{-1}}$ (dropping their imaginary parts), so they decay
-  within seconds; no balancing. *Used by* the legacy
-  {mat:func}`computePeriodicInitialCondition` only.
-
-Consequences to keep in mind when using these treatments (centroid kernels only):
-
-- **Results at the cell scale are not reliable.** The modified modes are the
-  mesh-scale ones, so the treatments are appropriate for smoothly varying
-  strain-rate fields. Single-cell features and sharp cell-to-cell contrasts in
-  viscosity or strain rate should not be interpreted.
-- **The solvers are not interchangeable at the cell scale.** Zeroing an
-  eigenvalue of `LL` leaves a neutral mode (it neither grows nor decays);
-  negating it in $A$ makes it decay at the same rate it would have grown;
-  replacing it makes it vanish within seconds. The two driver scripts and the
-  legacy periodic solver can therefore give slightly different answers on the
-  same mesh.
-- **The set of modified modes depends on the viscosities.** `negateGrowingModes`
-  works on $A = \operatorname{diag}(1/\eta) K$, whose eigenvalues change with
-  $\eta$. Outputs vary continuously with viscosity, except where a
-  complex-conjugate pair crosses $\mathrm{Re}(\lambda) = 0$: negation then
-  flips the sign of its imaginary part, a jump of up to
-  $2|\sin(\mathrm{Im}(\lambda)\,t)|$ of that mode's amplitude.
-- **Forcing must use the treated operator.** Build every forcing term that
-  contains the operator with the negated one, e.g.
-  $c = \dot\epsilon_\text{lock} - A_\text{neg}\,y_\text{pl}$. With the raw $A$,
-  the difference $(A_\text{neg} - A)\,y_\text{pl}$ acts as a spurious constant
-  forcing and the plate-rate state is no longer steady.
-- **Nearly neutral modes decay slowly.** A spurious eigenvalue close to zero
-  stays close to zero after negation. Modes with $|\lambda| < 10^{-16}\
-  \mathrm{s^{-1}}$ are treated as pure integrators and given zero periodic
-  amplitude (the minimum-norm solution); this threshold is absolute, so the
-  result is not continuous across it.
-
-### 3. Other approximations
+## Modelling assumptions and approximations
 
 - **Interseismic steady state.** {mat:func}`computeInterseismicSteadystate`
   solves for the fully relaxed state with the fault locked. The relevant kernel
   block is singular, so the solution is regularised (Tikhonov, zeroth order,
-  weight `lambda`; the notebook uses 10). The penalty pulls the mantle strain
+  weight `lambda`, typically 0.1 to 10). The penalty pulls the mantle strain
   rates towards zero (not towards their long-term values) and leaves fault slip
   rates unpenalised, so the result depends on that weight. The function also
   assumes the locked patches are the first ones in `rcv`.
 - **Corner-flow loading.** The long-term strain rates come from analytic
-  isoviscous corner flow (Turcotte & Schubert, 2002), which is singular at the
+  corner flow (Turcotte & Schubert, 2002; $n = 1$ or $n = 3$), which is singular at the
   corner. The evaluation points are shifted (`ocean_translate_params`,
   `continental_translate_params`) to stay away from it, and the strain rate in
   each cell comes from a planar fit of the velocity at its three vertices. The
@@ -291,20 +219,14 @@ Consequences to keep in mind when using these treatments (centroid kernels only)
   switch in {mat:func}`egh_modal` avoids cancellation in
   $(e^{\lambda t} - 1)/\lambda$ for small $|\lambda t|$.
 
-### Practical guidance
+## Practical guidance
 
-- Use meshes fine enough that the features you interpret span several cells.
+- Use meshes fine enough that the features you interpret span several cells
+  ({doc}`examples/example3` shows the effect of mesh size).
 - After building kernels for a new mesh, look at `evl.certificate`: the
-  asymmetry removed (about 1-2%) and the largest eigenvalue of the
-  symmetrised kernel (negative, or clipped to zero within the tolerance). A
+  asymmetry removed and the largest eigenvalue of the symmetrised kernel. A
   failed certification is an error; it points to a mesh or kernel problem.
-- With centroid kernels, check how many eigenvalues a treatment modifies and
-  how large they are (`[~, lambda] = negateGrowingModes(A)` against
-  `eig(A)`).
-- Recompute the kernels after any geometry change; the files in `kernels/`
-  match the example meshes only, and `evl_orig.h5` holds the default
-  (cell-averaged, certified) kernels; `evl_orig.certificate` records the
-  check.
-- `tests/test_negate_exact_solver.m` checks the semi-analytical solver
-  against the matrix exponential, periodicity, continuity in viscosity and the
-  steady state on the example mesh.
+- Recompute the kernels after any geometry change. The files in `kernels/`
+  match the example meshes only.
+- `runTests` checks the Green's functions, kernels and solvers against
+  physical identities; see `tests/README.md`.

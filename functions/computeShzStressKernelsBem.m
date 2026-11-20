@@ -1,7 +1,8 @@
-function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
+function LL_bem = computeShzStressKernelsBem(src,shz,boundary,bc)
 % COMPUTESHZSTRESSKERNELSBEM  Stress or traction kernels due to shear-zone strain, BEM-corrected.
 %
 %   LL_bem = computeShzStressKernelsBem(src, shz, boundary)
+%   LL_bem = computeShzStressKernelsBem(src, shz, boundary, bc)
 %
 %   For a unit eigenstrain in each source triangle, one strain component at
 %   a time, computes the half-space stress (receiver is a
@@ -16,6 +17,10 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 %   boundary  geometry.receiver object: model boundary patches
 %             .Vpl  0: zero displacement; 1: zero traction (.Vx, .Vz
 %             are ignored, see NOTES)
+%   bc        (optional) boundary correction of src from
+%             computeShzBoundaryCorrection(src, boundary); computed here
+%             if omitted or empty. Pass it when building kernels for
+%             several receiver sets with the same sources and boundary
 %
 % OUTPUTS
 %   LL_bem    [Nr x Ns x 3 x 3] kernels (MPa per unit strain); 4th index =
@@ -26,127 +31,54 @@ function LL_bem = computeShzStressKernelsBem(src,shz,boundary)
 % NOTES
 %   - Source strains are tensor components: e23 = 1 is a unit tensor shear
 %     strain.
-%   - The half-space stress comes from geometry.computeShzStressKernels,
-%     i.e. finite differences of the analytic displacement of Barbot
-%     (2018); see computeStressPlaneStrainTriangleShearZoneFiniteDifference.
-%   - Boundary correction as in computeFaultTractionKernelsBem, with one
-%     solve per source and strain component. Homogeneous problem only:
-%     the prescribed .Vx, .Vz are ignored (see
-%     computeFaultTractionKernelsBem).
+%   - The half-space stress comes from geometry.computeShzStressKernels
+%     (closed form, computeStressPlaneStrainTriangleShearZone).
+%   - Boundary correction as in computeFaultTractionKernelsBem: the
+%     boundary slip that cancels each source on the boundary
+%     (computeShzBoundaryCorrection) depends only on the sources and the
+%     boundary, so only the receiver kernels are computed per call when bc
+%     is passed. Homogeneous problem only: the prescribed .Vx, .Vz are
+%     ignored (see computeFaultTractionKernelsBem).
 %   - For a shearZoneReceiver, the boundary contribution from
 %     geometry.computeFaultStressKernels is stacked in the same component
 %     order as the half-space part, (sxx, sxz, szz).
 %
 % SEE ALSO
-%   computeAllStressKernelsBem, computeFaultTractionKernelsBem,
-%   computeShzDisplacementKernelsBem
+%   computeShzBoundaryCorrection, computeAllStressKernelsBem,
+%   computeFaultTractionKernelsBem, computeShzDisplacementKernelsBem
 %
 % AUTHORS
 %   Rishav Mallick (JPL), 2023
 
-% these are [3 x 3] or [2 x 3] stress kernels
-LL_bem = zeros(shz.N,src.N,3,3);
 
-% compute kernels relating unit shear from src to boundary
-LL_src_boundary = geometry.computeShzStressKernels(src,boundary);
-G_src_boundary = geometry.computeShzDisplacementKernels(src,boundary.xc);
+if nargin < 4 || isempty(bc)
+    bc = computeShzBoundaryCorrection(src,boundary);
+elseif bc.Ns ~= src.N || bc.Nb ~= boundary.N
+    error('bc was computed for %d sources and %d boundary patches, not %d and %d.', ...
+        bc.Ns, bc.Nb, src.N, boundary.N);
+end
 
-% compute displacement & traction kernels for boundary on itself
-[Kdd,Kdn,Knd,Knn] = geometry.computeFaultTractionKernels(boundary,boundary);
-[Gdx,Gdz,Gnx,Gnz] = geometry.computeFaultDisplacementKernels(boundary,boundary.xc);
-Ktraction = [Kdd,Knd;Kdn,Knn];
-Kdisp = [Gdx,Gnx;Gdz,Gnz];
-
-% compute stress or traction kernels from shear zone source to receiver 
+% half-space stress or traction from the sources at the receivers
 LL_src_shz = geometry.computeShzStressKernels(src,shz);
 
-% compute kernels from boundary to shz receiver object
-% (receiver could be shz or fault - check based on object type)
-if isa(shz,'geometry.shearZoneReceiver')    
-    [Kdxx_boundary_shz,Kdzz_boundary_shz,Kdxz_boundary_shz,Knxx_boundary_shz,Knzz_boundary_shz,Knxz_boundary_shz] = ...
-        geometry.computeFaultStressKernels(boundary,shz);
-
+% boundary to receiver kernels, stacked in the output component order
+if isa(shz,'geometry.shearZoneReceiver')
+    [Kdxx,Kdzz,Kdxz,Knxx,Knzz,Knxz] = geometry.computeFaultStressKernels(boundary,shz);
+    Kb = {[Kdxx,Knxx]; [Kdxz,Knxz]; [Kdzz,Knzz]}; % sxx, sxz, szz
 elseif isa(shz,'geometry.receiver')
-    [Kdd_boundary_shz,Kdn_boundary_shz,Knd_boundary_shz,Knn_boundary_shz] = ...
-        geometry.computeFaultTractionKernels(boundary,shz);
+    [Kdd,Kdn,Knd,Knn] = geometry.computeFaultTractionKernels(boundary,shz);
+    Kb = {[Kdd,Knd]; [Kdn,Knn]}; % shear, normal traction
 else
     error('not a recognized geometry, provide either geometry.receiver or geometry.shearZoneReceiver')
 end
 
+% half-space part plus the boundary slip that cancels each source on the
+% boundary (a shearZoneReceiver fills all 3 receiver components, a
+% receiver the first 2)
+LL_bem = zeros(shz.N,src.N,3,3);
 for component = 1:3
-    Kxx = zeros(shz.N,src.N);
-    Kzz = zeros(shz.N,src.N);
-    Kxz = zeros(shz.N,src.N);
-    for i = 1:src.N
-        % we only consider shear sources
-        source = zeros(src.N,1);
-        source(i) = 1;
-
-        % calculate source tractions
-        td_source = LL_src_boundary(:,:,1,component)*source;
-        tn_source = LL_src_boundary(:,:,2,component)*source;
-        % calculate source displacements
-        ux_source = G_src_boundary(:,:,1,component)*source;
-        uz_source = G_src_boundary(:,:,2,component)*source;
-
-        % boundary condition vector
-        BC = zeros(2*boundary.N,1);
-        % boundary conditions (only 2 types)
-        % rcv.Vpl = 0: dirichlet BC (u = 0)
-        % rcv.Vpl = 1: Neumann BC (t = 0)
-        idirichlet = boundary.Vpl == 0;
-        ineumann = boundary.Vpl == 1;
-
-        % displacement BC: homogeneous (boundary.Vx, Vz are not used)
-        BC([idirichlet;idirichlet]) = 0 - [ux_source(idirichlet);uz_source(idirichlet)];
-        % traction BC
-        BC([ineumann;ineumann]) = 0 - [td_source(ineumann);tn_source(ineumann)];
-
-        % construct BEM kernel
-        kernel = zeros(boundary.N*2,boundary.N*2);
-        kernel([idirichlet;idirichlet],:) = Kdisp([idirichlet;idirichlet],:);
-        kernel([ineumann;ineumann],:) = Ktraction([ineumann;ineumann],:);
-
-        % BEM solve
-        bem_sol = kernel\BC;
-        
-        % compute tractions or stress from source term + bem solution on boundary
-        if isa(shz,'geometry.shearZoneReceiver')
-            sigma = ...
-                [LL_src_shz(:,:,1,component);...
-                LL_src_shz(:,:,2,component);...
-                LL_src_shz(:,:,3,component)] * source + ...
-                [Kdxx_boundary_shz,Knxx_boundary_shz;...
-                Kdxz_boundary_shz,Knxz_boundary_shz;...
-                Kdzz_boundary_shz,Knzz_boundary_shz] * bem_sol;
-
-            Kxx(:,i) = sigma(1:end/3);
-            Kxz(:,i) = sigma(end/3+1:2/3*end);
-            Kzz(:,i) = sigma(2/3*end+1:end);
-        elseif isa(shz,'geometry.receiver')
-            tau = ...
-                [LL_src_shz(:,:,1,component);...
-                LL_src_shz(:,:,2,component)] * source + ...
-                [Kdd_boundary_shz,Knd_boundary_shz;...
-                Kdn_boundary_shz,Knn_boundary_shz] * bem_sol;
-
-            Kxz(:,i) = tau(1:end/2);% tau_shear
-            Kxx(:,i) = tau(end/2+1:end);% tau_normal
-        else
-            error('not a recognized geometry, provide either geometry.receiver or geometry.shearZoneReceiver')
-        end
-    end
-
-    % store each K (kernel) in a bigger matrix
-    if isa(shz,'geometry.shearZoneReceiver')
-        LL_bem(:,:,1,component) = Kxx; % sxx
-        LL_bem(:,:,2,component) = Kxz; % sxz
-        LL_bem(:,:,3,component) = Kzz; % szz
-    elseif isa(shz,'geometry.receiver')
-        LL_bem(:,:,1,component) = Kxz; % tau_shear
-        LL_bem(:,:,2,component) = Kxx; % tau_normal
-    else
-        error('not a recognized geometry. provide either geometry.shearZoneReceiver or geometry.receiver')
+    for p = 1:numel(Kb)
+        LL_bem(:,:,p,component) = LL_src_shz(:,:,p,component) + Kb{p}*bc.slip(:,:,component);
     end
 end
-
+end
