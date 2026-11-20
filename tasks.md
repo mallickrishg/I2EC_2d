@@ -24,6 +24,11 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §0a: certify the coupled fault-mantle operator, not only `LL` (a guarantee for a creeping fault; today checked case by case).
 - [ ] §0a, optional: rename `evl_orig` (it is no longer an "original, unmodified" kernel).
 
+- [ ] §11: analytic mantle stress kernel. *Done and tested on branch `analytic-triangle-stress` (default in `geometry.computeShzStressKernels`)*; left: regenerate `kernels/evl_orig.h5`, then merge. The receiver-independent BEM part is now computed once (`computeShzBoundaryCorrection`): full example kernel build 27 s.
+
+**Exploratory**
+- §10 (periodic power-law cycles without spin-up) lives only on branch `nonlin-spinup-solve`, in its own worktree `../I2EC_2d-nonlin-spinup-solve`. That branch is reserved for one agent: do not check it out, commit to it, merge or rebase it, or do §10 work on any other branch.
+
 **Known issues in legacy code (§0)**
 - [ ] `reconditionODEoperator.m` uses -0.1 s⁻¹, not the documented -eps; `computePeriodicInitialCondition.m` prints on every call. Both go if §3 deletes them.
 - [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder.
@@ -289,6 +294,34 @@ Tasks:
 - [x] ~~Remove the docs entries for deleted functions in `docs/api/kernels.rst`, `solvers.rst`, `utilities.rst` and `longterm.rst`.~~ *Every `mat:autofunction` entry now points at an existing function (checked 2026-11-20).*
 - [ ] Bring help blocks into one format (H1 line, INPUTS/OUTPUTS, author). Several files have no H1 line (for example `computeSiteVelocitiesBem`, `assembleStressKernel`), or have a stale name in it (`computeKLmodesMesh`).
 - [ ] Bring the README's "Code Dependencies" list up to date (bluewhitered, cline, drchrnd sources).
+
+## 11. Analytic stress of a strained triangle (2026-11-20, branch `analytic-triangle-stress`)
+
+**Problem.** `computeStressPlaneStrainTriangleShearZoneFiniteDifference` gets the strain by differencing the closed-form displacement (step 1e-6 l, one-sided in x3): four displacement evaluations per point, truncation errors of ~1e-6, and a patch of special cases (`atan(N/D)` jumps by pi on lines through source and image edges, d5279e7). The displacement is a closed form, so its gradient is one too.
+
+**What was done.**
+- `derivation/generateTriangleStress.m` differentiates the edge integrals `I22`, `I23`, `I32`, `I33` (every branch: general, a2 = 0, a3 = 0; read from the displacement file by line number) with the Symbolic Math Toolbox and writes `functions/computeStressPlaneStrainTriangleShearZone.m` (hand-written part: `derivation/triangleStressTemplate.m`; generated local functions below it, ~1 min to regenerate). d/dx atan(N/D) is written (N'D - ND')/(N^2 + D^2).
+- Same signature as the FD routine; e22, e23, e33 may also be [1 x K] rows (K strains share the edge integrals).
+- **Removable singularities (found in testing).** Terms like atan(N/D)/D cancel only between the two ends of an edge. On the line through an *image* edge, and through a *horizontal or vertical* source edge (the a2 = 0 / a3 = 0 branches), the closed form is NaN, and nearby it loses accuracy like 1e-13*(r/d)^2 (d: distance to the line, r: distance from the edge; measured 1e6 relative error at d = 1e-10 L, 1e-5 at 1e-4 L, and 3e-6 at d = 0.02 L when r = 45 L). General source-edge lines are fine. Fix: for points with d < 1e-2 max(L, r), that edge's contribution is integrated numerically (differentiated Green's function along the edge: 64-point Gauss-Legendre farther than L/4 from the edge, tanh-sinh nearer). Non-finite results (on the triangle's own edges/vertices) also get quadrature.
+- The Green's-function derivative uses atan2(x2-y2, x3+y3), so it stays finite at x3 = y3 = 0 (edge on the surface, point on the surface).
+- `geometry.computeShzStressKernels(src, shz, method)`: `'analytic'` (default) or `'finitedifference'`; one call per source for all three strains. The FD routine is kept for comparison.
+- Docs: `docs/theory.md` ("Mantle stress from the differentiated displacement"), `docs/api/kernels.rst`.
+
+**Results.**
+- [x] Independent reference (tanh-sinh quadrature, step 2e-4, of the differentiated Green's function; scratch script, not in the repo): 16 random triangles incl. axis-aligned edges, ~280 points each packed onto every source and image edge line (d from 1e-8 to 1e-2 L) and random points: median 1e-12, worst 2e-9 relative. FD against the same reference: median 1e-6, max 1.4e-2 (a shallow triangle).
+- [x] Traction-free surface to ~1e-14 (also with an edge on the surface). Equilibrium (Richardson FD of the stress, |div s| l/|s|): analytic median 1e-9, FD 1e-4. Betti reciprocity with exact cell averages (16x16 Gauss): 1e-14 to 6e-12 analytic, 1e-6 FD, at 2.5-30 km separation.
+- [x] Smooth across the edge lines without the FD routine's shifted-point special case; continuous to ~1e-8 at 1e-6 m offsets.
+- [x] Example mesh, half-space `LL` (3-point): entries agree with FD to 1.5e-8 median, 8e-5 max, of each source's largest stress; the worst disagreements were checked against the quadrature reference and the analytic value is right in every case (e.g. FD -2.49 vs analytic and reference -0.0147). 0 growing modes with both (max Re/max abs -2.2e-3).
+- [x] Full example kernel (`computeAllStressKernelsBem`, certified 3-point) vs cached FD `evl_orig.h5`: KK, KL identical; LK 7e-6, LL 4e-5 of max, within `cachedStressKernelsAreReproducible`'s 1e-4. Certifies with 0 clipped modes, max eigenvalue -8.3e-4 of the spectrum.
+- [x] Aligned shallow structured mesh (diagonal, 15 km, z -150 to -45 km, 280 cells; the d5279e7 failure case): analytic = FD after that fix: centroid 43 growing modes (max Re/max abs 0.14), 3-point 0.
+- [x] Speed: per source triangle with 1563 receivers, 928 ms FD vs 85 ms analytic (11x). Half-space shz->shz kernel: 23.7 s → 2.5 s. `computeShzStressKernelsBem` was then dominated by receiver-independent work (source→boundary kernels and one BEM solve, plus a full-matrix product, per source), repeated for each of the 3 quadrature points and again for LK; fixed below.
+- [x] Tests: 6 new tests in `GreensFunctionsTest` (vs a 4th-order derivative of the displacement, vs FD, traction-free surface, Betti, smooth on edge lines, several strains at once). Fast tier: 141 passed, 0 unexpected failures (3 known issues).
+
+**Left.**
+- [ ] Regenerate `kernels/evl_orig.h5` (and the mesh-convergence caches) with the analytic stress, and update the tolerance comment in `KernelsTest/cachedStressKernelsAreReproducible` (says LK, LL come from FD).
+- [ ] Merge the branch; then decide whether to delete the FD routine (§3) or keep it as the `'finitedifference'` option.
+- [x] ~~Follow-up (speed): compute the receiver-independent BEM part once.~~ *Done: new `computeShzBoundaryCorrection(src, boundary)` returns the boundary slip that cancels each unit source strain (`.slip`, [2Nb x Ns x 3]; one LU, all 3Ns right-hand sides). `computeShzStressKernelsBem(src, shz, boundary, bc)` takes it as an optional 4th argument (computed inside if omitted; size-checked) and is now matrix products only. `computeAllStressKernelsBem` computes it once and shares it between the 3 quadrature points and LK. Example mesh: shz→shz 203 s → 10 s (7 s with `bc` passed, `bc` itself 6 s), shz→fault 193 s → 1.4 s; results equal to the old loop to 1e-17. Full `computeAllStressKernelsBem` (certified 3-point): 27 s, equal to the earlier analytic build to 2e-17. Tests: `BoundaryCorrectionTest/precomputedCorrectionGivesSameKernels`, `correctionForOtherSourcesIsRejected`. Fast tier 140 passed, 0 unexpected failures. The fault-source routines (`computeFaultTractionKernelsBem`, KL block) still solve per source; not measured as a bottleneck.*
+- [ ] Optional: the generator reads the displacement file by line number; regenerate after any edit to `computeDisplacementPlaneStrainTriangleShearZone`.
 
 ---
 

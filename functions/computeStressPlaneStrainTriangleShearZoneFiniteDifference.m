@@ -70,6 +70,7 @@ function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZoneFiniteDifference
 %     structured meshes aligned with the surface.
 %
 % SEE ALSO
+%   computeStressPlaneStrainTriangleShearZone (closed form, preferred),
 %   computeDisplacementPlaneStrainTriangleShearZone, computeShzStressKernelsBem
 %
 % REFERENCES

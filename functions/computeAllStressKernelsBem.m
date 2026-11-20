@@ -170,10 +170,13 @@ evl.KL(:,:,2) = LL2;
 
 disp('Computing shear zone - shear zone stress kernels')
 tic
+% boundary slip cancelling each mantle source: independent of the
+% receivers, so shared by every quadrature point and by the LK block
+bcShz = computeShzBoundaryCorrection(shz,boundary);
 LL = 0;
 for q = 1:numel(qweights)
     shz.xc = qpoints{q};
-    LL = LL + qweights(q)*computeShzStressKernelsBem(shz,shz,boundary);
+    LL = LL + qweights(q)*computeShzStressKernelsBem(shz,shz,boundary,bcShz);
 end
 shz.xc = xc0;
 
@@ -217,7 +220,7 @@ toc
 
 disp('Computing shear zone - fault traction kernels')
 tic
-LL = computeShzStressKernelsBem(shz,rcv,boundary);
+LL = computeShzStressKernelsBem(shz,rcv,boundary,bcShz);
 
 % due to deviatoric state, e22 = -e33. Incorporating this into the kernels
 % shape of kernel: [Nf x Nshz x 2]
