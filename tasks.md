@@ -89,7 +89,8 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 - [ ] `computeSiteVelocitiesBem.m`: nothing calls it, and it carries a block of commented-out `devl`-based code.
 - [x] ~~`computeStressPlaneStrainTriangleShearZone.m` (**2,238 lines**, Barbot 2018 analytic stress): the code actually uses `computeStressPlaneStrainTriangleShearZoneFiniteDifference.m` instead. The tests show it gives **wrong stresses** (§0), so it cannot serve as a reference. → Delete it. This is the largest single file in the repo. *Deleted.*~~
 - [ ] `computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.
-- [ ] `filenameGenerator.m`: no callers. Its long `if/elseif` chain could be one line, `sprintf('%06d', num)`.
+- [x] ~~`filenameGenerator.m`: no callers in the tracked code.~~ *Kept on purpose:* it gives each run its own numbered folder (`000001/results.mat`, `000002/…`), which suits batch jobs of many forward models (strain rates, stresses, surface observations) whose outputs should be stored systematically. `experiments/EXPT1_run.m` uses it this way.
+- [ ] Optional tidy-up of `filenameGenerator.m`: the long `if/elseif` chain could be one line, `sprintf('%06d', num)`.
 - [x] ~~`pcolor_logvals.m`: see §1. *Deleted.*~~
 
 ## 4. File and function naming
