@@ -42,9 +42,11 @@ Each item names the failing test (`Class/test`).
 - [x] ~~`pcolor_logvals.m` draws nothing. *Deleted, with its docs entry and its test.* Test: `UtilitiesTest/pcolorLogValsDrawsSomething`.~~
 - [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder. Test: `UtilitiesTest/createMegathrustLeavesWorkingFolderClean`.
 
-### Discretisation (known, handled by the solvers)
+### Discretisation: growing modes of the mantle kernel
 
-- [ ] The collocated mantle-mantle block `LL` has eigenvalues with positive real part: 43 on the example mesh (max 2.4e3), and some even on a 24-triangle mesh. `negateGrowingModes` and `kernelmodify = 1` handle them. A better quadrature for the self-term and nearest neighbours might remove them at the source. Test: `KernelsTest/unmodifiedMantleKernelHasNoGrowingModes`.
+- [ ] The collocated mantle-mantle block `LL` has eigenvalues with positive real part: 43 on the example mesh (max 2.4e3), and some even on a 24-triangle mesh. They appear on every mesh tried, including structured uniform meshes, so remeshing is not a fix. Currently handled downstream: the semi-analytical solvers take the full kernel and negate them (`negateGrowingModes`); numerical solves change them in the kernel (`kernelmodify` 1 or 2). **Cause now identified, fix under test: see §0a.** Test: `KernelsTest/unmodifiedMantleKernelHasNoGrowingModes`.
+- [x] ~~Added a damped kernel for numerical solves: `kernelmodify = 2` / `modifyGrowingModes(evl, 2)` sets the growing eigenvalues to -max|lambda| instead of 0. Zeroed modes are neutral and can accumulate over many cycles (reported to run away within 30 cycles at 1e18 Pa s for n = 1, and to need ~100 cycles to settle for n = 3). Tests: `KernelsTest/dampedKernelHasOnlyDecayingModes`, `modifiedKernelsHaveNoGrowingModesForPowerLaw`.~~ *Becomes unnecessary if §0a succeeds.*
+- [x] ~~Decide the default for numerical solves.~~ *Decided: the default kernels are cell-averaged and certified (§0a); `kernelmodify` now defaults to 0 and is kept as the earlier empirical fix for centroid kernels.*
 
 ### Confirmed correct (safe to rely on during the clean-up)
 
@@ -54,6 +56,122 @@ Each item names the failing test (`Class/test`).
 - `computeSiteVelocitiesBem` gives the same result as `devl` from `computeAllDisplacementKernelsBem`, to 1e-12.
 - **The ODE path (`ode_viscoelastic` + `ode45`) matches `analyticSolveIVP`** for a locked fault with a Newtonian mantle, through a coseismic step. The solvers match `expm` to round-off.
 - **The spun-up numerical cycle matches the semi-analytical periodic cycle** (n = 1, fully locked fault, same operator: unmodified `LL` with growing modes negated). `runImposedEarthquakeCycles` converges to `computePeriodicInitialConditionBalanced` + `analyticSolveIVP` at the rate of the slowest mode (gap shrinks ~250x per two cycles for rho = 0.063) and agrees to 1e-10 after 8 cycles; one cycle alone is still 2e-3 off. Test: `TimeIntegrationTest/spunUpLockedNewtonianCycleMatchesAnalyticPeriodicCycle`. Exact only for a locked fault: the numerical fault is rate-strengthening (`d log v/dt = (dtau/dt)/Asigma`), the analytic one linear viscous.
+
+## 0a. Galerkin (cell-averaged), certified mantle kernels: no growing modes at the source (adopted as the default, 2026-11-20)
+
+**Goal.** Build a mantle-mantle kernel that has no growing modes, so that neither `kernelmodify` nor `negateGrowingModes` is needed, for linear (Maxwell) and power-law (n = 3) rheology alike, in both the numerical and the semi-analytical solvers. The example mesh in `inputs/` stays as it is: only the kernels change.
+
+**Diagnosis.**
+- The continuous operator from a deviatoric eigenstrain to the stress it causes is symmetric and negative semidefinite: the elastic energy of any eigenstrain distribution is non-negative, so stress always opposes the eigenstrain. A correct discretisation keeps both properties and cannot have growing modes.
+- I2EC uses piecewise-constant strain per triangle (the source integral is exact, Barbot 2018), but samples the receiver stress at the **centroid** (collocation, i.e. a point test function). For neighbouring cells the stress varies strongly across the receiving cell, so the point value is not the energy-consistent driving stress. This breaks the symmetry (area-weighted `LL` is 15.6% asymmetric on the example mesh, 13-14% for neighbours, 0.5% beyond 4 cell sizes) and the sign: the symmetric part has 65 positive eigenvalues.
+- Using the **cell average** of the receiver stress instead (Galerkin with P0 elements: same piecewise-constant function for trial strain and test stress) keeps symmetry and sign. The average is computed with a 3-point (degree 2) or 7-point (Dunavant degree 5) interior quadrature rule, so it is approximately Galerkin (adjacent pairs have edge discontinuities and corner log-singularities a fixed rule cannot integrate exactly).
+- Ruled out: the boundary correction (the half-space kernel alone has the same 43 modes) and the pressure removal in the deviatoric projection (identical in the centroid and averaged kernels; for a deviatoric eigenstrain only the deviatoric stress does work, so dropping the pressure cannot make the operator indefinite). Collocation asymmetry alone is not the cause either: symmetrising the centroid kernel gives 65 growing modes, not 0.
+
+**Results so far.**
+
+| Kernel (example mesh, 521 cells) | Growing modes | max Re(lambda)/max abs(lambda) |
+|---|---|---|
+| centroid, half-space only | 43 | 5.7e-2 |
+| centroid, full BEM (cached `evl_orig`) | 43 | 5.7e-2 |
+| cell average 3-point, half-space only | 0 | -2.2e-3 |
+| cell average 7-point, half-space only | 0 | -2.2e-3 |
+| cell average 3-point, full BEM | 0 | -2.2e-3 |
+
+- Averaging changes `LL` entries by a median 17-31% for cells within 2 cell sizes, 7% at 2-4, 1% at 4-10 and 0.2% beyond: only the near field changes.
+- First toy mesh (PDE Toolbox, Hmax 40 km, 127 cells): 8 growing modes with centroid, 0 with 3- and 7-point averaging. Structured diagonal-split mesh, 0.8 km cells, 1250 cells (half-space only, circular-inclusion setup): 244 growing modes with centroid, 0 with 3-point averaging. 24-triangle test mesh: growing modes with centroid, none with averaging (unit test).
+- Cost: about 3x (3-point) the time of the `KL` and `LL` blocks; 284 s for the full example kernel.
+
+**Toy meshes (full BEM, example boundary).** Growing modes, centroid → 3-point → 7-point:
+
+| Mesh | Cells | Centroid | 3-point | 7-point | max Re/max abs (3-point) |
+|---|---|---|---|---|---|
+| PDE Toolbox outline, Hmax 40 km | 127 | 8 | 0 | 0 | -9.7e-3 |
+| PDE Toolbox outline, Hmax 25 km | 320 | 25 | 0 | 0 | -3.4e-3 |
+| PDE Toolbox outline, Hmax 15 km | 876 | 78 | 0 | – | -1.1e-3 |
+| structured diagonal, 25 km, box z -150 to -50 km | 96 | 41 | 29 | 35 | +6.5e-1 |
+| structured diagonal, 15 km, same box | 280 | 114 | 70 | 70 | +9.5e-1 |
+| structured diagonal, 10 km, same box | 600 | 208 | 134 | – | +5.4e-1 |
+| structured criss-cross, 25 / 15 / 10 km, same box | 192 / 560 / 1200 | 25 / 97 / 223 | 12 / 42 / 113 | 7 / – / – | ~1e-7 |
+| structured diagonal, 2.5 km, box z -120 to -100 km | 128 | 18 | 0 | – | -7.8e-3 |
+| structured diagonal, 0.8 km, box z -120 to -100 km (half-space only) | 1250 | 244 | 0 | – | – |
+| 24-triangle test mesh | 24 | 2 | 0 | 0 | – |
+
+- Unstructured meshes: averaging removes every growing mode.
+- **Shallow structured meshes still fail, and differently.** Even the centroid kernel has a growing eigenvalue as large as the largest eigenvalue (max Re/max abs up to 1.0), which is not the subtle collocation effect. The BEM boundary is not the cause (half-space-only kernel matches the BEM kernel to 1e-9, same counts). The triangle-stress function reports hundreds of "points corrected with double-exponential integration" on these meshes. Hypothesis under test: when the grid is aligned with the surface and starts at a whole multiple of the cell size, centroids and quadrature points lie exactly on the extensions of the *image* triangles' edges, where the closed-form half-space solution is singular; only non-finite values are corrected, so finite-but-wrong values (e.g. an angle branch jump) pass through. The image is far for deep boxes (which pass) and close for shallow ones (which fail). **Confirmed by shifting the same 15 km mesh by a fraction of a cell** (half-space kernel):
+
+  | Shallow 15 km structured mesh | Centroid | 3-point average |
+  |---|---|---|
+  | aligned (as in the table) | 112 growing, max Re/max abs 1.0, area-weighted asymmetry 141% | 72 growing, 0.94 |
+  | shifted 0.37 cell | 46 growing, 0.14, asymmetry 15% | **0**, asymmetry 1.5% |
+  | shifted 0.5 cell | 46 growing, 0.14 | **0** |
+
+  Once nothing is aligned, the mesh behaves like all the others and averaging removes every growing mode. The aligned mesh has a few grossly wrong kernel entries (141% asymmetry) that are finite, so the function's non-finite check does not catch them. This is a separate bug in `computeStressPlaneStrainTriangleShearZoneFiniteDifference` and may also explain growing modes seen on structured meshes in earlier tests. **Found and fixed.** The bad entries are ~9e10 (typical off-diagonal ~90, self term ~-1.6e4). Every one has its receiver centroid exactly on the line through an edge of the *image* triangle (distance 0). The closed-form displacement contains `atan(N/D)` with `D = (x3+m3)*a2 - a3*(m2-x2)`, which is zero on that line; `atan` jumps by pi there although the field is smooth, and the 1e-6 finite-difference stencil across the jump gives a finite but enormous strain. The same denominator appears for lines through the source's own edges.
+- [x] ~~Fix the triangle-stress evaluation at aligned points.~~ *Fixed in `computeStressPlaneStrainTriangleShearZoneFiniteDifference` (uncommitted): points within 1e-5 l of a line through a source or image edge (l = shortest edge; not on the triangle's own edges or near its vertices) are evaluated as the mean of two points shifted +-1e-3 l normal to the line (one-sided at the surface); other points are unchanged. On the aligned shallow 15 km mesh the centroid kernel now has 46 growing modes (max Re/max abs 0.14, as for the shifted mesh) and the 3-point kernel 0 (asymmetry 1.5%). Test: `GreensFunctionsTest/triangleStressIsSmoothOnEdgeLines` (points on an image-edge line and on a source-edge line outside the triangle; fails on the old code).*
+- [x] ~~Rerun the structured toy meshes with the fix.~~ Growing modes, centroid → 3-point: diagonal 25 / 15 / 10 km: 12 → 0, 46 → 0, 108 → 0 (max Re/max abs -8e-3, -3e-3, -1e-3). Criss-cross 25 / 15 / 10 km: 25 → 12, 97 → 42, 223 → 113, all at ~1e-7 of the spectrum: zero-energy modes (compatible, divergence-free piecewise-constant strains that criss-cross meshes admit) perturbed by quadrature. Removed by the certification below.
+- [ ] Check whether the example mesh or the cached kernels have any points on such lines (the cached-kernel reproducibility test will show it).
+- Criss-cross meshes: the remaining modes are at ~1e-7 of the spectrum. Criss-cross meshes admit compatible, divergence-free piecewise-constant strains that produce no stress (true zero-energy modes); the approximate quadrature perturbs these zeros slightly. To check after the alignment question is settled.
+
+**Linear comparison (example mesh, periodic cycle, 500-yr recurrence).** Centroid kernel + `negateGrowingModes` vs 3-point cell-averaged kernel with no modification:
+- The cell-averaged operator `A` has no growing modes; `negateGrowingModes` leaves it unchanged (relative change 1e-13). With the centroid kernel it has 43 and negation changes `A` by 3.6e-5 (viscosity 1e19 / 10^18.5 Pa s) or 3.6e-4 (10x lower).
+- Oceanic 1e19, wedge 10^18.5 Pa s: differences (relative, whole field) through the cycle are ≤ 1.7% in fault slip rate, ≤ 1.9% in surface vx, ≤ 3.2% in surface vz, and 3-15% in mantle strain rate.
+- Oceanic 1e18, wedge 10^17.5 Pa s: up to 26% in fault slip rate (at 20 yr), 15% in surface vx, 36% in surface vz (late in the cycle) and 46-88% in mantle strain rate (5-20 yr).
+- These differences combine the near-field kernel change and the effect of negation; neither run is a converged reference. To tell which is closer to the truth, compare both against a refined mesh (or the circular-inclusion test for the kernel itself).
+
+**Implemented (uncommitted, on `maintenance-cleanup`).**
+- `computeAllStressKernelsBem(..., 'cellaverage', 1 | 3 | 7)`: 1 = centroid (default, unchanged results), 3 or 7 = cell average for the two blocks with a mantle receiver (`KL`, `LL`). `KK` and `LK` are unchanged (fault receivers). Averaging `KL` also makes it consistent with `LK`, which already treats each mantle cell as a whole source.
+- Implementation: the BEM receiver code reads only `shz.xc`, so the kernel is evaluated at each quadrature point in turn (temporarily moving `shz.xc`, restored by `onCleanup`) and the weighted sum is taken.
+- Tests (`KernelsTest`): `cellAveragedMantleKernelHasNoGrowingModes` (3 and 7 points, also checks area-weighted symmetry < 2% and that centroids are restored), `centroidCollocationHasGrowingModesOnTestMesh`, `cellAverageOfOneIsTheDefault`, invalid values rejected.
+
+**Pending checks before adopting it.**
+- [ ] Toy meshes (used only to test that averaging removes the growing modes on any mesh, not to replace the example mesh): done, see table above. Passes on unstructured meshes; **open: shallow structured meshes** (alignment test running).
+- [x] ~~Linear comparison: periodic cycle on the example mesh, centroid kernel + `negateGrowingModes` vs cell-averaged kernel with no modification, two viscosity levels. Report differences in fault slip rate, mantle strain rate and surface velocity through the cycle; check that the cell-averaged operator `A` has no growing modes (so negation does nothing).~~ Done, see above; differences need a converged reference to interpret.
+- [x] ~~Circular-inclusion accuracy test: structured 0.8 km mesh at 110 km depth, sharp and tapered sources, diagonal transect, against the exact circular inclusion (Eshelby; interior value -mu*eps/(2(1-nu))). Compares centroid, `kernelmodify` 1 and 2, and 3-point averaging; repeats the test behind `Figure_regkernels_comparison.pdf` (which used a separate kernel library) with I2EC's triangle kernels.~~ Done. Growing modes: centroid 244, zeroed 0, damped 0, 3-point average 0. The reference matches Eshelby (interior -0.6658 vs -0.6667 mu*eps). RMS error of the sharp-source stress along the transect (units of mu*eps; collocated kernels scored against exact point values, the averaged kernel against exact cell averages):
+
+  | Kernel | inside (r < 3 km) | edge (3-5.5 km) | outside (r > 5.5 km) |
+  |---|---|---|---|
+  | centroid (original) | 0.003 | 0.018 | 0.002 |
+  | `kernelmodify = 1` (zeroed) | 0.004 | 0.018 | 0.003 |
+  | `kernelmodify = 2` (damped) | 0.047 | 0.050 | 0.024 |
+  | cell average, 3-point | 0.004 | 0.016 | 0.002 |
+
+  The cell-averaged kernel is as accurate as the original (for the quantity it represents) and has no growing modes. Zeroing changes this smooth-ish source by < 1%; damping is 10-20x less accurate. On this mesh (source radius = 5 cells) all kernels agree to a few % along the transect, unlike the much larger changes in `Figure_regkernels_comparison.pdf`, which used a different kernel library and a finer square-cell mesh.
+- [x] ~~Power-law check: linearise the n = 3 mantle system about random stress states with the cell-averaged kernel and confirm no growing modes.~~ Done on the example mesh (3-point full BEM kernel): 0 growing modes for n = 1 and n = 3 in every trial; all eigenvalues strictly negative (max Re/max abs -1e-3 for n = 1, -6e-7 for n = 3).
+- [x] ~~Rebuild the example kernels with averaging (same mesh in `inputs/`; only the kernels are recomputed) and compare `MAIN_analyticsolve_singleeqcycle.m` and `MAIN_i2ec_singleeqcycle.m` outputs with the current ones.~~ Done (2026-11-20, scratch copies of both drivers; the repo scripts and `kernels/` unchanged).
+  - Certified 3-point example kernel: built in 165 s; certificate: asymmetry removed 1.35%, largest eigenvalue -8.3e-4 of the spectrum, **0 eigenvalues clipped** (on the example mesh the certification only removes quadrature asymmetry).
+  - Analytic driver (centroid kernel + `negateGrowingModes` vs certified kernel, negation then a no-op): state 4e-5 to 1.8% through the cycle; late-interseismic surface vx 1.0%, vz 2.6%; surface displacement time series ux ≤ 1.2%, uz mostly ≤ 6% (up to 14% at a few points where uz is near zero).
+  - Numerical driver (centroid kernel + `kernelmodify = 1` vs certified kernel, no modification), last of 5 cycles: surface vx median 0.1%, max 0.8%; vz median 1.0%, max 2.0%; fault slip rate max 0.7%; mantle strain rate median 1.9%, max 4.2%.
+  - **The certified kernel ran 3.6x faster in `ode45`**: 239 s vs 850 s for the 5 cycles (fewer, larger steps).
+  - Figure: surface velocity profiles from both drivers overlap at plot scale.
+
+**Certification (implemented, uncommitted; decided 2026-11-20).**
+- Decision: use 3-point averaging, for the mantle-mantle block only. The fault blocks stay collocated: for the straight, non-interacting faults in this repo the fault kernels are negative semidefinite already, so Galerkin is not needed there.
+- `functions/certifyMantleKernel.m`, called by `computeAllStressKernelsBem` whenever `'cellaverage'` > 1: symmetrises the area-weighted `LL` (removes only quadrature error), checks that the largest eigenvalue of the symmetric part is ≤ tolerance × its largest magnitude (error otherwise), sets eigenvalues in (0, tolerance] to exactly 0, and stores `evl.certificate` (asymmetry removed, max eigenvalue, number clipped, tolerance).
+- Guarantee: a symmetric negative semidefinite area-weighted kernel gives no growing modes for any viscosity distribution and any power-law exponent at any stress state (the linearised system L*D is similar to X*S*X with X symmetric positive definite).
+- Tolerance 1e-3 (relative to the largest eigenvalue magnitude), from the measured margin: quadrature-perturbed zero-energy modes reach 1.4e-4 (criss-cross 25 km, 3-point); the centroid example kernel, which is truly indefinite, has 65 positive eigenvalues up to 4.3e-2; the 3-point example kernel has none (largest -8.3e-4). The quadrature error itself is ~1e-2 (antisymmetric part of the example kernel 8.9e-3 of the spectrum), so clipping at 1e-3 is below it.
+- Tests (`KernelsTest`): certified kernel exactly symmetric and negative semidefinite (3 and 7 points), `certificationRejectsCentroidKernel` (example centroid kernel errors), `certifiedKernelHasNoGrowingModesForPowerLaw` (n = 1 and 3, random stress states over 4 orders of magnitude and prefactors over 4 orders).
+- [x] ~~Confirm the certification passes on the criss-cross meshes at 1e-3.~~ Criss-cross 25 km: asymmetry 2.3%, largest symmetric eigenvalue 1.4e-4, 20 clipped; 15 km: 2.3%, 1.6e-4, 90 clipped. Certified kernels: largest real part ~1e-15 of the spectrum (round-off), all eigenvalues real. (10 km, 1200 cells, not rerun; same margin expected.)
+
+**Late-interseismic strain rates at the Maxwell-time endmembers (n = 1, periodic = fully spun-up cycle, example mesh, uniform viscosity, t = 0.98 T).** Centroid kernel + `kernelmodify = 1` vs certified 3-point kernel:
+
+| Maxwell time / T_recur | Kernel | Operator modes with Re ≥ 0 | Median strain rate / long-term |
+|---|---|---|---|
+| 1000 | `kernelmodify = 1` | 25 slightly positive, 42 exactly zero | 1.09 |
+| 1000 | certified | none | 1.00 |
+| 0.001 | `kernelmodify = 1` | 27 slightly positive, 30 exactly zero | 11.7 |
+| 0.001 | certified | none (slowest mode e-folds in 0.35 T) | 4.3 |
+
+The zeroed modes are neutral, so in the spun-up cycle they hold cell-scale noise (speckled strain-rate maps). With a weak mantle (Maxwell time 0.001 T) the noise dominates: field difference 42%, per-cell ratio certified/zeroed 0.09-1.9 (5th-95th percentile), fault slip rate 5%. With a strong mantle (1000 T) the difference is confined to the slowly deforming regions (field difference 2%, per-cell ratio 0.17-1.4). The certified fields are smooth.
+
+**Adopted (uncommitted).**
+- [x] ~~`computeAllStressKernelsBem` defaults: `'cellaverage', 3`, `'kernelcertify', true` (new option), `'kernelmodify', 0`.~~ `kernelcertify` with `'cellaverage', 1` is an error (centroid kernels cannot be certified); the earlier centroid kernel is `'cellaverage', 1, 'kernelcertify', false` (plus `'kernelmodify', 1` for the old numerical default).
+- [x] ~~`kernelmodify` and `modifyGrowingModes` kept as the earlier, empirical fix for centroid kernels (not removed).~~
+- [x] ~~`kernels/evl_orig.mat` regenerated with the default (certified) kernel; it now has an `evl_orig.certificate` field (asymmetry 1.35%, max eigenvalue -8.3e-4, 0 clipped). `devl.mat` is unchanged (displacement kernels do not depend on the mantle receivers).~~
+- [x] ~~Help text updated: `computeAllStressKernelsBem`, `modifyGrowingModes`, `ode_viscoelastic`, `runImposedEarthquakeCycles`, `assembleStressKernel`, `computeInterseismicSteadystate`; comment in `MAIN_analyticsolve_singleeqcycle.m`. `docs/theory.md` growing-mode section rewritten (prevention by default; earlier fixes for centroid kernels); `docs/inputs.md` describes the cached kernel.~~
+- [x] ~~Tests: `KernelsTest` uses an explicit centroid kernel where the test is about centroid kernels, plus `defaultIsCertifiedThreePointAverage` and `cachedExampleKernelIsCertified` (replaces the `KnownIssue` test `unmodifiedMantleKernelHasNoGrowingModes`); `TimeIntegrationTest/spunUpLockedNewtonianCycleMatchesAnalyticPeriodicCycle` pinned to the centroid kernel it was written for (its last check needs a slow mode).~~
+- [ ] `negateGrowingModes` is unchanged: with certified kernels it finds nothing to negate. Optionally make it warn when it does negate (a sign of centroid kernels or an unusual mesh).
+- [ ] Optionally rename `evl_orig` (it is no longer an "original, unmodified" kernel in the old sense).
+
+**If it does not work** (growing modes on some mesh, or a large loss of accuracy): keep the full kernel + `negateGrowingModes` for semi-analytical solves and `kernelmodify = 2` (damped) for numerical solves, and record which meshes fail and why.
 
 ## 1. Broken or likely incorrect code (fix or delete first)
 
@@ -118,7 +236,7 @@ Tasks:
 ## 5. `meshing/` folder
 
 - [x] ~~Replaced the vendored `mesh2d` library and the two outdated scripts (`CREATE_shearzone_mesh.m`, `CREATE_geometryFromEdgesMesh.m`; neither produced the mesh in `inputs/`, which covers a larger domain) with one function, `meshing/createShearZoneMesh.m`. It meshes the example outline with the PDE Toolbox and writes the `.dat` files. Documented in `docs/inputs.md`; test: `GeometryTest/createdMeshIsReadableAndFillsTheOutline`.~~
-- [ ] The exact settings of the example mesh are lost: `'Hmax', 20` gives 495 triangles instead of 521. → Either keep `inputs/` as is, or regenerate it with the new function and rebuild `kernels/` (changes the example's numbers).
+- [x] ~~The exact settings of the example mesh are lost (`'Hmax', 20` gives 495 triangles instead of 521).~~ *Decided: keep the mesh in `inputs/` as it is; `createShearZoneMesh` is only for making new meshes.*
 
 ## 6. Cached kernels and data
 
@@ -148,6 +266,7 @@ Tasks:
 ### Suggested order
 
 0. §0: fix the bugs in code that is in use (`getStrainratesLongterm` done).
+0a. §0a: done; certified 3-point kernels are the default (`kernelmodify` kept as the earlier fix).
 1. §1 and §2: delete or fix the broken files and duplicates (low risk, since nothing calls them).
 2. §3 and §5: decide which unused files to keep.
 3. §7: one setup script.

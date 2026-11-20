@@ -10,7 +10,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
 
     properties
         M       % small model
-        Evl     % kernels with kernelmodify = 1 (no growing modes)
+        Evl     % default kernels (cell-averaged, certified: no growing modes)
         yr = 3.15e7
         Vpl = 1e-9
     end
@@ -18,7 +18,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
     methods (TestClassSetup)
         function build(tc)
             tc.M = makeSmallModel(tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder);
-            [~, tc.Evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd, ''kernelmodify'', 1)');
+            [~, tc.Evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd)');
         end
     end
 
@@ -168,7 +168,9 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             rcv.pinnedPosition = true(rcv.N, 1);
             shz.alpha = 1/(1e18*1e-6) * ones(shz.N, 1);   % slowest mode ~36 yr
             Ns = shz.N; alpha = [shz.alpha; shz.alpha];
-            [~, evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd, ''kernelmodify'', 0)');
+            % centroid kernel (growing modes, negated below): its slowest
+            % mode makes one cycle insufficient, which the last check uses
+            [~, evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd, ''cellaverage'', 1, ''kernelcertify'', false)');
             LL = [evl.LL(:,:,1,1) evl.LL(:,:,1,2); evl.LL(:,:,2,1) evl.LL(:,:,2,2)];
             [~, lambda, A] = negateGrowingModes(alpha .* LL);
             LLneg = A ./ alpha;                            % same operator for ode45

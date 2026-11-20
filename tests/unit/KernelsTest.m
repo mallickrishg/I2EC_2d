@@ -9,9 +9,16 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
     % must be (approximately, for well-separated elements) symmetric.  A
     % sign or component-ordering error in any block breaks it.
 
+    properties (TestParameter)
+        n = {1, 3}
+        mode = struct('zero', 1, 'damp', 2)
+        quadrature = {3, 7}
+    end
+
     properties
         Sm     % small model struct (makeSmallModel)
-        Evl    % small-model stress kernels, kernelmodify = 0
+        Evl    % small-model centroid kernels ('cellaverage', 1, not certified, not modified)
+        EvlCert % small-model default kernels (3-point cell average, certified)
         Devl   % small-model displacement kernels
         Ex     % example model with cached evl_orig / devl
     end
@@ -20,7 +27,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         function buildKernels(tc)
             folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
             tc.Sm = makeSmallModel(folder);
-            [~, tc.Evl] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''kernelmodify'', 0)');
+            [~, tc.Evl] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''cellaverage'', 1, ''kernelcertify'', false)');
+            [~, tc.EvlCert] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd)');
             [~, tc.Devl] = evalc('computeAllDisplacementKernelsBem(tc.Sm.obs, tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, 1)');
             tc.Ex = loadExampleModel(true);
         end
@@ -97,12 +105,141 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function kernelModifyRemovesGrowingModes(tc)
-            [~, evm] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''kernelmodify'', 1)');
+            [~, evm] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''cellaverage'', 1, ''kernelcertify'', false, ''kernelmodify'', 1)');
             L = [evm.LL(:,:,1,1) evm.LL(:,:,1,2); evm.LL(:,:,2,1) evm.LL(:,:,2,2)];
             scale = max(abs(eig(L)));
             tc.verifyLessThanOrEqual(max(real(eig(L))) / scale, 1e-10);
             tc.verifyEqual(evm.KK, tc.Evl.KK, 'other blocks unchanged');
             tc.verifyEqual(evm.LK, tc.Evl.LK);
+        end
+
+        function dampedKernelHasOnlyDecayingModes(tc)
+            % kernelmodify = 2 on a centroid kernel: each growing
+            % eigenvalue becomes -max|lambda|
+            e0 = tc.Evl;
+            ed = modifyGrowingModes(e0, 2);
+            lam0 = eig(KernelsTest.deviatoricBlock(e0));
+            lam = eig(KernelsTest.deviatoricBlock(ed));
+            scale = max(abs(lam0));
+            tc.verifyLessThan(max(real(lam)) / scale, 0, 'no growing or neutral mode');
+            nGrowing = sum(real(lam0) > 0);
+            atMax = @(x) abs(x + scale) < 1e-6*scale;   % the kernel's own -max|lambda| counts too
+            tc.verifyEqual(sum(atMax(lam)), nGrowing + sum(atMax(lam0)), ...
+                'each growing mode now decays at -max|lambda|');
+            tc.verifyEqual(sort(real(lam(~atMax(lam)))), ...
+                sort(real(lam0(real(lam0) <= 0 & ~atMax(lam0)))), 'AbsTol', 1e-8*scale, 'other modes unchanged');
+            for f = {'KK', 'KL', 'LK'}
+                tc.verifyEqual(ed.(f{1}), e0.(f{1}), f{1});
+            end
+        end
+
+        function modifiedKernelsHaveNoGrowingModesForPowerLaw(tc, n, mode)
+            % Linearise the mantle system ds/dt = L * edot(s) about random
+            % stress states: d(edot)/ds = alpha tau^(n-1) (I + (n-1) s s'/tau^2)
+            % is positive definite per cell, so the number of growing
+            % modes is that of L for any n; a modified kernel has none.
+            L = KernelsTest.deviatoricBlock(modifyGrowingModes(tc.Evl, mode));
+            M = tc.Sm.shz.N;
+            rng(3);
+            for trial = 1:2
+                tau = 10.^(-1 + 2*rand(M, 1)); ang = 2*pi*rand(M, 1);
+                s22 = tau.*cos(ang); s23 = tau.*sin(ang);
+                c = 1e-14*(1 + 9*rand(M, 1)) .* tau.^(n-1);
+                D11 = c.*(1 + (n-1)*s22.^2./tau.^2);
+                D22 = c.*(1 + (n-1)*s23.^2./tau.^2);
+                D12 = c.*(n-1).*s22.*s23./tau.^2;
+                lam = eig(L * [diag(D11) diag(D12); diag(D12) diag(D22)]);
+                tc.verifyLessThan(max(real(lam)) / max(abs(lam)), 1e-10, sprintf('trial %d', trial));
+            end
+        end
+
+        function kernelModifyOptionMatchesModifyGrowingModes(tc)
+            [~, ed] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''cellaverage'', 1, ''kernelcertify'', false, ''kernelmodify'', 2)');
+            ref = modifyGrowingModes(tc.Evl, 2);
+            tc.verifyEqual(ed.LL, ref.LL, 'AbsTol', 1e-10*max(abs(ref.LL(:))));
+            tc.verifyEqual(ed.KK, tc.Evl.KK);
+        end
+
+        function cellAveragedMantleKernelHasNoGrowingModes(tc, quadrature)
+            % Averaging the stress over each receiving cell (Galerkin)
+            % instead of sampling it at the centroid removes the growing
+            % modes at the source and restores reciprocity of LL.
+            m = tc.Sm;
+            [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, ''kernelmodify'', 0, ''cellaverage'', quadrature)');
+            L = KernelsTest.deviatoricBlock(e);
+            lam = eig(L);
+            tc.verifyEqual(sum(real(lam) > 0), 0, sprintf('max Re/max|lambda| = %.2e', max(real(lam))/max(abs(lam))));
+            S = diag([m.shz.area; m.shz.area]) * L;
+            tc.verifyLessThan(norm(S - S', 'fro') / norm(S, 'fro'), 1e-12, 'certified: area-weighted LL is symmetric');
+            tc.verifyLessThanOrEqual(max(eig((S + S')/2)), 1e-12*max(abs(eig(S))), 'certified: negative semidefinite');
+            tc.verifyLessThan(e.certificate.asymmetry, 0.05, 'quadrature asymmetry removed by certification');
+            tc.verifyLessThanOrEqual(e.certificate.maxEigenvalue, e.certificate.tolerance);
+            tc.verifyEqual(m.shz.xc, (m.shz.A + m.shz.B + m.shz.C)/3, 'AbsTol', 1e-6, 'centroids restored');
+            tc.verifyEqual(e.KK, tc.Evl.KK, 'fault-fault block unchanged');
+            tc.verifyEqual(e.LK, tc.Evl.LK, 'mantle-to-fault block unchanged');
+        end
+
+        function certificationRejectsCentroidKernel(tc)
+            % centroid kernels are not negative semidefinite (the
+            % example mesh: 65 positive eigenvalues in the symmetric part)
+            tc.verifyError(@() certifyMantleKernel(tc.Evl, tc.Sm.shz), 'certifyMantleKernel:notNegative');
+        end
+
+        function certifiedKernelHasNoGrowingModesForPowerLaw(tc, n)
+            % the guarantee: no growing modes for any SPD power-law
+            % Jacobian (random stress states, magnitudes and prefactors)
+            m = tc.Sm;
+            [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, ''kernelmodify'', 0, ''cellaverage'', 3)');
+            L = KernelsTest.deviatoricBlock(e);
+            M = m.shz.N;
+            rng(5);
+            for trial = 1:5
+                tau = 10.^(-2 + 4*rand(M, 1)); ang = 2*pi*rand(M, 1);
+                s22 = tau.*cos(ang); s23 = tau.*sin(ang);
+                c = 10.^(-16 + 4*rand(M, 1)) .* tau.^(n-1);
+                D11 = c.*(1 + (n-1)*s22.^2./tau.^2);
+                D22 = c.*(1 + (n-1)*s23.^2./tau.^2);
+                D12 = c.*(n-1).*s22.*s23./tau.^2;
+                lam = eig(L * [diag(D11) diag(D12); diag(D12) diag(D22)]);
+                tc.verifyLessThanOrEqual(max(real(lam)), 1e-10*max(abs(lam)), sprintf('trial %d', trial));
+            end
+        end
+
+        function centroidCollocationHasGrowingModesOnTestMesh(tc)
+            % the reference for the test above: the default (centroid)
+            % kernel of the same mesh does have growing modes
+            tc.verifyGreaterThan(sum(real(eig(KernelsTest.deviatoricBlock(tc.Evl))) > 0), 0);
+        end
+
+        function defaultIsCertifiedThreePointAverage(tc)
+            m = tc.Sm;
+            [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, ''cellaverage'', 3, ''kernelcertify'', true, ''kernelmodify'', 0)');
+            tc.verifyEqual(tc.EvlCert, e);
+            tc.verifyTrue(isfield(tc.EvlCert, 'certificate'));
+            tc.verifyFalse(isfield(tc.Evl, 'certificate'), 'centroid kernels are not certified');
+        end
+
+        function cachedExampleKernelIsCertified(tc)
+            % kernels/evl_orig.mat holds the default (certified) kernels:
+            % no growing modes, area-weighted LL exactly symmetric
+            e = tc.Ex.evl;
+            tc.verifyTrue(isfield(e, 'certificate'), 'kernels/evl_orig.mat is not a certified kernel');
+            L = KernelsTest.deviatoricBlock(e);
+            lam = eig(L);
+            tc.verifyLessThanOrEqual(max(real(lam)), 1e-12*max(abs(lam)), ...
+                sprintf('%d eigenvalues with Re > 0', sum(real(lam) > 0)));
+            S = [tc.Ex.shz.area; tc.Ex.shz.area] .* L;
+            tc.verifyLessThan(norm(S - S', 'fro')/norm(S, 'fro'), 1e-12);
+        end
+
+        function invalidKernelModifyIsRejected(tc)
+            m = tc.Sm;
+            tc.verifyError(@() modifyGrowingModes(tc.Evl, 3), 'modifyGrowingModes:mode');
+            tc.verifyError(@() computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, 'kernelmodify', 3), ?MException);
+            tc.verifyError(@() computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, 'cellaverage', 2), ?MException);
+            tc.verifyError(@() computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, 'cellaverage', 1), ?MException, ...
+                'certification of a centroid kernel must be refused');
+            tc.verifyError(@() computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, 'kernelcertify', 'yes'), ?MException);
         end
 
         function unknownOptionIsRejected(tc)
@@ -122,22 +259,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             tc.verifySize(e.KK, [tc.Ex.rcv.N tc.Ex.rcv.N]);
             tc.verifySize(e.LL, [tc.Ex.shz.N tc.Ex.shz.N 2 2]);
             tc.verifySize(tc.Ex.devl.KO, [size(tc.Ex.obs,1) tc.Ex.rcv.N 2]);
-        end
-    end
-
-    methods (Test, TestTags = {'KnownIssue'})
-        function unmodifiedMantleKernelHasNoGrowingModes(tc)
-            % An elastic relaxation operator should not have eigenvalues
-            % with positive real part.  The collocated LL block does (43
-            % on the example mesh, even on the 24-triangle mesh); the
-            % solvers negate them (negateGrowingModes) and
-            % kernelmodify = 1 zeroes them.  Kept as a known issue of the
-            % discretisation, not of the solvers.
-            e = tc.Ex.evl;
-            L = [e.LL(:,:,1,1) e.LL(:,:,1,2); e.LL(:,:,2,1) e.LL(:,:,2,2)];
-            lam = eig(L);
-            tc.verifyEqual(sum(real(lam) > 0), 0, ...
-                sprintf('%d eigenvalues with Re > 0, max Re = %.3g', sum(real(lam) > 0), max(real(lam))));
         end
     end
 
@@ -167,10 +288,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
 
     methods (Test, TestTags = {'Slow'})
         function cachedStressKernelsAreReproducible(tc)
-            % rebuild evl_orig from inputs/ and compare to kernels/evl_orig.mat
+            % rebuild evl_orig (default: certified 3-point) from inputs/ and
+            % compare to kernels/evl_orig.mat
             % (minutes; catches a stale cache after a mesh or kernel change)
             m = tc.Ex;
-            [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd, ''kernelmodify'', 0)');
+            [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd)');
             % KK, KL come from closed-form line-dislocation stresses;
             % LK, LL from the finite-difference triangle stress (step 1e-6 of
             % the shortest edge), which reproduces only to ~1e-5 (measured
@@ -189,6 +311,12 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
                 ref = m.devl.(f{1});
                 tc.verifyEqual(d.(f{1}), ref, 'AbsTol', 1e-8*max(abs(ref(:))), f{1});
             end
+        end
+    end
+
+    methods (Static)
+        function L = deviatoricBlock(e)
+            L = [e.LL(:,:,1,1) e.LL(:,:,1,2); e.LL(:,:,2,1) e.LL(:,:,2,2)];
         end
     end
 end

@@ -168,25 +168,48 @@ system damped again. They are regularisations, not physics.
 
 ### 2. Spurious growing modes
 
-The discretised `LL` kernel, and therefore $A$, has a few eigenvalues with
-$\mathrm{Re}(\lambda) > 0$. They are associated with spatial scales comparable
-to the cell size and appear on every mesh tried, including structured
-meshes of uniform cells; remeshing does not remove them, so they have to be
-handled numerically. Left alone, each would grow as $e^{\lambda t}$ and the
-periodic condition above would be meaningless. The numerical (`ode45`) and
-semi-analytical solvers handle them differently:
+The continuous operator from a deviatoric eigenstrain to the stress it
+causes is symmetric and negative semidefinite: the elastic energy of any
+eigenstrain distribution is non-negative, so stress always opposes the
+eigenstrain, and viscous relaxation can only decay. A *centroid-collocated*
+`LL` kernel (stress sampled at each cell's centroid) breaks both properties
+for neighbouring cells, and has a few eigenvalues with
+$\mathrm{Re}(\lambda) > 0$ (43 on the example mesh), on every mesh tried,
+including structured meshes of uniform cells. Left alone, each would grow as
+$e^{\lambda t}$ and the periodic condition above would be meaningless.
+
+- **Prevent them (default)** — {mat:func}`computeAllStressKernelsBem`
+  averages the stress over each receiving mantle cell (3-point quadrature,
+  option `cellaverage`) instead of sampling it at the centroid. With
+  piecewise-constant strain this is a Galerkin discretisation, which keeps
+  the symmetry and the sign of the continuous operator. The area-weighted
+  `LL` is then symmetrised (removing quadrature error, about 1%) and checked
+  to be negative semidefinite ({mat:func}`certifyMantleKernel`, option
+  `kernelcertify`); the build errors if the check fails. A certified kernel
+  has no growing modes for any viscosity distribution and any power-law
+  exponent, at any stress state, so no modification is needed in either
+  solver. On the example mesh the certified kernel changes surface velocities
+  by about 1-2% relative to the centroid kernel and makes the `ode45` runs
+  about 3.6 times faster. The fault blocks (`KK`, `LK`) are not averaged:
+  the straight, non-interacting faults used here are already well behaved.
+
+The earlier treatments remain for centroid kernels
+(`'cellaverage', 1, 'kernelcertify', false`):
 
 - **Change them in the kernel (numerical solves)** —
   {mat:func}`modifyGrowingModes`, also the `kernelmodify` option of
-  {mat:func}`computeAllStressKernelsBem` (default `1`). Eigendecomposes the
+  {mat:func}`computeAllStressKernelsBem` (default `0`). Eigendecomposes the
   $2M \times 2M$ deviatoric `LL` kernel, changes the eigenvalues with
   $\mathrm{Re}(\lambda) > 0$ and rebuilds `LL`. Acts on the kernel alone,
   before viscosities are applied, so it works for any power-law exponent: for
   a reciprocal kernel the linearised mantle system has as many growing modes
   as `LL`, whatever $n$ and the stress state. Two choices:
   - `kernelmodify = 1` sets them to **zero**. The modes become neutral;
-    nothing restores them, so they can accumulate over many earthquake
-    cycles and slow the approach to a cycle-invariant state.
+    nothing restores them, so in a spun-up cycle they hold cell-scale noise.
+    With a Maxwell time of 0.001 recurrence intervals the late-interseismic
+    strain rate of the example was 2.7 times that of the certified kernel
+    (median), with a speckled pattern; at 1000 recurrence intervals the
+    difference was confined to slowly deforming regions.
   - `kernelmodify = 2` sets them to $-\max|\lambda|$ (**damped**). They decay
     at the fastest rate the kernel has. Prefer this for long spin-ups and for
     power-law ($n = 3$) runs.
@@ -197,10 +220,9 @@ semi-analytical solvers handle them differently:
   $A$, eigendecomposes it and replaces each $\lambda$ with
   $\mathrm{Re}(\lambda) > 0$ by $-\lambda$, keeping its eigenvector. Acts on
   the full coupled operator, after viscosities are applied. *Used by* the
-  semi-analytical solver (`MAIN_analyticsolve_singleeqcycle.m`, through
-  {mat:func}`analyticSolveIVP` and
-  {mat:func}`computePeriodicInitialConditionBalanced`), with kernels computed
-  with `kernelmodify = 0` (`kernels/evl_orig.mat`).
+  semi-analytical solver ({mat:func}`analyticSolveIVP` and
+  {mat:func}`computePeriodicInitialConditionBalanced`). With the default
+  certified kernels there is nothing to negate and the operator is unchanged.
 - **Replace them by a fast decay** — {mat:func}`reconditionODEoperator`. Sets
   eigenvalues with $\mathrm{Re}(\lambda) \ge 0$ to the real value
   $-0.1\ \mathrm{s^{-1}}$ (dropping their imaginary parts), so they decay
@@ -270,9 +292,9 @@ Consequences to keep in mind:
   (`[~, lambda] = negateGrowingModes(A)` against `eig(A)`); a large number, or
   ones with large $|\lambda|$, suggests a mesh problem.
 - Recompute the kernels after any geometry change; the files in `kernels/`
-  match the example meshes only, and `evl_orig.mat` was computed with
-  `kernelmodify = 0`. For a numerical solve, build the zeroed or damped kernel
-  from it without recomputing: `evl = modifyGrowingModes(evl_orig, 2)`.
+  match the example meshes only, and `evl_orig.mat` holds the default
+  (cell-averaged, certified) kernels; `evl_orig.certificate` records the
+  check.
 - `tests/test_negate_exact_solver.m` checks the semi-analytical solver
   against the matrix exponential, periodicity, continuity in viscosity and the
   steady state on the example mesh.

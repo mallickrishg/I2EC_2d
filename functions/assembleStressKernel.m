@@ -26,9 +26,10 @@ function stresskernel = assembleStressKernel(evl,locked)
 %                 of creeping (unlocked) patches
 %
 % NOTES
-%   - The drivers pass the unmodified kernels (computeAllStressKernelsBem
-%     with 'kernelmodify', 0, saved as evl_orig); the growing modes are
-%     then handled on the full operator by negateGrowingModes.
+%   - The drivers pass the default kernels of computeAllStressKernelsBem
+%     (cell-averaged and certified, saved as kernels/evl_orig.mat), which
+%     have no growing modes; negateGrowingModes in the solvers then changes
+%     nothing. With centroid kernels it negates their growing modes.
 %
 % SEE ALSO
 %   computeAllStressKernelsBem, negateGrowingModes, analyticSolveIVP

@@ -118,5 +118,33 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GreensFunctionsTest < matlab.u
             w21 = a1 * (s22*e1(1) + 2*s23*e1(2) + s33*e1(3));
             tc.verifyEqual(w12, w21, 'RelTol', 1e-3);
         end
+
+        function triangleStressIsSmoothOnEdgeLines(tc)
+            % The closed-form displacement has atan(N/D) terms with D = 0 on
+            % the lines through the edges of the triangle and of its image
+            % above the surface. On those lines (away from the triangle's
+            % own edges) the field is smooth, but a finite-difference
+            % stencil across the atan jump used to give stresses ~1e10 too
+            % large (structured meshes aligned with the surface put
+            % centroids exactly there).
+            G = 30e3; nu = 0.25;
+            A = [0 10e3]; B = [10e3 10e3]; C = [10e3 20e3];     % depth positive
+            % on the image edge line A'C' (x3 = -10 km - x2) only, and on
+            % the source edge line AC (x3 = 10 km + x2) outside the triangle;
+            % with the unit normal of each line
+            pts = [-30e3 20e3; 30e3 40e3];
+            nrm = [1 1; 1 -1]/sqrt(2);
+            for k = 1:size(pts, 1)
+                P = pts(k,:); d = 50;   % m: curvature error of the mean ~2e-5
+                Q = [P; P + d*nrm(k,:); P - d*nrm(k,:)];
+                for e = {[1 0 -1], [0 1 0]}
+                    [s22, s23, s33] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
+                        Q(:,1), Q(:,2), A, B, C, e{1}(1), e{1}(2), e{1}(3), G, nu);
+                    S = [s22 s23 s33];
+                    ref = (S(2,:) + S(3,:))/2;      % smooth field: mean of the two neighbours
+                    tc.verifyEqual(S(1,:), ref, 'AbsTol', 1e-4*norm(ref), sprintf('point %d', k));
+                end
+            end
+        end
     end
 end

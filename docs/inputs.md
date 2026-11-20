@@ -71,7 +71,9 @@ one. Rebuild the cached kernels below after changing the mesh.
 ## Pre-computed kernels
 
 `kernels/evl_orig.mat` and `kernels/devl.mat` hold the stress and displacement
-kernels for the example geometry. They are valid only for these meshes:
+kernels for the example geometry. `evl_orig.mat` holds the default kernels of
+{mat:func}`computeAllStressKernelsBem` (3-point cell average, certified; see
+`evl_orig.certificate`). They are valid only for these meshes:
 after any change in geometry, recompute them with
 {mat:func}`computeAllStressKernelsBem` and
 {mat:func}`computeAllDisplacementKernelsBem`.

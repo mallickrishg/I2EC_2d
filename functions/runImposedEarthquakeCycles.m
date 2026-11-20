@@ -49,11 +49,10 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %   e23dot         [Nt x M] shear strain rate e23 (1/s)
 %
 % NOTES
-%   - Stability: pass kernels with the modified LL block (the default of
-%     computeAllStressKernelsBem, 'kernelmodify' = 1), in which positive
-%     eigenvalues of the deviatoric mantle-to-mantle kernel are set to
-%     zero; otherwise the spurious growing modes of the discretised
-%     kernel are integrated too.
+%   - Stability: pass the default kernels of computeAllStressKernelsBem
+%     (cell-averaged and certified: no growing modes for any viscosity or
+%     power-law exponent). Centroid kernels ('cellaverage', 1) have
+%     spurious growing modes and need 'kernelmodify' 1 or 2.
 %   - Spin-up is by brute force: nreps must be large enough for the cycle
 %     to become periodic; compare successive cycles to check.
 %   - nreps = 1 runs and returns a single cycle from the long-term state,

@@ -21,8 +21,8 @@ function [sol_f,sol_22,sol_23] = computeInterseismicSteadystate(rcv,shz,evl_orig
 %             .pinnedPosition  [N x 1] logical, true for locked patches
 %   shz       geometry.shearZoneReceiver object: mantle cells
 %             .N               number of cells
-%   evl_orig  struct of unmodified stress kernels (.KK, .KL, .LK, .LL)
-%             from computeAllStressKernelsBem(..., 'kernelmodify', 0)
+%   evl_orig  struct of stress kernels (.KK, .KL, .LK, .LL) from
+%             computeAllStressKernelsBem (default: certified, unmodified)
 %   Vpl       scalar plate rate (m/s)
 %   lambda    scalar Tikhonov weight, typically 0.1 to 10
 %
@@ -65,8 +65,7 @@ shz.e23pl = -e23.*Vpl;% 1/s
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
-% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
-% evl = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',1);
+% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
 % load('kernels/evl_orig.mat','evl_orig');
 
 %% compute quasi-steady rates for 

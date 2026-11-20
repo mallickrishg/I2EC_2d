@@ -45,7 +45,7 @@ shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
 % use original unmodified kernels for this solve
-% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary,'kernelmodify',0);
+% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary); % cell-averaged, certified (default)
 load('kernels/evl_orig.mat','evl_orig');
 
 % compute displacement kernels

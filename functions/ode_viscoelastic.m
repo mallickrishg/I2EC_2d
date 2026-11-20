@@ -29,9 +29,10 @@ function [Yp] = ode_viscoelastic(~,Y,rcv,shz,evl)
 % NOTES
 %   - Locked patches (rcv.pinnedPosition) have v = 0 in the stress
 %     calculation; their log(v) entries still evolve but are not used.
-%   - Stability: the function integrates whatever kernels it is given;
-%     use the modified kernels (default 'kernelmodify' = 1 in
-%     computeAllStressKernelsBem) to keep the system damped.
+%   - Stability: the function integrates whatever kernels it is given.
+%     The default kernels of computeAllStressKernelsBem (cell-averaged,
+%     certified) have no growing modes for any viscosity or power-law
+%     exponent. Centroid kernels need 'kernelmodify' 1 or 2.
 %
 % SEE ALSO
 %   runImposedEarthquakeCycles, viscoeq_sequence_simulation,
