@@ -24,6 +24,9 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §0a: certify the coupled fault-mantle operator, not only `LL` (a guarantee for a creeping fault; today checked case by case).
 - [ ] §0a, optional: rename `evl_orig` (it is no longer an "original, unmodified" kernel).
 
+**Exploratory**
+- [ ] §10: find the periodic power-law cycle without brute-force spin-up: Newton shooting on the state at t = 0+, started from a mean-plus-oscillation guess (cycle-mean strain rate = long-term rate). Branch `nonlin-spinup-solve`, own worktree.
+
 **Known issues in legacy code (§0)**
 - [ ] `reconditionODEoperator.m` uses -0.1 s⁻¹, not the documented -eps; `computePeriodicInitialCondition.m` prints on every call. Both go if §3 deletes them.
 - [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder.
@@ -289,6 +292,42 @@ Tasks:
 - [x] ~~Remove the docs entries for deleted functions in `docs/api/kernels.rst`, `solvers.rst`, `utilities.rst` and `longterm.rst`.~~ *Every `mat:autofunction` entry now points at an existing function (checked 2026-11-20).*
 - [ ] Bring help blocks into one format (H1 line, INPUTS/OUTPUTS, author). Several files have no H1 line (for example `computeSiteVelocitiesBem`, `assembleStressKernel`), or have a stale name in it (`computeKLmodesMesh`).
 - [ ] Bring the README's "Code Dependencies" list up to date (bluewhitered, cline, drchrnd sources).
+
+## 10. Exploratory: periodic power-law cycles without brute-force spin-up (2026-11-20)
+
+Work happens on branch `nonlin-spinup-solve`, in its own worktree (`../I2EC_2d-nonlin-spinup-solve`), kept up to date by merging `maintenance-cleanup` into it. Only one agent works there; nothing else should check out that branch.
+
+**Problem.** `runImposedEarthquakeCycles` finds the periodic power-law cycle by brute force: it integrates cycle after cycle from the long-term state (example 1: 15 cycles of `ode45`). Linearising example 1 at its long-term state (tangent compliance) gives 1061 relaxation modes. 1035 decay within one 500-yr cycle; about 26 large-scale modes are slower, the slowest with a decay time of about 4000 yr. That mode shrinks by exp(lambda*T) ≈ 0.88 per cycle: about 110 cycles to reach 1e-6, and 15 cycles leave about 15% of it. The faster postseismic deformation speeds this up somewhat in the real cycle. The cost is a *few* slow modes, which a direct method can correct cheaply.
+
+**Formulation: a fixed point at t = 0+.** Let X0 be the state just after the earthquake: (s22, s23) in every mantle cell and the slip rate on every creeping patch. Each cell's viscosity eta0(x) and strain rate follow from X0 through the power law. Evolve X0 to T-, add the known coseismic stress step, and require the result to equal X0:
+
+    F(X0) = Phi(X0; T) + Delta - X0 = 0
+
+- **Match the full state, not only the viscosity.** The power law ties eta to the stress magnitude tau = sqrt(s22^2 + s23^2) only, not to its direction. Requiring eta_T -> eta_0 gives M equations for 2M + Nc unknowns. Matching (s22, s23, v), or equivalently the strain-rate vector, gives as many equations as unknowns.
+- **Well posed.** The system is dissipative and driven periodically, and every relaxation mode decays, so the cycle map contracts: there is exactly one solution, the periodic cycle that the spin-up converges to.
+- **Plain substitution is today's spin-up** (guess -> evolve -> jump -> new guess). The saving has to come from a better first guess and a better update.
+
+**Constraint: the cycle mean is the long-term rate.** Stress is periodic, and the earthquake releases exactly one cycle's slip deficit, so K * integral over the cycle of (x - x_pl) dt = 0 and the mean of every cell's strain rate (and every creeping patch's slip rate) equals the long-term value from the analytic corner flow. This holds for any rheology. Checked with the Newtonian example (`newtonianCycle`): the mean equals x_pl to 8e-13 (mantle) and 5e-14 (fault), while the state at 0+ differs from x_pl by 3.4 (relative).
+- It follows from periodicity, so it adds no equation. It is a clean residual, though: during spin-up, the per-cycle mean's departure from x_pl directly measures how far that cycle is from periodic.
+- **For n > 1, mean strain rate = long-term does not mean mean stress = long-term stress.** edot ~ tau^n is convex, so an oscillating stress strains more than its mean would. The periodic cycle must sit at a *lower* mean stress than the long-term state, by more where the stress swings more. This offset is presumably large-scale, so the slow modes probably carry it (not tested).
+- Example 1 caps the coseismic stress change at 5 MPa next to the locked zone. The constraint is then only approximate there and nearby; it is exact for uncapped earthquakes.
+
+**Method (to test, in this order).**
+1. *Mean plus oscillation initial guess.* From a linear cycle with the tangent compliance, take each cell's stress oscillation dsigma(t). In each cell separately, find the mean stress sigma_bar for which the cycle-averaged power law gives the long-term rate, <f(sigma_bar + dsigma(t))> = edot_pl (two equations, two unknowns per cell). Rebuild the compliances from sigma_bar + dsigma and repeat a few times. Gives X0.
+2. *Newton shooting from that X0.* Update X0 <- X0 + (I - Phi_lin)^(-1) * F(X0), where Phi_lin is the one-cycle state map of the linear model with the cycle-averaged tangent compliance. `computePeriodicInitialConditionBalanced` already does the (I - Phi)^(-1) solve in modal form. Each iteration costs one power-law cycle. The answer is exact; the linearisation only sets the convergence rate. If the contraction is poor, use Newton-Krylov (GMRES on the monodromy, the linear solve as preconditioner).
+3. *Fallback without a Jacobian:* Anderson acceleration (memory of about 5) of the cycle map.
+
+Notes for the linear model:
+- Use the *tangent* compliance, d(edot)/d(sigma) = alpha*tau^(n-1)*[I + (n-1)*s*s'/tau^2]: a 2x2 block per cell, n times the secant compliance along the stress direction. The linear solver takes it unchanged, A = blkdiag(C)*K instead of K./eta. The fault's tangent is v/Asigma (rate-strengthening).
+- A linear model with each cell's viscosity frozen over the whole cycle cannot itself be the periodic power-law cycle. Power-law relaxation decays algebraically, linear relaxation exponentially, and the stress at T- is the integral of that history. Freezing eta at its 0+ value relaxes too fast; freezing it at T- relaxes too slowly. The linear model only supplies a guess and the Newton update.
+- Cells whose strain rate passes through zero or rotates (near the locked zone) need a floor on tau.
+
+**Tasks**
+- [ ] Reference: run example 1 for many cycles (about 100) and record the per-cycle residual (state and cycle-mean), to get a converged periodic cycle and the actual contraction rate.
+- [ ] Measure the mean-stress offset from the long-term stress in the reference cycle, and check that it lies in the slow modes.
+- [ ] Implement (1) and measure its distance from the reference.
+- [ ] Implement (2) from the long-term state and from (1): power-law cycles to 1e-6, and wall time.
+- [ ] Check whether `ode45` dominates the cost per cycle (the postseismic phase is stiff). `ode15s` with the analytic Jacobian (blkdiag(C)*K) may matter as much as the number of cycles.
 
 ---
 
