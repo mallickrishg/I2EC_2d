@@ -57,7 +57,7 @@ run I2EC_2d/examples/example2_analyticNewtonian
 | [`example3_meshConvergence`](https://mallickrishg.github.io/I2EC_2d/examples/example3.html) | The example 2 cycle on three mantle meshes |
 | [`example4_analyticVsNumerical`](https://mallickrishg.github.io/I2EC_2d/examples/example4.html) | Both solvers on the same cycle |
 
-Each takes 1–2 minutes (example 3 about 15 minutes the first time, while it
+Each takes 1–2 minutes (example 3 about 2 minutes the first time, while it
 computes and caches its kernels). To build your own model, start from the
 [quick start](https://mallickrishg.github.io/I2EC_2d/quickstart.html) and the
 description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.html).
