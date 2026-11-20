@@ -53,6 +53,7 @@ Each item names the failing test (`Class/test`).
 - **Duplicate copies give identical results**: `functions/LDdispHS`, `EdgeStress`, `computedisplacementGFs`, `computetractionkernels`, and the old edge-dislocation traction kernels, which match the line-dislocation kernels. The deletions in §2 change no numbers.
 - `computeSiteVelocitiesBem` gives the same result as `devl` from `computeAllDisplacementKernelsBem`, to 1e-12.
 - **The ODE path (`ode_viscoelastic` + `ode45`) matches `analyticSolveIVP`** for a locked fault with a Newtonian mantle, through a coseismic step. The solvers match `expm` to round-off.
+- **The spun-up numerical cycle matches the semi-analytical periodic cycle** (n = 1, fully locked fault, same operator: unmodified `LL` with growing modes negated). `runImposedEarthquakeCycles` converges to `computePeriodicInitialConditionBalanced` + `analyticSolveIVP` at the rate of the slowest mode (gap shrinks ~250x per two cycles for rho = 0.063) and agrees to 1e-10 after 8 cycles; one cycle alone is still 2e-3 off. Test: `TimeIntegrationTest/spunUpLockedNewtonianCycleMatchesAnalyticPeriodicCycle`. Exact only for a locked fault: the numerical fault is rate-strengthening (`d log v/dt = (dtau/dt)/Asigma`), the analytic one linear viscous.
 
 ## 1. Broken or likely incorrect code (fix or delete first)
 

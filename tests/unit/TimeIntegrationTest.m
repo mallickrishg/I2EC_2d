@@ -153,6 +153,62 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
             tc.verifyEqual([e22'; e23'], eT, 'RelTol', 1e-5, 'AbsTol', 1e-6*max(abs(eT)));
         end
+
+        function spunUpLockedNewtonianCycleMatchesAnalyticPeriodicCycle(tc)
+            % Numerical path with spin-up (runImposedEarthquakeCycles,
+            % ode45) against the semi-analytical periodic cycle
+            % (computePeriodicInitialConditionBalanced + analyticSolveIVP).
+            % Fully locked fault + n = 1 mantle, so both paths solve the
+            % same linear ODE de/dt = A e + c (e = alpha s). Both use the
+            % same operator: the unmodified LL with its growing modes
+            % negated (negateGrowingModes), so every mode decays and the
+            % spin-up converges to the periodic cycle at the rate of the
+            % slowest mode, rho = max|exp(lambda T)| per cycle.
+            rcv = tc.M.rcv; shz = tc.M.shz;
+            rcv.pinnedPosition = true(rcv.N, 1);
+            shz.alpha = 1/(1e18*1e-6) * ones(shz.N, 1);   % slowest mode ~36 yr
+            Ns = shz.N; alpha = [shz.alpha; shz.alpha];
+            [~, evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd, ''kernelmodify'', 0)');
+            LL = [evl.LL(:,:,1,1) evl.LL(:,:,1,2); evl.LL(:,:,2,1) evl.LL(:,:,2,2)];
+            [~, lambda, A] = negateGrowingModes(alpha .* LL);
+            LLneg = A ./ alpha;                            % same operator for ode45
+            evl.LL(:,:,1,1) = LLneg(1:Ns, 1:Ns);     evl.LL(:,:,1,2) = LLneg(1:Ns, Ns+1:end);
+            evl.LL(:,:,2,1) = LLneg(Ns+1:end, 1:Ns); evl.LL(:,:,2,2) = LLneg(Ns+1:end, Ns+1:end);
+            KL = [evl.KL(:,:,1); evl.KL(:,:,2)];
+            epl = [shz.e22pl; shz.e23pl];
+            c = -A*epl - alpha .* (KL*rcv.Vpl);
+
+            % one event per cycle at t1: 2 m of slip on the whole fault
+            Trecur = 100*tc.yr; t1 = 30*tc.yr;
+            slip = 2 * ones(rcv.N, 1);
+            sc = struct('Nevents', 1, 'Timing', t1, 'dtau', zeros(rcv.N,1), ...
+                'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
+            b = alpha .* (KL*slip);
+
+            % analytic periodic cycle: y0 just after the event, y(T) + b = y0
+            y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+
+            % enough cycles for the start-up transient to fall below 1e-8
+            rho = max(abs(exp(lambda*Trecur)));
+            nreps = ceil(log(1e-8)/log(rho)) + 1;
+            tc.assertLessThan(nreps, 20, sprintf('spin-up too slow: rho = %.3f', rho));
+            [~, t, ~, e22, e23] = evalc('runImposedEarthquakeCycles(rcv, shz, evl, sc, nreps, Trecur)');
+            Enum = [e22'; e23'];
+
+            % analytic state at each output time: time since the last event
+            post = [false; diff(t) == 0];                 % post-event copy of t1
+            tau = t - t1 + Trecur*(t < t1 | (t == t1 & ~post));
+            Ean = analyticSolveIVP(A, c, y0, tau');
+            scale = max(abs(Ean(:)));
+            tc.verifyEqual(Enum, Ean, 'AbsTol', 1e-6*scale, ...
+                sprintf('spun-up cycle (%d cycles, rho = %.3f) vs analytic periodic cycle', nreps, rho));
+
+            % without spin-up the first cycle is still far from periodic
+            % (compared at the end of the cycle)
+            [~, ~, ~, f22, f23] = evalc('runImposedEarthquakeCycles(rcv, shz, evl, sc, 1, Trecur)');
+            gap1 = max(abs([f22(end,:)'; f23(end,:)'] - Ean(:,end)));
+            tc.verifyGreaterThan(gap1, 1e-3*scale, 'one cycle from the long-term state is not yet periodic');
+        end
     end
 
     methods (Test)
