@@ -70,10 +70,48 @@ one. Rebuild the cached kernels below after changing the mesh.
 
 ## Pre-computed kernels
 
-`kernels/evl_orig.mat` and `kernels/devl.mat` hold the stress and displacement
-kernels for the example geometry. `evl_orig.mat` holds the default kernels of
-{mat:func}`computeAllStressKernelsBem` (3-point cell average, certified; see
-`evl_orig.certificate`). They are valid only for these meshes:
+`kernels/evl_orig.h5` and `kernels/devl.h5` hold the stress and displacement
+kernels for the example geometry. `evl_orig.h5` holds the default kernels of
+{mat:func}`computeAllStressKernelsBem` (3-point cell average, certified; see its
+`certificate` group). They are valid only for these meshes:
 after any change in geometry, recompute them with
 {mat:func}`computeAllStressKernelsBem` and
 {mat:func}`computeAllDisplacementKernelsBem`.
+
+### Kernel files (HDF5)
+
+Kernels are stored as HDF5 files, so they can be read outside MATLAB.
+{mat:func}`saveKernels` writes them and {mat:func}`loadKernels` reads them back
+into the same MATLAB struct:
+
+```matlab
+evl = computeAllStressKernelsBem(rcv, shz, boundary);
+saveKernels('kernels/evl_orig.h5', evl, 'rcv', rcv, 'shz', shz);
+evl = loadKernels('kernels/evl_orig.h5');
+```
+
+Layout (format `I2EC kernels`, version 1):
+
+| Path | Contents |
+| --- | --- |
+| `/KK`, `/KL`, `/LK`, `/LL` | stress kernel blocks (from {mat:func}`computeAllStressKernelsBem`) |
+| `/KO`, `/LO` | displacement kernel blocks (from {mat:func}`computeAllDisplacementKernelsBem`) |
+| `/certificate/...` | the check by {mat:func}`certifyMantleKernel`, if the kernel was certified |
+| `/options/...` | `cellaverage`, `kernelcertify`, `kernelmodify` used to build it |
+| `/geometry/fault/xc`, `W`, `dip` | fault patch centres (m), widths (m), dips (degrees) |
+| `/geometry/mantle/vertices`, `triangles`, `centroids`, `area` | mantle mesh; triangle indices are 1-based |
+| `/geometry/obs` | observation points of the displacement kernels (m) |
+
+Every dataset has `description` and `units` attributes. Arrays are written so
+that a row-major reader sees the MATLAB shape and index order:
+`f['KL'][i, j, c]` is MATLAB's `evl.KL(i+1, j+1, c+1)`. Scalars (the
+certificate values and options) are one-element arrays. In Python:
+
+```python
+import h5py
+with h5py.File("kernels/evl_orig.h5", "r") as f:
+    KK = f["KK"][:]                      # (N, N)
+    LL = f["LL"][:]                      # (M, M, 2, 2)
+    print(f["LL"].attrs["description"], f["LL"].attrs["units"])
+    area = f["geometry/mantle/area"][:]
+```

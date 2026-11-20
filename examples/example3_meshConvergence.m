@@ -9,8 +9,8 @@
 % and boundary meshes are the same in all three runs.
 %
 % Meshes are made with meshing/createShearZoneMesh (PDE Toolbox) and
-% their kernels (default: cell-averaged, certified) are cached in
-% kernels/meshconvergence/ (git-ignored). The first run computes them,
+% their kernels (default: cell-averaged, certified) are cached as HDF5
+% files in kernels/meshconvergence/ (git-ignored). The first run computes them,
 % about an hour for the fine mesh; later runs take about a minute.
 % Run from any folder:  run examples/example3_meshConvergence
 
@@ -37,15 +37,19 @@ for k = 1:numel(res)
     mk = exampleModel('ShearZone', fullfile(cachedir, name));   % fresh receivers
     shz = mk.shz;
 
-    kernelfile = fullfile(cachedir, ['evl_' name '.mat']);
+    kernelfile = fullfile(cachedir, ['evl_' name '.h5']);
+    oldfile = fullfile(cachedir, ['evl_' name '.mat']);   % cache of earlier versions
     if isfile(kernelfile)
-        load(kernelfile, 'evl');
-        assert(size(evl.LL,1) == shz.N, 'cached kernel does not match %s', name);
+        evl = loadKernels(kernelfile);
+    elseif isfile(oldfile)
+        load(oldfile, 'evl');
+        saveKernels(kernelfile, evl, 'rcv', mk.rcv, 'shz', shz);
     else
         fprintf('computing kernels for the %s mesh (%d cells)\n', res(k).name, shz.N);
         evl = computeAllStressKernelsBem(mk.rcv, shz, mk.boundary);
-        save(kernelfile, 'evl', '-v7.3');
+        saveKernels(kernelfile, evl, 'rcv', mk.rcv, 'shz', shz);
     end
+    assert(size(evl.LL,1) == shz.N, 'cached kernel does not match %s', name);
 
     cyc = newtonianCycle(mk.rcv, shz, evl, mk.Vpl, yr);
     sol = cyc.solve(tfrac*cyc.Trecur);

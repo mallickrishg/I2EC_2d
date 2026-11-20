@@ -58,6 +58,10 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 %                  deviatoric strain in shz; 3rd index = receiver stress
 %                  component (sigma22', sigma23), 4th index = source strain
 %                  component (e22, e23) (MPa)
+%             .certificate  result of certifyMantleKernel (certified
+%                  kernels only)
+%             .options  the cellaverage, kernelcertify and kernelmodify
+%                  values used
 %
 % NOTES
 %   - Cell averaging (default, 'cellaverage' 3) makes the mantle-mantle
@@ -211,6 +215,10 @@ end
 
 % change the growing modes (numerical solves only)
 evl = modifyGrowingModes(evl, modifykernel);
+
+% record how the kernels were built (stored by saveKernels)
+evl.options = struct('cellaverage', cellaverage, 'kernelcertify', double(logical(kernelcertify)), ...
+    'kernelmodify', modifykernel);
 toc
 
 %% compute stress interactions from shear zones to fault (LK kernels)

@@ -220,16 +220,66 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function cachedExampleKernelIsCertified(tc)
-            % kernels/evl_orig.mat holds the default (certified) kernels:
+            % kernels/evl_orig.h5 holds the default (certified) kernels:
             % no growing modes, area-weighted LL exactly symmetric
             e = tc.Ex.evl;
-            tc.verifyTrue(isfield(e, 'certificate'), 'kernels/evl_orig.mat is not a certified kernel');
+            tc.verifyTrue(isfield(e, 'certificate'), 'kernels/evl_orig.h5 is not a certified kernel');
             L = KernelsTest.deviatoricBlock(e);
             lam = eig(L);
             tc.verifyLessThanOrEqual(max(real(lam)), 1e-12*max(abs(lam)), ...
                 sprintf('%d eigenvalues with Re > 0', sum(real(lam) > 0)));
             S = [tc.Ex.shz.area; tc.Ex.shz.area] .* L;
             tc.verifyLessThan(norm(S - S', 'fro')/norm(S, 'fro'), 1e-12);
+        end
+
+        function kernelFilesRoundTrip(tc)
+            % saveKernels / loadKernels: exact round trip of the stress and
+            % displacement kernels, nested structs and geometry
+            folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+            m = tc.Sm;
+            f1 = fullfile(folder, 'evl.h5'); f2 = fullfile(folder, 'devl.h5');
+            saveKernels(f1, tc.EvlCert, 'rcv', m.rcv, 'shz', m.shz, 'description', 'test');
+            saveKernels(f2, tc.Devl, 'obs', m.obs);
+            [e, g, info] = loadKernels(f1);
+            tc.verifyEqual(e, tc.EvlCert, 'stress kernels, certificate and options');
+            tc.verifyEqual(loadKernels(f2), tc.Devl, 'displacement kernels');
+            tc.verifyEqual(g.mantle.vertices, m.shz.vert);
+            tc.verifyEqual(double(g.mantle.triangles), m.shz.tri);
+            tc.verifyEqual(g.fault.W, m.rcv.W);
+            tc.verifyEqual(info.format, 'I2EC kernels');
+            tc.verifyEqual(info.description, 'test');
+            [~, g2] = loadKernels(f2);
+            tc.verifyEqual(g2.obs, m.obs);
+        end
+
+        function kernelFilesShowTheMatlabShapeToRowMajorReaders(tc)
+            % h5info reports dimensions fastest-first; a row-major reader
+            % (h5py/NumPy) sees them reversed, which must be the MATLAB
+            % size, so f['KL'][i, j, c] = KL(i+1, j+1, c+1)
+            folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+            f = fullfile(folder, 'evl.h5');
+            saveKernels(f, tc.EvlCert);
+            for name = {'KK', 'KL', 'LK', 'LL'}
+                I = h5info(f, ['/' name{1}]);
+                tc.verifyEqual(fliplr(I.Dataspace.Size), size(tc.EvlCert.(name{1})), name{1});
+                tc.verifyFalse(isempty(h5readatt(f, ['/' name{1}], 'description')));
+            end
+            % one element read through the low-level, C-order interface
+            fid = H5F.open(f); did = H5D.open(fid, '/KL');
+            sid = H5D.get_space(did);
+            H5S.select_hyperslab(sid, 'H5S_SELECT_SET', [2 4 1], [], [1 1 1], []);   % C order, 0-based
+            msid = H5S.create_simple(1, 1, []);
+            v = H5D.read(did, 'H5ML_DEFAULT', msid, sid, 'H5P_DEFAULT');
+            H5S.close(msid); H5S.close(sid); H5D.close(did); H5F.close(fid);
+            tc.verifyEqual(v, tc.EvlCert.KL(3, 5, 2), 'KL[2,4,1] (0-based, row-major) = KL(3,5,2)');
+        end
+
+        function loadKernelsRejectsOtherFiles(tc)
+            folder = tc.applyFixture(matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+            tc.verifyError(@() loadKernels(fullfile(folder, 'none.h5')), 'loadKernels:missing');
+            f = fullfile(folder, 'other.h5');
+            h5create(f, '/x', 3); h5write(f, '/x', [1 2 3]');
+            tc.verifyError(@() loadKernels(f), 'loadKernels:format');
         end
 
         function invalidKernelModifyIsRejected(tc)
@@ -254,7 +304,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function cachedKernelsMatchCurrentMesh(tc)
-            % kernels/*.mat must be built on the meshes in inputs/
+            % kernels/*.h5 must be built on the meshes in inputs/
             e = tc.Ex.evl;
             tc.verifySize(e.KK, [tc.Ex.rcv.N tc.Ex.rcv.N]);
             tc.verifySize(e.LL, [tc.Ex.shz.N tc.Ex.shz.N 2 2]);
@@ -289,7 +339,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
     methods (Test, TestTags = {'Slow'})
         function cachedStressKernelsAreReproducible(tc)
             % rebuild evl_orig (default: certified 3-point) from inputs/ and
-            % compare to kernels/evl_orig.mat
+            % compare to kernels/evl_orig.h5
             % (minutes; catches a stale cache after a mesh or kernel change)
             m = tc.Ex;
             [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd)');

@@ -155,18 +155,29 @@ system damped again. They are regularisations, not physics.
   not used. It would add a particular solution, superposed once on the cycle
   response; the code does not compute it, and the background rate comes from
   the long-term solution instead.
-- **Mantle stress by finite differences.** The stress kernels of a triangle are
-  not evaluated from closed-form stresses: they are computed from the analytic
-  *displacement* by finite differences with a step of $10^{-6}$ times the
-  triangle's shortest edge (central in $x_2$, one-sided in $x_3$), at the cell
-  centroids, with the source's own anelastic strain removed inside the source
-  triangle ({mat:func}`computeStressPlaneStrainTriangleShearZoneFiniteDifference`).
-  Where the closed-form displacement is not finite (on edges or vertices),
-  tanh-sinh quadrature is used instead
-  ({mat:func}`computeDisplacementPlaneStrainTriangleShearZoneTanhSinh`).
-  This is the "regularised" stress kernel: it avoids the hypersingular
-  closed-form evaluation, but self- and neighbour interactions remain the
-  least accurate entries.
+- **Mantle stress from the differentiated displacement.** The stress kernels
+  of a triangle are the exact derivative of the closed-form *displacement*
+  (Barbot, 2018), generated with the Symbolic Math Toolbox
+  (`derivation/generateTriangleStress.m`), with the source's own anelastic
+  strain removed inside the source triangle
+  ({mat:func}`computeStressPlaneStrainTriangleShearZone`). The derivative of
+  each $\arctan(N/D)$ is written $(N'D - ND')/(N^2 + D^2)$, so it is smooth
+  where the $\arctan$ jumps. Some terms behave like $\arctan(N/D)/D$ and
+  cancel only between the two ends of an edge: on the line through an edge of
+  the image triangle, and through a horizontal or vertical edge, the closed
+  form loses accuracy like $10^{-13}(r/d)^2$ (distance $d$ from the line, $r$
+  from the edge). Within $d < 10^{-2} r$ that edge's contribution is instead
+  integrated numerically (Gauss-Legendre or tanh-sinh quadrature of the
+  differentiated Green's function). The result agrees with an independent
+  quadrature to about $10^{-12}$ (worst $2 \times 10^{-9}$), satisfies Betti
+  reciprocity to rounding and is about 10 times faster to build than the
+  earlier finite-difference stress
+  ({mat:func}`computeStressPlaneStrainTriangleShearZoneFiniteDifference`, step
+  $10^{-6}$ of the shortest edge, errors of $10^{-6}$ typical and up to
+  $10^{-4}$ of the self term), which is kept for comparison
+  (`geometry.computeShzStressKernels(src, shz, 'finitedifference')`). On a
+  triangle's own edges and vertices the stress is singular or discontinuous;
+  cell-averaged kernels never evaluate it there.
 - **Deviatoric projection.** `KL`, `LK` and `LL` are combinations of the full
   $\sigma_{22}, \sigma_{23}, \sigma_{33}$ kernels with $\epsilon_{33} =
   -\epsilon_{22}$ imposed. The source code flags the index construction of
@@ -302,7 +313,7 @@ Consequences to keep in mind when using these treatments (centroid kernels only)
   how large they are (`[~, lambda] = negateGrowingModes(A)` against
   `eig(A)`).
 - Recompute the kernels after any geometry change; the files in `kernels/`
-  match the example meshes only, and `evl_orig.mat` holds the default
+  match the example meshes only, and `evl_orig.h5` holds the default
   (cell-averaged, certified) kernels; `evl_orig.certificate` records the
   check.
 - `tests/test_negate_exact_solver.m` checks the semi-analytical solver

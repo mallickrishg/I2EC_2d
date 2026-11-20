@@ -156,5 +156,5 @@ fixed. See `tests/README.md` for how to read the results.
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
 | `meshing/` | `createShearZoneMesh.m`: builds the triangular shear-zone mesh (PDE Toolbox). |
 | `inputs/` | Example fault, boundary and shear-zone geometry files. |
-| `kernels/` | Pre-computed stress (`evl_orig.mat`) and displacement (`devl.mat`) kernels. |
+| `kernels/` | Pre-computed stress (`evl_orig.h5`) and displacement (`devl.h5`) kernels, as HDF5 (see {doc}`inputs`). |
 | `tests/` | Test suite (`matlab.unittest`); see `tests/README.md`. |

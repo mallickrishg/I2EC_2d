@@ -44,7 +44,7 @@ Trecur = 500 * yr;  Vpl = 1e-9;
 earthModel = geometry.LDhs(mu, nu);
 rcv = geometry.receiver(fullfile(root, 'inputs', 'megathrust2d.seg'), earthModel);
 shz = geometry.shearZoneReceiver(fullfile(root, 'inputs', 'shearzone'), earthModel);
-load(fullfile(root, 'kernels', 'evl_orig.mat'), 'evl_orig');
+evl_orig = loadKernels(fullfile(root, 'kernels', 'evl_orig.h5'));
 
 % Rheology (I2EC example)
 rcv.Asigma = 1e-6 .* (5e17 / (sum(~rcv.pinnedPosition .* rcv.W))) .* ones(rcv.N, 1);
