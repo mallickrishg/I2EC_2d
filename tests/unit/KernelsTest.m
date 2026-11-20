@@ -343,11 +343,12 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             % (minutes; catches a stale cache after a mesh or kernel change)
             m = tc.Ex;
             [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd)');
-            % KK, KL come from closed-form line-dislocation stresses;
-            % LK, LL from the finite-difference triangle stress (step 1e-6 of
-            % the shortest edge), which reproduces only to ~1e-5 (measured
-            % max 1e-5, median 3e-6 relative, 2026-11-19)
-            tol = struct('KK', 1e-8, 'KL', 1e-8, 'LK', 1e-4, 'LL', 1e-4);
+            % every block is closed form (line dislocations for KK, KL; the
+            % differentiated triangle displacement for LK, LL, since
+            % 2026-11-20), so the cache reproduces to rounding. A cache built
+            % with the earlier finite-difference triangle stress differs by
+            % ~1e-5 in LK and 4e-5 in LL and fails here
+            tol = struct('KK', 1e-8, 'KL', 1e-8, 'LK', 1e-8, 'LL', 1e-8);
             for f = {'KK', 'KL', 'LK', 'LL'}
                 ref = m.evl.(f{1});
                 tc.verifyEqual(e.(f{1}), ref, 'AbsTol', tol.(f{1})*max(abs(ref(:))), f{1});

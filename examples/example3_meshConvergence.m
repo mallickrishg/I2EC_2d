@@ -11,7 +11,7 @@
 % Meshes are made with meshing/createShearZoneMesh (PDE Toolbox) and
 % their kernels (default: cell-averaged, certified) are cached as HDF5
 % files in kernels/meshconvergence/ (git-ignored). The first run computes them,
-% about an hour for the fine mesh; later runs take about a minute.
+% about a minute for the fine mesh; later runs load them.
 % Run from any folder:  run examples/example3_meshConvergence
 
 clear
