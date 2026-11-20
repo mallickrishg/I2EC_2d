@@ -39,11 +39,9 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %     (x positive away from the trench, z negative below the surface), and
 %     in the oceanic mantle otherwise.
 %   - The corner-flow solutions are singular at their origin (the corner).
-%     The two translations move each region into the corner-flow frame and
-%     keep the evaluation points away from that singularity; 1 m is also
-%     subtracted from both z shifts. Tune them to the mesh.
-%   - Wedge cells use column 1 (continental arc) of
-%     computeCornerflowVelocityfield, oceanic cells column 2.
+%     The two translations move each region into the corner-flow frame
+%     (cornerFlowVelocity, which also subtracts 1 m from the z shift to
+%     keep points off the corner). Tune them to the mesh.
 %   - The planar fit assumes the velocity varies little across a cell, so
 %     it is accurate for cells that are small compared with their distance
 %     from the corner.
@@ -52,13 +50,14 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %
 % EXAMPLE
 %   dip = 45*pi/180;
-%   ocean_trans = [0, -20e3];       % oceanic lithosphere ~20 km thick
-%   cont_trans = [-140e3, -35e3];   % offset from trench, ~35 km thick
+%   ocean_trans = [0, 20e3];        % oceanic lithosphere ~20 km thick
+%   cont_trans = [-140e3, 35e3];    % offset from trench, ~35 km thick
 %   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ocean_trans, ...
 %                                           cont_trans, 1);
 %
 % SEE ALSO
-%   computeCornerflowVelocityfield, computeLongTermVelocity
+%   cornerFlowVelocity, computeCornerflowVelocityfield,
+%   computeLongTermVelocity
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2025
@@ -67,48 +66,25 @@ if nargin < 5
     n = 1;
 end
 
-% rescale parameters: move the shz the x and z coordinates because corner flow solutions are at (0,0)
-% Note: Don't move to 0 because solutions are not well defined at 0,0. These
-% parameters have to be adjusted based on how the mesh is created. 
-
-oceanic_x_translate = ocean_translate_params(1); % x translation (relative to trench)
-oceanic_z_translate = ocean_translate_params(2) - 1;% plate thickness ~ 20e3 (shift slightly)
-
-continental_x_translate = continental_translate_params(1);%-140e3; % note: move to wedge (and not to 0,0)
-continental_z_translate = continental_translate_params(2) - 1;% continental plate thickness ~ 35e3 (shift slightly)
-
-% long-term strain rates
+% the corner-flow frame of each region (cornerFlowVelocity applies the
+% translations, which have to be adjusted to how the mesh is made)
 e22_dev = zeros(shz.N,1);
 e23 = zeros(shz.N,1);
+wedge = shz.xc(:,2) + shz.xc(:,1).*tan(dip) >= 0;
 
 % loop through all triangles
 for i = 1:shz.N
-
-    % check whether the vertices are in the continental or oceanic mantle
-    kk = shz.xc(i,2) + shz.xc(i,1).*tan(dip);
-
-    if kk >= 0
-        % continental mantle
-        % Triangle co-ordinates are shifted
-        Cx = [shz.A(i,1),shz.B(i,1),shz.C(i,1),shz.xc(i,1)]' + continental_x_translate;
-        Cz = [shz.A(i,2),shz.B(i,2),shz.C(i,2),shz.xc(i,2)]' + continental_z_translate;
-        % Velocity vectors
-        [Vx,Vz]     = computeCornerflowVelocityfield(dip,Cx,Cz,n);
-        Vx = Vx(:,1);
-        Vz = Vz(:,1);
-
+    % velocity at the three vertices and the centroid
+    Cx = [shz.A(i,1),shz.B(i,1),shz.C(i,1),shz.xc(i,1)]';
+    Cz = [shz.A(i,2),shz.B(i,2),shz.C(i,2),shz.xc(i,2)]';
+    if wedge(i)
+        [Vx, Vz] = cornerFlowVelocity(dip, Cx, Cz, 'wedge', continental_translate_params, n);
     else
-        % oceanic mantle
-        % Triangle co-ordinates are shifted
-        Cx = [shz.A(i,1),shz.B(i,1),shz.C(i,1),shz.xc(i,1)]' + oceanic_x_translate;
-        Cz = [shz.A(i,2),shz.B(i,2),shz.C(i,2),shz.xc(i,2)]' + oceanic_z_translate;
-        % Velocity vectors
-        [Vx,Vz]     = computeCornerflowVelocityfield(dip,Cx,Cz,n);
-        Vx = Vx(:,2);
-        Vz = Vz(:,2);
-    end    
+        [Vx, Vz] = cornerFlowVelocity(dip, Cx, Cz, 'ocean', ocean_translate_params, n);
+    end
 
-    % Build the system
+    % Build the system (in model coordinates: the frame is a translation,
+    % so the gradient is the same)
     A = [ones(length(Cx),1) Cx Cz zeros(length(Cx),3);
         zeros(length(Cx),3) ones(length(Cx),1) Cx Cz];   % 6x6
     b = [Vx; Vz];

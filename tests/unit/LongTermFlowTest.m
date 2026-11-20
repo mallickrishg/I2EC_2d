@@ -1,7 +1,6 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unittest.TestCase
     %LONGTERMFLOWTEST  Corner-flow loading: computeCornerflowVelocityfield,
-    % compute_cornerflow_velocityfield (old), getStrainratesLongterm,
-    % computeLongTermVelocity.
+    % cornerFlowVelocity, getStrainratesLongterm, computeLongTermVelocity.
     %
     % Corner flow is checked against its own boundary conditions
     % (arc: v = 0 at the surface, v = slab velocity on the slab; ocean:
@@ -98,14 +97,21 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
             end
         end
 
-        function oldAndNewNewtonianCornerFlowAgree(tc)
-            % compute_cornerflow_velocityfield (used by computeLongTermVelocity)
-            % vs computeCornerflowVelocityfield(n = 1) (used by getStrainratesLongterm)
+        function regionVelocityIsShiftedCornerFlow(tc, n)
+            % cornerFlowVelocity: the region's column of the corner flow at
+            % (x + dx, z + dz - 1)
             [X, Z] = tc.wedgeGrid();
-            [vx1, vz1] = computeCornerflowVelocityfield(tc.Dip, X, Z, 1);
-            [vx0, vz0] = compute_cornerflow_velocityfield(tc.Dip, X, Z);
-            tc.verifyEqual(vx0, vx1, 'AbsTol', 1e-10*max(abs(vx1(:))));
-            tc.verifyEqual(vz0, vz1, 'AbsTol', 1e-10*max(abs(vz1(:))));
+            s = [-0.3 0.2];
+            [vx, vz] = computeCornerflowVelocityfield(tc.Dip, X + s(1), Z + s(2) - 1, n);
+            [wx, wz] = cornerFlowVelocity(tc.Dip, X, Z, 'wedge', s, n);
+            [ox, oz] = cornerFlowVelocity(tc.Dip, X, Z, 'ocean', s, n);
+            tc.verifyEqual([wx wz], [vx(:,1) vz(:,1)]);
+            tc.verifyEqual([ox oz], [vx(:,2) vz(:,2)]);
+        end
+
+        function unknownRegionIsRejected(tc)
+            tc.verifyError(@() cornerFlowVelocity(tc.Dip, 1, -1, 'slab', [0 0]), ...
+                'cornerFlowVelocity:region');
         end
 
         function invalidExponentIsRejected(tc)
@@ -144,8 +150,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         end
 
         function longTermVelocityUsesSameCornerFlowAsStrainRates(tc)
-            % computeLongTermVelocity (old corner flow, polygon regions) vs the
-            % corner flow behind getStrainratesLongterm, in the oceanic mantle
+            % computeLongTermVelocity (polygon regions) vs the corner flow
+            % behind getStrainratesLongterm, in the oceanic mantle
             rcv = tc.Ex.rcv; shz = tc.Ex.shz; bnd = tc.Ex.bnd;
             dipdeg = rcv.dip(1);
             X = [150e3; 250e3; 300e3; 100e3];

@@ -25,10 +25,10 @@ function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 % NOTES
 %   - Both columns are evaluated at every point; the caller picks the column
 %     for the region each point lies in.
-%   - The solution is singular at the corner (origin). Callers translate the
-%     coordinates of each region (ocean/continental translate parameters in
-%     getStrainratesLongterm) to keep points away from it; r = 0 is set to
-%     r^2 = Inf in the Newtonian branch.
+%   - The solution is singular at the corner (origin). cornerFlowVelocity
+%     translates model points into this frame for each region (the
+%     ocean/continental translate parameters) and keeps them away from
+%     it; r = 0 is set to r^2 = Inf in the Newtonian branch.
 %   - Wedge: fixed upper surface, slab moving down-dip. Oceanic mantle:
 %     incoming plate moving at unit speed, slab moving down-dip.
 %   - For n = 3 the four coefficients of each region come from the
@@ -44,7 +44,7 @@ function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 %   [Vx, Vz] = computeCornerflowVelocityfield(dip, x(:), z(:), 1);
 %
 % SEE ALSO
-%   getStrainratesLongterm, compute_cornerflow_velocityfield
+%   cornerFlowVelocity, getStrainratesLongterm, computeLongTermVelocity
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2025
