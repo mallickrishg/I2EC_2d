@@ -15,7 +15,7 @@ addpath tests; runTests('all')   % + kernel rebuild and MAIN scripts
 
 Tests tagged `KnownIssue` check the *correct* behaviour of the bugs listed in §0. They fail today. When one starts passing, remove its tag.
 
-## Still open (2026-11-20)
+## Still open (2026-11-20, checked against `main` after PRs #12 and #13)
 
 Everything else in this file is done. Details are in the sections named.
 
@@ -38,11 +38,11 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §1: one corner-flow implementation (switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)`, delete the old one); one helper for the translate/rescale block; `computeInterseismicSteadystate` hard-coded geometry.
 - [ ] §2: write down the rule for `+geometry/` vs `functions/`.
 - [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`, `computeInterseismicSteadystate`; optional `filenameGenerator` tidy-up.
-- [ ] §4: naming convention, snake_case renames, `+geometry` class names, third-party credits.
+- [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
 - [ ] §6: a regeneration script or hash check for `kernels/*.h5`.
 - [ ] §7: one `setup.m`.
 - [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
-- [ ] §9: one help-block format; README dependency list.
+- [x] ~~§9: one help-block format; README dependency list.~~ *Done: every help block has an H1 line and INPUTS/OUTPUTS; the README no longer has a dependency list (rewritten in #13).*
 
 ---
 
@@ -264,7 +264,7 @@ Tasks:
   - `create_megathrust` → `createMegathrust`
   - `egh_modal` → `eghModal` (or a more descriptive name)
 - [ ] Decide whether to rename the `+geometry` classes (`receiver`, `shearZoneReceiver`, `earthModel`, `fpatch`, `shzpatch`). Renaming them changes the public API for anyone with existing scripts.
-- [ ] Leave third-party files under their original names: `bluewhitered`, `cline`, `drchrnd`, `LDdispHS`, `LDstressHS`. Credit their source in a header or a `THIRD_PARTY.md`.
+- [ ] Leave third-party files under their original names: `bluewhitered`, `cline`, `drchrnd`, `LDdispHS`, `LDstressHS`. Credit their source under "Third-party components" in `docs/contributors.md` (it already credits CutAndDisplace for `LDdispHS`/`LDstressHS`, Barbot 2018 and the PDE Toolbox; `bluewhitered`, `cline` and `drchrnd` are still missing).
 - [x] ~~Bring the example and entry-point scripts in line with each other (`MAIN_analyticsolve_singleeqcycle.m`, `MAIN_i2ec_singleeqcycle.m`, `PLOT_longtermVelocity.m`). Consider moving them into `examples/`.~~ *Done (2026-11-20): replaced by `examples/` (example1_numericalPowerLaw, example2_analyticNewtonian, example3_meshConvergence, example4_analyticVsNumerical, plotLongtermVelocity), which share `exampleModel` and `newtonianCycle`, run from any folder and are run by `ExampleScriptsTest`.*
 
 ## 5. `meshing/` folder
@@ -288,13 +288,13 @@ Tasks:
 - [x] ~~Test suite in `tests/` (`matlab.unittest`, runner `tests/runTests.m`, guide `tests/README.md`): 84 fast tests (Green's functions, geometry, BEM kernels, corner flow, solvers, ODE path, utilities, legacy code), plus a slow tier that rebuilds the example kernels and runs the MAIN scripts.~~
 - [ ] Run `runTests` in CI with `matlab-actions/setup-matlab` + `run-command`. The runner exits non-zero only on unexpected failures, so `KnownIssue` tests don't block CI. Needs a MATLAB licence in CI (free for public repos via MathWorks' GitHub actions); Parallel Computing Toolbox is optional (`parfor` runs serially without it).
 - [ ] Remove each `KnownIssue` tag as its bug in §0 is fixed.
-- [ ] The docs workflow (`.github/workflows/docs.yml`) only builds Sphinx. → Add `docs/_ext/check_help.py`, or a similar check, to CI so every documented function exists and has a help block.
+- [ ] The docs workflow (`.github/workflows/docs.yml`) only builds Sphinx (`docs/build.sh`). `docs/_ext/check_help.py` exists and exits 1 on a failed check, but only runs by hand. → Run it in CI so every documented function exists and has a help block.
 
 ## 9. Documentation clean-up (after the deletions above)
 
 - [x] ~~Remove the docs entries for deleted functions in `docs/api/kernels.rst`, `solvers.rst`, `utilities.rst` and `longterm.rst`.~~ *Every `mat:autofunction` entry now points at an existing function (checked 2026-11-20).*
-- [ ] Bring help blocks into one format (H1 line, INPUTS/OUTPUTS, author). Several files have no H1 line (for example `computeSiteVelocitiesBem`, `assembleStressKernel`), or have a stale name in it (`computeKLmodesMesh`).
-- [ ] Bring the README's "Code Dependencies" list up to date (bluewhitered, cline, drchrnd sources).
+- [x] ~~Bring help blocks into one format (H1 line, INPUTS/OUTPUTS, author). Several files have no H1 line (for example `computeSiteVelocitiesBem`, `assembleStressKernel`), or have a stale name in it (`computeKLmodesMesh`).~~ *Done (checked 2026-11-20): every file in `functions/` and `+geometry/` has an H1 line naming itself, and every file in `functions/` has INPUTS/OUTPUTS.*
+- [x] ~~Bring the README's "Code Dependencies" list up to date (bluewhitered, cline, drchrnd sources).~~ *Superseded: the README was rewritten around the documentation website (#13) and has no dependency list. Credits live in `docs/contributors.md`; the missing ones are tracked in §4.*
 
 ## 11. Analytic stress of a strained triangle (2026-11-20, branch `analytic-triangle-stress`)
 
