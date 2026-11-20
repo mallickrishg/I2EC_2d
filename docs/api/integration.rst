@@ -13,3 +13,5 @@ Time-stepping solver for general (including power-law) rheology.
 
 .. mat:autofunction:: extract_v_edot_from_statevector
 
+
+.. mat:autofunction:: isLinearFaultLaw

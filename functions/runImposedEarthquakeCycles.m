@@ -67,7 +67,12 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 
 % create initial values as perturbations about steady-state values
 Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
-logV_0 = log(rcv.Vpl);
+% fault state: log(v), or v for the linear viscous fault law
+if isLinearFaultLaw(rcv)
+    logV_0 = rcv.Vpl;
+else
+    logV_0 = log(rcv.Vpl);
+end
 
 % TODO - change from strain rate to stress
 edot_pl = sqrt(shz.e22pl.^2 + shz.e23pl.^2);

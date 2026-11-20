@@ -20,8 +20,15 @@ classdef receiver < geometry.fpatch
 %                   velocity (m/s), a, b, and characteristic slip (m);
 %                   defaults only, not used by the I2EC solvers
 %   sigma           [N x 1] fault-normal stress (MPa); default only
-%   Asigma          [N x 1] rate-dependence (a-b)*sigma (MPa); the linear
-%                   solvers use it as a viscosity per unit length
+%   Asigma          [N x 1] rate-dependence (a-b)*sigma (MPa) for the
+%                   rate-strengthening fault law; for faultLaw = 'linear'
+%                   and in the semi-analytical solvers, a viscosity per
+%                   unit length eta' (MPa s/m), with tau = eta' * v
+%   faultLaw        fault law of the numerical integration (char):
+%                   'ratestrengthening' (default), d log(v)/dt =
+%                   (dtau/dt)/Asigma, state log(v); or 'linear' (linear
+%                   viscous, as in the semi-analytical solvers),
+%                   dv/dt = (dtau/dt)/Asigma, state v
 %   mu0             [N x 1] friction coefficient at Vo; default only
 %   Vpl             [N x 1] long-term slip rate (m/s), or the
 %                   boundary-condition type for the model boundary
@@ -29,7 +36,8 @@ classdef receiver < geometry.fpatch
 %   pinnedPosition  [N x 1] 1 for locked patches (zero slip rate between
 %                   earthquakes), 0 otherwise
 %   dgf             [1 x 1] degrees of freedom per patch in the state
-%                   vector of the numerical integration (1: log slip rate)
+%                   vector of the numerical integration (1: log(v), or v
+%                   for faultLaw = 'linear')
 %   plus the geometry inherited from geometry.fpatch (N, x, xc, W, dip,
 %   slip, dv, nv, earthModel)
 %
@@ -44,9 +52,13 @@ classdef receiver < geometry.fpatch
         Vo;a;b;l;
         % fault-normal stress [N x 1] (MPa); default, unused by I2EC
         sigma;
-        % rate dependence (a-b)*sigma [N x 1] (MPa); the linear solvers use
-        % it as a viscosity per unit length
+        % rate dependence (a-b)*sigma [N x 1] (MPa); for faultLaw 'linear'
+        % and in the semi-analytical solvers, a viscosity per unit length
+        % (MPa s/m)
         Asigma;
+        % fault law of the numerical integration: 'ratestrengthening'
+        % (default; state log(v)) or 'linear' (linear viscous; state v)
+        faultLaw = 'ratestrengthening';
         % friction coefficient at the reference velocity [N x 1]; default
         mu0;
         % long-term slip rate [N x 1] (m/s); boundary-condition type for the

@@ -9,7 +9,8 @@ function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,st
 %   Trecur. A cycle with K imposed events at times T1 < ... < TK has K+1
 %   segments, [0,T1], [T1,T2], ..., [TK,Trecur]; each segment after the
 %   first starts by applying the stress change of the event at its start.
-%   An event adds dtau/Asigma to log(v) on each fault patch and dsigma22,
+%   An event adds dtau/Asigma to the fault state on each patch (log(v),
+%   or v for rcv.faultLaw = 'linear'; see ode_viscoelastic) and dsigma22,
 %   dsigma23 to the mantle stresses. Each cycle starts from the final
 %   state of the previous one, and only the last cycle is returned.
 %
@@ -22,8 +23,9 @@ function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,st
 %   stress_change  struct of imposed events (any number K >= 1)
 %                  .Nevents         number of events per cycle, K
 %                  .Timing          [1 x K] increasing event times from
-%                                   the start of the cycle, 0 < T < Trecur
-%                                   (s)
+%                                   the start of the cycle, 0 <= T < Trecur
+%                                   (s); an event at 0 is applied to the
+%                                   initial state
 %                  .dtau            [N x K] shear stress change (MPa)
 %                  .dsigma22        [M x K] change in s22 (MPa)
 %                  .dsigma23        [M x K] change in s23 (MPa)
@@ -40,7 +42,8 @@ function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,st
 %     InitialStep = 1e-6 s and MaxStep = 1e8 s, restarted on each segment.
 %     The system is autonomous, so each segment is integrated from t = 0.
 %   - Each event time appears twice in tfull: the states just before and
-%     just after the stress step.
+%     just after the stress step (an event at t = 0 appears once, after
+%     the step).
 %   - With nreps > 1, prints the cycle number at the start of each cycle.
 %   - The cycle boundary is kept as a segment end (with no stress step),
 %     so the returned cycle starts exactly at t = 0.
@@ -59,9 +62,9 @@ if numel(Tk) ~= stress_change.Nevents
     error('viscoeq_sequence_simulation:events', ...
         'stress_change.Timing must have Nevents = %d entries.', stress_change.Nevents);
 end
-if isempty(Tk) || any(diff(Tk) <= 0) || Tk(1) <= 0 || Tk(end) >= Trecur
+if isempty(Tk) || any(diff(Tk) <= 0) || Tk(1) < 0 || Tk(end) >= Trecur
     error('viscoeq_sequence_simulation:timing', ...
-        'Event times must be strictly increasing and lie strictly between 0 and Trecur.');
+        'Event times must be strictly increasing, with 0 <= T < Trecur.');
 end
 
 options = odeset('Refine',1,'AbsTol',1e-10,'RelTol',1e-10,'InitialStep',1e-6,'MaxStep',1e8);
@@ -79,6 +82,9 @@ for s = 1:numel(seg)
     end
     if j > 1                                   % event j-1 starts segment j
         y = applyStressStep(y, rcv, shz, stress_change, j-1);
+    end
+    if tb(j+1) == tb(j)                        % event at t = 0: no segment
+        continue
     end
     [t, Y] = ode45(y_odefunction, [0 tb(j+1)-tb(j)], y, options);
     y = Y(end,:)';

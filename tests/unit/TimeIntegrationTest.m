@@ -28,6 +28,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             rcv.Vpl = tc.Vpl * ones(rcv.N, 1);
             rcv.Asigma = 0.5 * ones(rcv.N, 1);
             rcv.pinnedPosition = false(rcv.N, 1);
+            rcv.faultLaw = 'ratestrengthening';   % rcv is a handle: reset per test
             shz.n = ones(shz.N, 1);
             shz.alpha = 1/(1e19*1e-6) * ones(shz.N, 1);
             shz.e22pl = 1e-15 * linspace(-1, 1, shz.N)';
@@ -118,7 +119,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             run = @(T) viscoeq_sequence_simulation(f, Y0, rcv, shz, ...
                 setfield(sc, 'Timing', T), Trecur); %#ok<SFLD>
             tc.verifyError(@() run(sc.Timing([2 1 3 4 5])), 'viscoeq_sequence_simulation:timing');
-            tc.verifyError(@() run([0 sc.Timing(2:end)]), 'viscoeq_sequence_simulation:timing');
+            tc.verifyError(@() run([-1 sc.Timing(2:end)]), 'viscoeq_sequence_simulation:timing');
             tc.verifyError(@() run([sc.Timing(1:end-1) Trecur]), 'viscoeq_sequence_simulation:timing');
             tc.verifyError(@() run(sc.Timing(1:4)), 'viscoeq_sequence_simulation:events');
         end
@@ -205,6 +206,76 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
             tc.verifySize(V, [numel(t) rcv.N]);
             tc.verifySize(e22, [numel(t) shz.N]);
+        end
+
+        function eventAtTimeZeroIsAppliedToTheInitialState(tc)
+            % Timing = 0: the first state returned is the initial state
+            % plus the stress step, at t = 0, and appears only once
+            [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
+            sc.Timing(1) = 0;
+            [t, Y] = viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur);
+            tc.verifyEqual(t(1), 0);
+            tc.verifyNotEqual(t(2), 0, 'no pre-event copy at t = 0');
+            iV = 1:rcv.N;
+            tc.verifyEqual(Y(1,iV)', Y0(iV) + sc.dtau(:,1)./rcv.Asigma, 'AbsTol', 1e-12);
+            tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
+        end
+
+        function linearFaultCycleMatchesAnalyticSolver(tc)
+            % rcv.faultLaw = 'linear' (tau = Asigma*v) with an n = 1 mantle
+            % is the ODE of the semi-analytical solver, creeping fault
+            % included. Start the numerical solve from the analytic
+            % periodic state just before the earthquake (event at t = 0),
+            % integrate one cycle, and compare slip and strain rates.
+            rcv = tc.M.rcv; shz = tc.M.shz;
+            rcv.faultLaw = 'linear';
+            locked = (1:rcv.N)' <= rcv.N/3;               % shallow third locked
+            rcv.pinnedPosition = locked;
+            rcv.Asigma = 1e-6*(5e17/sum(rcv.W)) * ones(rcv.N, 1);   % viscosity per unit length
+            shz.alpha = 1/(1e18*1e-6) * ones(shz.N, 1);
+            [~, evl] = evalc('computeAllStressKernelsBem(tc.M.rcv, tc.M.shz, tc.M.bnd)');
+
+            % analytic operator and forcing, as in the analytic example
+            Ns = shz.N; Nc = sum(~locked);
+            visc = [rcv.Asigma(~locked); 1./shz.alpha; 1./shz.alpha];
+            A = assembleStressKernel(evl, locked) ./ visc;
+            vlock = rcv.Vpl .* locked;
+            c = -[evl.KK(~locked,:)*vlock; evl.KL(:,:,1)*vlock; evl.KL(:,:,2)*vlock]./visc ...
+                - A*[rcv.Vpl(~locked); shz.e22pl; shz.e23pl];
+            Trecur = 100*tc.yr;
+            slip = 2 * locked;
+            sc = struct('Nevents', 1, 'Timing', 0, 'dtau', evl.KK*slip, ...
+                'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
+            b = [sc.dtau(~locked); sc.dsigma22; sc.dsigma23] ./ visc;
+            y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+
+            % numerical state just before the event: [v; s22, s23 interleaved]
+            ypre = y0 - b;
+            Y0 = zeros(rcv.N + 2*Ns, 1);
+            Y0(~locked) = ypre(1:Nc);
+            Y0(rcv.N+1:2:end) = ypre(Nc+1:Nc+Ns) ./ shz.alpha;
+            Y0(rcv.N+2:2:end) = ypre(Nc+Ns+1:end) ./ shz.alpha;
+            [t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+                Y0, rcv, shz, sc, Trecur);
+            [V, e22, e23] = extract_v_edot_from_statevector(Y, rcv, shz);
+
+            Ean = analyticSolveIVP(A, c, y0, t');
+            Vscale = max(abs(Ean(1:Nc,:)), [], 'all');
+            Escale = max(abs(Ean(Nc+1:end,:)), [], 'all');
+            tc.verifyEqual(V(:,~locked)', Ean(1:Nc,:), 'AbsTol', 1e-6*Vscale, 'fault slip rate');
+            tc.verifyEqual([e22'; e23'], Ean(Nc+1:end,:), 'AbsTol', 1e-6*Escale, 'mantle strain rate');
+            tc.verifyEqual(V(:,locked), zeros(numel(t), sum(locked)), 'locked patches do not slip');
+            % the cycle closes: the end state is the start state (locked
+            % patches excluded: their fault state evolves but is not used)
+            used = [~locked; true(2*Ns, 1)];
+            tc.verifyEqual(Y(end,used)', Y0(used), 'AbsTol', 1e-6*max(abs(Y0(used))), 'periodic');
+        end
+
+        function unknownFaultLawIsRejected(tc)
+            rcv = tc.M.rcv; shz = tc.M.shz;
+            rcv.faultLaw = 'plastic';
+            Y = zeros(rcv.N + 2*shz.N, 1);
+            tc.verifyError(@() ode_viscoelastic(0, Y, rcv, shz, tc.Evl), 'isLinearFaultLaw:unknown');
         end
     end
 
