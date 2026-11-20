@@ -96,8 +96,8 @@ for k = 1:numel(res)
 end
 colormap(turbo(30))
 cb = colorbar; cb.Layout.Tile = 'east';
+cb.Label.Interpreter = 'latex';     % before the string, which is LaTeX
 cb.Label.String = 'strain rate $\sqrt{\dot\epsilon_{22}^2 + \dot\epsilon_{23}^2}$ (1/s)';
-cb.Label.Interpreter = 'latex';
 title(tl, 'Mantle strain rate over the earthquake cycle on three meshes')
 
 %% plot: profiles through all three meshes
