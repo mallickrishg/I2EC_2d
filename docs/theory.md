@@ -75,7 +75,7 @@ with the fluidity `shz.alpha` $= 1/\eta$ in the Newtonian case ($n = 1$) and
   set `rcv.faultLaw = 'linear'` (read by {mat:func}`isLinearFaultLaw`). The
   state is then $v$ instead of $\log v$, so $v$ may become negative. With
   $n = 1$ both solvers then integrate the same linear equations, which
-  {doc}`examples` (example 4) uses to check one against the other.
+  {doc}`examples/example4` uses to check one against the other.
 
 Locked patches (`rcv.pinnedPosition`) have $v = 0$ between earthquakes and are
 removed from the unknowns. Earthquakes are imposed: the slip deficit of the
