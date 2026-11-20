@@ -175,11 +175,9 @@ system damped again. They are regularisations, not physics.
   differentiated Green's function). The result agrees with an independent
   quadrature to about $10^{-12}$ (worst $2 \times 10^{-9}$), satisfies Betti
   reciprocity to rounding and is about 10 times faster to build than the
-  earlier finite-difference stress
-  ({mat:func}`computeStressPlaneStrainTriangleShearZoneFiniteDifference`, step
-  $10^{-6}$ of the shortest edge, errors of $10^{-6}$ typical and up to
-  $10^{-4}$ of the self term), which is kept for comparison
-  (`geometry.computeShzStressKernels(src, shz, 'finitedifference')`). On a
+  finite-difference stress it replaced (removed; step $10^{-6}$ of the
+  shortest edge, errors of $10^{-6}$ typical and up to $10^{-2}$ near the
+  edge lines). On a
   triangle's own edges and vertices the stress is singular or discontinuous;
   cell-averaged kernels never evaluate it there.
 - **Deviatoric projection.** `KL`, `LK` and `LL` are combinations of the full

@@ -1,17 +1,14 @@
-function LL = computeShzStressKernels(src,shz,method)
+function LL = computeShzStressKernels(src,shz)
 % COMPUTESHZSTRESSKERNELS  Half-space stress from strain in triangular zones.
 %
 %   LL = geometry.computeShzStressKernels(src, shz)
-%   LL = geometry.computeShzStressKernels(src, shz, 'finitedifference')
 %
 %   Stress (or fault traction) at the receivers due to a unit eigenstrain
 %   in each triangle of src, in a homogeneous elastic half-space. Each
 %   source triangle is loaded with unit exx, exz and ezz, and the stress
 %   is evaluated at the receiver centres with
 %   computeStressPlaneStrainTriangleShearZone (closed-form derivative of
-%   the displacement of Barbot, 2018), or with the older
-%   computeStressPlaneStrainTriangleShearZoneFiniteDifference. If the
-%   receivers are fault patches, the stress is projected to shear and
+%   the displacement of Barbot, 2018). If the receivers are fault patches, the stress is projected to shear and
 %   normal traction.
 %
 % INPUTS
@@ -25,7 +22,6 @@ function LL = computeShzStressKernels(src,shz,method)
 %           .xc          [Nr x 2] receiver points (m, z negative)
 %           .dv, .nv     [Nr x 2] unit dip and normal vectors (patches
 %                        only)
-%   method  'analytic' (default) or 'finitedifference'
 %
 % OUTPUTS
 %   LL      [Nr x M x 3 x 3] kernel (MPa per unit strain). The 4th index is
@@ -36,10 +32,9 @@ function LL = computeShzStressKernels(src,shz,method)
 %           is szz due to exz.
 %
 % NOTES
-%   - 'analytic' differentiates the closed-form displacement exactly
-%     (about 1e-12 relative error) and evaluates the three source strains
-%     in one call, about 11 times faster than 'finitedifference', which
-%     differences the displacement (about 1e-6 relative error).
+%   - The stress is the exact derivative of the closed-form displacement
+%     (about 1e-12 relative error); the three source strains are
+%     evaluated in one call per source triangle.
 %   - Depths are made positive (z -> -z) for the source vertices and
 %     receiver points before the call, as that function expects.
 %   - The component order is [sxx, sxz, szz]; geometry.computeFaultStressKernels
@@ -48,7 +43,6 @@ function LL = computeShzStressKernels(src,shz,method)
 %
 % SEE ALSO
 %   computeStressPlaneStrainTriangleShearZone,
-%   computeStressPlaneStrainTriangleShearZoneFiniteDifference,
 %   computeShzStressKernelsBem, geometry.computeShzDisplacementKernels
 %
 % REFERENCES
@@ -56,14 +50,6 @@ function LL = computeShzStressKernels(src,shz,method)
 %
 % AUTHORS
 %   Rishav Mallick (JPL), 2023
-
-if nargin < 3
-    method = 'analytic';
-end
-analytic = strcmpi(method, 'analytic');
-if ~analytic && ~strcmpi(method, 'finitedifference')
-    error('method must be ''analytic'' or ''finitedifference''.');
-end
 
 mu = src.earthModel.G;
 nu = src.earthModel.nu;
@@ -90,17 +76,9 @@ K3 = zeros(shz.N,src.N,3);
 I = eye(3);
 
 parfor k = 1:src.N
-    if analytic
-        % all three unit source strains at once [Nr x 3]
-        [s22,s23,s33] = computeStressPlaneStrainTriangleShearZone( ...
-            xc(:,1),xc(:,2),A(k,:),B(k,:),C(k,:),I(1,:),I(2,:),I(3,:),mu,nu);
-    else
-        s22 = zeros(size(xc,1),3); s23 = s22; s33 = s22;
-        for i = 1:3
-            [s22(:,i),s23(:,i),s33(:,i)] = computeStressPlaneStrainTriangleShearZoneFiniteDifference( ...
-                xc(:,1),xc(:,2),A(k,:),B(k,:),C(k,:),I(i,1),I(i,2),I(i,3),mu,nu);
-        end
-    end
+    % all three unit source strains at once [Nr x 3]
+    [s22,s23,s33] = computeStressPlaneStrainTriangleShearZone( ...
+        xc(:,1),xc(:,2),A(k,:),B(k,:),C(k,:),I(1,:),I(2,:),I(3,:),mu,nu);
     if isPatch
         % traction vector for the fault plane orientation, rotated to
         % fault-shear and fault-normal directions

@@ -11,9 +11,9 @@ function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZone( ...
 %   (computeDisplacementPlaneStrainTriangleShearZone), generated with the
 %   Symbolic Math Toolbox by derivation/generateTriangleStress.m; the
 %   eigenstrain is removed inside the triangle and Hooke's law gives the
-%   stress. Same inputs and outputs as
-%   computeStressPlaneStrainTriangleShearZoneFiniteDifference. Geometry
-%   (x3 is depth, positive down):
+%   stress. It replaces an earlier finite-difference version (removed
+%   2026-11-20; truncation errors ~1e-6, up to 1e-2 near edge lines).
+%   Geometry (x3 is depth, positive down):
 %
 %                 surface
 %         -------------+-------------- E (x2)
@@ -75,7 +75,8 @@ function [s22,s23,s33]=computeStressPlaneStrainTriangleShearZone( ...
 %
 % SEE ALSO
 %   computeDisplacementPlaneStrainTriangleShearZone,
-%   computeStressPlaneStrainTriangleShearZoneFiniteDifference
+%   computeDisplacementPlaneStrainTriangleShearZoneTanhSinh,
+%   geometry.computeShzStressKernels
 %
 % REFERENCES
 %   Barbot, S. (2018). Deformation of a half-space from anelastic strain
