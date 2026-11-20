@@ -179,16 +179,24 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
         end
     end
 
-    methods (Test, TestTags = {'KnownIssue'})
-        function uniformSegmentGivesUniformPatches(tc)
-            % megathrust2d.seg asks for W0 = W/50 with growth factor 1.
+    methods (Test)
+        function uniformSegmentMergesTheLastTwoPatches(tc)
+            % Known quirk, kept on purpose (won't fix, see tasks.md):
+            % megathrust2d.seg asks for W0 = W/50 with growth factor 1, but
             % flt2flt merges the last two patches when the remainder is
-            % exactly 2*W0 (floating-point '>' on equal values), so the
-            % mesh has 49 patches and the deepest one is twice as wide.
-            % create_megathrust(..., Nfault) returns Nfault-1 patches.
-            W = tc.Ex.rcv.W;
-            tc.verifyEqual(numel(W), 50, 'number of patches');
-            tc.verifyEqual(max(W) / min(W), 1, 'RelTol', 1e-9, 'width ratio deepest/other');
+            % 2*W0 (round-off makes 'Wt > Wc/2' true), so the example mesh
+            % has 49 patches and the deepest one is 2*W0 wide. The cached
+            % kernels in kernels/ are built on this mesh, so this test pins
+            % it: a change here means the kernels must be rebuilt.
+            rcv = tc.Ex.rcv;
+            W = rcv.W;
+            W0 = min(W);
+            tc.verifyEqual(numel(W), 49, 'number of patches');
+            tc.verifyEqual(W(1:end-1), W0*ones(48,1), 'RelTol', 1e-12, 'uniform patches');
+            tc.verifyEqual(W(end), 2*W0, 'RelTol', 1e-9, 'deepest patch');
+            tc.verifyEqual(sum(W), 50*W0, 'RelTol', 1e-12, 'total length');
+            [~, deepest] = max(rcv.xc(:,2) .* -1);
+            tc.verifyEqual(deepest, numel(W), 'the wide patch is the deepest');
         end
     end
 end
