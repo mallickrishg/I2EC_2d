@@ -119,6 +119,26 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GreensFunctionsTest < matlab.u
             tc.verifyEqual(w12, w21, 'RelTol', 1e-3);
         end
 
+        function triangleDisplacementWithNearlyAlignedEdges(tc)
+            % An edge horizontal or vertical up to floating-point noise
+            % (a 1e-10 m tilt over 10 km, as PDE Toolbox meshes produce)
+            % used to give u2 errors of ~66 per unit strain; the closed
+            % form is exact only for exactly aligned edges. Compared with
+            % tanh-sinh quadrature around the centroid.
+            nu = 0.25; s = (-5:5)'*1e-2;
+            cases = {[145e3 156698.7; 140e3 165359; 150e3 165359 + 1e-10], ...   % nearly horizontal base
+                     [140e3 160e3; 140e3 + 1e-10 170e3; 150e3 165e3]};             % nearly vertical edge
+            for k = 1:numel(cases)
+                V = cases{k}; P = mean(V) + s*[1 0];
+                for e = {[1 0 -1], [0 1 0]}
+                    [u2, u3] = computeDisplacementPlaneStrainTriangleShearZone(P(:,1), P(:,2), V(1,:), V(2,:), V(3,:), e{1}(1), e{1}(2), e{1}(3), nu);
+                    [r2, r3] = computeDisplacementPlaneStrainTriangleShearZoneTanhSinh(P(:,1), P(:,2), V(1,:), V(2,:), V(3,:), e{1}(1), e{1}(2), e{1}(3), nu);
+                    scale = max(abs([r2; r3]));
+                    tc.verifyEqual([u2 u3], [r2 r3], 'AbsTol', 1e-6*scale, sprintf('case %d', k));
+                end
+            end
+        end
+
         function triangleStressIsSmoothOnEdgeLines(tc)
             % The closed-form displacement has atan(N/D) terms with D = 0 on
             % the lines through the edges of the triangle and of its image
