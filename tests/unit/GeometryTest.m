@@ -2,7 +2,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
     %GEOMETRYTEST  Mesh classes in +geometry and the half-space kernel wrappers.
 
     properties
-        Ex   % example model (inputs/), geometry only
+        Ex   % example model (examples/inputs/), geometry only
     end
 
     methods (TestClassSetup)
@@ -93,7 +93,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
             tc.verifyEqual(shz.N, size(tri, 1));
             tc.verifyEqual(shz.vert, vert, 'AbsTol', 1e-6);
             tc.verifyGreaterThan(min(shz.area), 0, 'no degenerate triangles');
-            % default outline: same as the example mesh in inputs/
+            % default outline: same as the example mesh in examples/inputs/
             oc = [-100 -20; -100 -200; 450 -200; 450 -132.5; 0 -20];
             we = [201 -50; 450 -112.5; 450 -35; 201 -35];
             outline = (polyarea(oc(:,1), oc(:,2)) + polyarea(we(:,1), we(:,2))) * 1e6;

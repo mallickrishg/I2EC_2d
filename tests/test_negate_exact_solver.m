@@ -3,7 +3,7 @@ function test_negate_exact_solver
 %
 % Self-contained tests of negateGrowingModes, egh_modal, analyticSolveIVP
 % and computePeriodicInitialConditionBalanced, using I2EC's example mesh
-% (inputs/ and kernels/).  Run from the I2EC_2d root:
+% (examples/inputs/ and kernels/).  Run from the I2EC_2d root:
 %   addpath('tests'); test_negate_exact_solver
 %
 % The forcing is built as in the former MAIN_analyticsolve_singleeqcycle.m (now examples/newtonianCycle.m), with the
@@ -42,8 +42,8 @@ nu = 0.25; mu = 30e3;
 Trecur = 500 * yr;  Vpl = 1e-9;
 
 earthModel = geometry.LDhs(mu, nu);
-rcv = geometry.receiver(fullfile(root, 'inputs', 'megathrust2d.seg'), earthModel);
-shz = geometry.shearZoneReceiver(fullfile(root, 'inputs', 'shearzone'), earthModel);
+rcv = geometry.receiver(fullfile(root, 'examples', 'inputs', 'megathrust2d.seg'), earthModel);
+shz = geometry.shearZoneReceiver(fullfile(root, 'examples', 'inputs', 'shearzone'), earthModel);
 evl_orig = loadKernels(fullfile(root, 'kernels', 'evl_orig.h5'));
 
 % Rheology (I2EC example)

@@ -6,7 +6,7 @@ function m = makeSmallModel(folder)
 % Writes a 10-patch megathrust, a coarse 20-patch box boundary and a
 % 24-triangle mantle shear zone into FOLDER (use a temporary folder) and
 % loads them with the +geometry classes.  The geometry follows the example
-% in inputs/ (same dip, same boundary box), only coarser, so every kernel
+% in examples/inputs/ (same dip, same boundary box), only coarser, so every kernel
 % routine runs in about a second.
 %
 % Output struct m:
