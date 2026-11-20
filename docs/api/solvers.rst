@@ -23,7 +23,5 @@ Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
 
 .. mat:autofunction:: extractComponentsSolutionVector
 
-.. mat:autofunction:: computeInterseismicSteadystate
-
 .. mat:autofunction:: computeKLmodesMesh
 

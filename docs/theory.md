@@ -104,7 +104,10 @@ $$
 
 where $K$ is assembled by {mat:func}`assembleStressKernel` (locked patches
 removed), $\eta$ stacks the fault and cell viscosities, and $c$ is the forcing
-from locking and long-term loading. With $A = V\,\mathrm{diag}(\lambda)\,V^{-1}$
+from locking and long-term loading. $A$ is far from symmetric and badly
+scaled (fault and mantle rows differ by their viscosities), so it is balanced
+(MATLAB `balance`) before its eigendecomposition, which reduces round-off
+({mat:func}`eigBalanced`). With $A = V\,\mathrm{diag}(\lambda)\,V^{-1}$
 each mode evolves on its own:
 
 $$
@@ -115,7 +118,8 @@ $$
 and the integrated state (slip, strain) uses
 $h_k(t) = (g_k(t) - t)/\lambda_k$. {mat:func}`egh_modal` evaluates $e$, $g$
 and $h$ exactly, with an 8-term Taylor series when $|\lambda t| < 10^{-2}$ so
-that they stay accurate as $\lambda \to 0$. The solution at any time costs one
+that they stay accurate for slow modes at short times, where the closed forms
+lose digits to cancellation. The solution at any time costs one
 matrix–vector product ({mat:func}`analyticSolveIVP`).
 
 **Periodic cycle.** For events with recurrence time $T$ that cause a jump $b$
@@ -195,13 +199,6 @@ the negated operator too.
 
 ## Modelling assumptions and approximations
 
-- **Interseismic steady state.** {mat:func}`computeInterseismicSteadystate`
-  solves for the fully relaxed state with the fault locked. The relevant kernel
-  block is singular, so the solution is regularised (Tikhonov, zeroth order,
-  weight `lambda`, typically 0.1 to 10). The penalty pulls the mantle strain
-  rates towards zero (not towards their long-term values) and leaves fault slip
-  rates unpenalised, so the result depends on that weight. The function also
-  assumes the locked patches are the first ones in `rcv`.
 - **Corner-flow loading.** The long-term strain rates come from analytic
   corner flow (Turcotte & Schubert, 2002; $n = 1$ or $n = 3$), which is singular at the
   corner. The evaluation points are shifted (`ocean_translate_params`,
@@ -214,10 +211,6 @@ the negated operator too.
   the dynamical system.
 - **Imposed, characteristic earthquakes.** Events are prescribed (slip, timing),
   not computed; the periodic solution describes a perfectly repeating cycle.
-- **Numerical safeguards in the linear solver.** $A$ is balanced (MATLAB
-  `balance`) before its eigendecomposition to reduce round-off, and the series
-  switch in {mat:func}`egh_modal` avoids cancellation in
-  $(e^{\lambda t} - 1)/\lambda$ for small $|\lambda t|$.
 
 ## Practical guidance
 
