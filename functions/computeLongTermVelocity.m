@@ -7,7 +7,7 @@ function [Vx, Vz]=computeLongTermVelocity(X,Z,Vpl,Tplate,dip,shz,boundary,ocean_
 %   Assigns the long-term (geological) velocity to each point by region:
 %   the incoming plate moves at Vpl, the overriding plate is fixed, the
 %   slab moves down-dip at Vpl, and the oceanic mantle and mantle wedge
-%   follow Newtonian corner flow (compute_cornerflow_velocityfield) scaled
+%   follow Newtonian corner flow (cornerFlowVelocity, n = 1) scaled
 %   by Vpl. Points in no region get zero velocity.
 %
 % INPUTS
@@ -34,23 +34,17 @@ function [Vx, Vz]=computeLongTermVelocity(X,Z,Vpl,Tplate,dip,shz,boundary,ocean_
 %     (inpolygon): incoming plate (x < 0, above -Tplate), overriding plate,
 %     slab of thickness Tplate, oceanic mantle and mantle wedge. Where they
 %     overlap, the region assigned last wins (oceanic, then wedge mantle).
-%   - Oceanic-mantle points use column 2 and wedge points column 1 of
-%     compute_cornerflow_velocityfield.
-%   - The corner-flow solution is singular at its origin. The translations
-%     move each region into the corner-flow frame and keep points away from
-%     that singularity; 1 m is also subtracted from both z shifts.
+%   - The translations move each region into the corner-flow frame
+%     (cornerFlowVelocity, which also subtracts 1 m from the z shift to
+%     keep points off the corner), as in getStrainratesLongterm.
 %   - dip is in degrees here (getStrainratesLongterm takes radians).
 %
 % SEE ALSO
-%   compute_cornerflow_velocityfield, getStrainratesLongterm, inpolygon
+%   cornerFlowVelocity, getStrainratesLongterm, inpolygon
 %
 % AUTHORS
 %   Sharadha Sathiakumar (EOS), 2023
 
-oceanic_x_translate = ocean_translate_params(1); % x translation (relative to trench)
-oceanic_z_translate = ocean_translate_params(2) - 1;% plate thickness ~ 20e3 (shift slightly)
-continental_x_translate = continental_translate_params(1);%-140e3; % note: move to wedge (and not to 0,0)
-continental_z_translate = continental_translate_params(2) - 1;% continental plate thickness ~ 35e3 (shift slightly)
 om=shz.vert(:,1) < -shz.vert(:,2)/tand(dip);
 
 pt1=min(shz.vert(~om,2))+((max(shz.vert(:,1))-max(boundary.x(:,1)))/cosd(dip))*sind(dip);
@@ -91,23 +85,10 @@ Vz(inreg2) = 0;
 Vx(inreg3) = Vpl*cosd(dip);
 Vz(inreg3) = -Vpl*sind(dip);
 
-% oceanic mantle 
-Ox=X(inreg4)+ oceanic_x_translate;Oz=Z(inreg4) + oceanic_z_translate;
-[Vxt,Vzt]= compute_cornerflow_velocityfield(dip*pi/180,Ox,Oz);
-ind=find(inreg4==1);
-    for i=1:length(ind)
-    Vx(ind(i)) = Vxt(i,2)*Vpl ;
-    Vz(ind(i)) = Vzt(i,2)*Vpl;
-    end
+% oceanic mantle and mantle wedge: Newtonian corner flow
+[Vx(inreg4), Vz(inreg4)] = cornerFlowVelocity(dip*pi/180, X(inreg4), Z(inreg4), 'ocean', ocean_translate_params, 1);
+[Vx(inreg5), Vz(inreg5)] = cornerFlowVelocity(dip*pi/180, X(inreg5), Z(inreg5), 'wedge', continental_translate_params, 1);
+Vx(inreg4 | inreg5) = Vpl*Vx(inreg4 | inreg5);
+Vz(inreg4 | inreg5) = Vpl*Vz(inreg4 | inreg5);
 
-% continental mantle    
-Cx=X(inreg5) + continental_x_translate;Cz=Z(inreg5) + continental_z_translate;
-[Vxt,Vzt]= compute_cornerflow_velocityfield(dip*pi/180,Cx,Cz);
-ind=find(inreg5==1);
-
-    for i=1:length(ind)
-    Vx(ind(i)) = Vxt(i,1)*Vpl;
-    Vz(ind(i)) = Vzt(i,1)*Vpl;
-    end
-
-end 
+end

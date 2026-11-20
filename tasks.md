@@ -35,7 +35,7 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] Future: particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
 
 **Clean-up backlog**
-- [ ] §1: one corner-flow implementation (switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)`, delete the old one); one helper for the translate/rescale block.
+- [x] ~~§1: one corner-flow implementation; one helper for the translate/rescale block.~~ *Done: `compute_cornerflow_velocityfield` deleted; both callers go through `cornerFlowVelocity`.*
 - [ ] §2: write down the rule for `+geometry/` vs `functions/`.
 - [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`; optional `filenameGenerator` tidy-up.
 - [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
@@ -80,7 +80,7 @@ Each item names the failing test (`Class/test`).
 ### Confirmed correct (safe to rely on during the clean-up)
 
 - The kernel sign conventions agree with each other: KK, KL/LK and LL satisfy Betti reciprocity (ratio ≈ +1) on both the example and the synthetic mesh. This full-kernel check is dominated by the half-space part. The BEM box correction is now checked separately by `BoundaryCorrectionTest`, which caught the swapped rows above. `computeFaultStressKernels`' `-Sxz` convention matches `computeFaultTractionKernels`.
-- **Old corner flow = new corner flow** (n = 1) to 1e-14. So `compute_cornerflow_velocityfield` can be replaced by `computeCornerflowVelocityfield(…, 1)` in `computeLongTermVelocity` without changing results (item in §1). Both satisfy their boundary conditions and are divergence-free.
+- **Old corner flow = new corner flow** (n = 1) to 1e-14. So `compute_cornerflow_velocityfield` could be replaced by `computeCornerflowVelocityfield(…, 1)` in `computeLongTermVelocity` without changing results (done in §1; the old routine is deleted). Both satisfy their boundary conditions and are divergence-free.
 - **Duplicate copies give identical results**: `functions/LDdispHS`, `EdgeStress`, `computedisplacementGFs`, `computetractionkernels`, and the old edge-dislocation traction kernels, which match the line-dislocation kernels. The deletions in §2 change no numbers.
 - `computeSiteVelocitiesBem` gives the same result as `devl` from `computeAllDisplacementKernelsBem`, to 1e-12.
 - **The ODE path (`ode_viscoelastic` + `ode45`) matches `analyticSolveIVP`** for a locked fault with a Newtonian mantle, through a coseismic step. The solvers match `expm` to round-off.
@@ -212,8 +212,8 @@ The zeroed modes are neutral, so in the spun-up cycle they hold cell-scale noise
 - [x] ~~**`functions/computeStressFault_bem.m` is broken.** *Deleted, with its docs entry and `LegacyCodeTest/stressFaultBemRuns`.* It called `computeFullTractionKernels`, which doesn't exist anywhere in the repo. Nothing called this function, but the docs listed it (`docs/api/kernels.rst`).~~
 - [x] ~~**`functions/getStrainratesLongterm_old.m` has the wrong function name inside it.** *Deleted.* The file declares `function ... = getStrainratesLongterm(...)`, so the declared name doesn't match the filename. Nothing calls it. → Delete it.~~
 - [x] ~~**`functions/pcolor_logvals.m` is unfinished.** *Deleted, with its docs entry and `UtilitiesTest/pcolorLogValsDrawsSomething`.* It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.~~
-- [ ] **Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `examples/plotLongtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.
-- [ ] **`computeLongTermVelocity.m` and `getStrainratesLongterm.m` repeat the same translate/rescale block** (`ocean_translate_params`, `continental_translate_params`, the `- 1` shift). → Pull it into one helper so the two can't drift apart.
+- [x] ~~**Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `examples/plotLongtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.~~ *Done: `computeLongTermVelocity` uses `computeCornerflowVelocityfield` (n = 1) and `compute_cornerflow_velocityfield.m` is deleted, with its docs entry and `LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`. Velocities change by 2e-14 relative on the `plotLongtermVelocity` grid.*
+- [x] ~~**`computeLongTermVelocity.m` and `getStrainratesLongterm.m` repeat the same translate/rescale block** (`ocean_translate_params`, `continental_translate_params`, the `- 1` shift). → Pull it into one helper so the two can't drift apart.~~ *Done: new `cornerFlowVelocity(dip, x, z, region, shift, n)` applies the shift (with the 1 m) and picks the region's column; both callers use it. Strain rates change by under 1e-14 relative (n = 1 and 3). Tests: `LongTermFlowTest/regionVelocityIsShiftedCornerFlow`, `unknownRegionIsRejected`.*
 - [x] ~~**`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Moot if the function is deleted (§3): since the notebook was removed, nothing in the tracked code calls it.~~ *Moot: deleted.*
 
 ## 2. Duplicate code: `+geometry/` vs `functions/`
@@ -250,7 +250,7 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 The repo mixes several naming styles:
 
 - **camelCase**: `computeLongTermVelocity`, `analyticSolveIVP`, `negateGrowingModes`
-- **snake_case**: `compute_cornerflow_velocityfield`, `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`
+- **snake_case**: `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`
 - **all lowercase**: `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
 - **UPPERCASE script prefixes**: `MAIN_`, `PLOT_`, `CREATE_`, `TEST_`, plus a lowercase `tests/test_*.m`
 

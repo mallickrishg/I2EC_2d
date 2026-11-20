@@ -9,7 +9,7 @@ Background (corner-flow) strain rates and velocities.
 
 .. mat:autofunction:: computeCornerflowVelocityfield
 
-.. mat:autofunction:: compute_cornerflow_velocityfield
+.. mat:autofunction:: cornerFlowVelocity
 
 .. mat:autofunction:: computeLongTermVelocity
 
