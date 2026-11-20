@@ -16,3 +16,47 @@ dl.field-list span > code.xref.mat-obj {
   border: none;
   padding: 0;
 }
+
+/* Landing page: section cards in a responsive grid. */
+.landing-cards > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+}
+.landing-cards > ul > li {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-background-border);
+  border-radius: 0.5rem;
+  background: var(--color-background-secondary);
+  transition: border-color 0.15s;
+}
+.landing-cards > ul > li:hover {
+  border-color: var(--color-brand-primary);
+}
+.landing-cards > ul > li > p {
+  margin: 0;
+}
+.landing-cards > ul > li > p:first-child {
+  font-size: 1.05em;
+  margin-bottom: 0.35rem;
+}
+.landing-cards > ul > li > p + p {
+  font-size: 0.9em;
+  color: var(--color-foreground-secondary);
+}
+.landing-cards a {
+  text-decoration: none;
+}
+/* the whole card is clickable */
+.landing-cards > ul > li {
+  position: relative;
+}
+.landing-cards > ul > li a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
