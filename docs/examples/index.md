@@ -10,7 +10,7 @@ run examples/example1_numericalPowerLaw
 and adds the I2EC folders to the path itself. All of them use the default
 stress kernels: averaged over each mantle cell and certified free of growing
 modes (see [Kernel options](../quickstart.md#kernel-options) and
-{ref}`mantle-kernels`), loaded from `kernels/evl_orig.h5`.
+{ref}`mantle-kernels`), loaded from `examples/kernels/evl_orig.h5`.
 
 | Example | Rheology | Solver | Run time |
 | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ Two helper functions in `examples/` set this up:
   the kinematic hinge fault and a mantle mesh (`'ShearZone'`, default
   `examples/inputs/shearzone`). With `'StressKernels', true` or
   `'DisplacementKernels', true` it also returns the kernels: loaded from
-  `kernels/` when they match the meshes, computed otherwise.
+  `examples/kernels/` when they match the meshes, computed otherwise.
 - `newtonianCycle` sets the rheology of examples 2–4 (uniform viscosity
   $10^{19}$ Pa s, linear viscous fault with $\eta = 5\times10^{17}$ Pa s over
   the fault width, `rcv.faultLaw = 'linear'`) and solves the periodic cycle

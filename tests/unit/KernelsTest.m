@@ -2,7 +2,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
     %KERNELSTEST  BEM stress and displacement kernels (computeAll*KernelsBem).
     %
     % Uses the 10-patch / 24-triangle synthetic model from makeSmallModel
-    % (about a second to build) and the cached example kernels in kernels/.
+    % (about a second to build) and the cached example kernels in examples/kernels/.
     %
     % The central check is Betti's reciprocal theorem: with element sizes
     % as weights, the fault-fault, fault-mantle and mantle-mantle blocks
@@ -220,10 +220,10 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function cachedExampleKernelIsCertified(tc)
-            % kernels/evl_orig.h5 holds the default (certified) kernels:
+            % examples/kernels/evl_orig.h5 holds the default (certified) kernels:
             % no growing modes, area-weighted LL exactly symmetric
             e = tc.Ex.evl;
-            tc.verifyTrue(isfield(e, 'certificate'), 'kernels/evl_orig.h5 is not a certified kernel');
+            tc.verifyTrue(isfield(e, 'certificate'), 'examples/kernels/evl_orig.h5 is not a certified kernel');
             L = KernelsTest.deviatoricBlock(e);
             lam = eig(L);
             tc.verifyLessThanOrEqual(max(real(lam)), 1e-12*max(abs(lam)), ...
@@ -304,7 +304,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         end
 
         function cachedKernelsMatchCurrentMesh(tc)
-            % kernels/*.h5 must be built on the meshes in examples/inputs/
+            % examples/kernels/*.h5 must be built on the meshes in examples/inputs/
             e = tc.Ex.evl;
             tc.verifySize(e.KK, [tc.Ex.rcv.N tc.Ex.rcv.N]);
             tc.verifySize(e.LL, [tc.Ex.shz.N tc.Ex.shz.N 2 2]);
@@ -339,7 +339,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
     methods (Test, TestTags = {'Slow'})
         function cachedStressKernelsAreReproducible(tc)
             % rebuild evl_orig (default: certified 3-point) from examples/inputs/ and
-            % compare to kernels/evl_orig.h5
+            % compare to examples/kernels/evl_orig.h5
             % (minutes; catches a stale cache after a mesh or kernel change)
             m = tc.Ex;
             [~, e] = evalc('computeAllStressKernelsBem(m.rcv, m.shz, m.bnd)');

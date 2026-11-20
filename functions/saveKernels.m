@@ -40,8 +40,8 @@ function saveKernels(filename, K, varargin)
 %
 % EXAMPLE
 %   evl = computeAllStressKernelsBem(rcv, shz, boundary);
-%   saveKernels('kernels/evl_orig.h5', evl, 'rcv', rcv, 'shz', shz);
-%   % in Python:  import h5py; KK = h5py.File('kernels/evl_orig.h5')['KK'][:]
+%   saveKernels('examples/kernels/evl_orig.h5', evl, 'rcv', rcv, 'shz', shz);
+%   % in Python:  import h5py; KK = h5py.File('examples/kernels/evl_orig.h5')['KK'][:]
 %
 % SEE ALSO
 %   loadKernels, computeAllStressKernelsBem, computeAllDisplacementKernelsBem

@@ -12,7 +12,7 @@ between the three solutions comes from the mantle mesh. The script prints the
 relative difference from the fine mesh at $t/T = 0.01$, $0.1$ and $0.99$ and
 plots strain-rate snapshots and profiles on the three meshes.
 
-The kernels of the three meshes are cached in `kernels/meshconvergence/`
+The kernels of the three meshes are cached in `examples/kernels/meshconvergence/`
 (git-ignored). The first run computes them in about a minute (most of it for
 the fine mesh); later runs load them and take about a minute.
 

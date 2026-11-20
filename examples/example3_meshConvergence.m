@@ -10,7 +10,7 @@
 %
 % Meshes are made with meshing/createShearZoneMesh (PDE Toolbox) and
 % their kernels (default: cell-averaged, certified) are cached as HDF5
-% files in kernels/meshconvergence/ (git-ignored). The first run computes them,
+% files in examples/kernels/meshconvergence/ (git-ignored). The first run computes them,
 % about a minute for the fine mesh; later runs load them.
 % Run from any folder:  run examples/example3_meshConvergence
 
@@ -25,7 +25,7 @@ tfrac = [0.01 0.1 0.99];
 % mantle meshes: largest triangle edge (km)
 res = struct('name', {'coarse', 'regular', 'fine'}, 'Hmax', {40, 20, 10});
 
-cachedir = fullfile(m.root, 'kernels', 'meshconvergence');
+cachedir = fullfile(m.root, 'examples', 'kernels', 'meshconvergence');
 if ~exist(cachedir, 'dir'), mkdir(cachedir); end
 
 %% solve the periodic cycle on each mesh
