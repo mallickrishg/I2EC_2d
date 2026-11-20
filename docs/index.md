@@ -1,27 +1,51 @@
 # I2EC: Integral Imposed Earthquake Cycles (2D)
 
-**I2EC** is a MATLAB code for viscoelastic earthquake cycles in two-dimensional
-(plane-strain) subduction zones. An extended boundary element method turns the
-governing equations into coupled ordinary differential equations for fault slip
-rate and mantle strain rate, loaded by long-term plate motion and corner flow
-and perturbed by periodic imposed earthquakes. The equations can be integrated
-in time for general (power-law) rheology, or, for linear viscoelasticity,
-solved semi-analytically by eigendecomposition, which is orders of magnitude
-faster.
+**I2EC** is a MATLAB code for viscoelastic earthquake cycles in
+two-dimensional subduction zones. It models fault slip and power-law mantle
+flow through repeated imposed earthquakes, and solves linear models
+semi-analytically, orders of magnitude faster than time integration.
 
 ```{figure} _static/overview.png
 :alt: Cross-section of the example model geometry
 :width: 100%
+:class: landing-figure
 
-The example model in `inputs/`: a megathrust dipping at 14° that is locked from
-0 to 30 km depth and creeps below, above a triangulated oceanic mantle and below
-a triangulated mantle wedge. The model boundary (`inputs/boundary2d.seg`) lies
-outside this window. Made by `docs/figures/make_overview.m`.
+The example model: a megathrust locked to 30 km depth above a triangulated
+oceanic mantle and mantle wedge.
 ```
+
+:::{container} landing-cards
+
+- **{doc}`Quick start <quickstart>`**
+
+  Install, run the semi-analytical and numerical solvers, choose kernels.
+
+- **{doc}`Examples <examples/index>`**
+
+  Four worked models with figures, from power-law flow to mesh convergence.
+
+- **{doc}`Theory and methods <theory>`**
+
+  Governing equations, rheology, solvers and how the kernels are computed.
+
+- **{doc}`Model inputs <inputs>`**
+
+  Fault, boundary and mantle-mesh files, and the cached kernels.
+
+- **{doc}`API reference <api/solvers>`**
+
+  Every function, grouped by solver, loading, kernels and geometry.
+
+- **{doc}`Cite I2EC <contributors>`**
+
+  Authors, the paper to cite, and third-party components.
+
+:::
 
 ```{toctree}
 :caption: Guide
 :maxdepth: 2
+:hidden:
 
 quickstart
 examples/index
@@ -32,6 +56,7 @@ inputs
 ```{toctree}
 :caption: API reference
 :maxdepth: 1
+:hidden:
 
 api/solvers
 api/integration
@@ -44,6 +69,7 @@ api/utilities
 ```{toctree}
 :caption: Project
 :maxdepth: 1
+:hidden:
 
 contributors
 GitHub repository <https://github.com/mallickrishg/I2EC_2d>
