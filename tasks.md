@@ -39,7 +39,7 @@ Each item names the failing test (`Class/test`).
 - [x] ~~`getStrainratesLongterm_old.m` declares `getStrainratesLongterm`. *Deleted.* Test: `LegacyCodeTest/functionNamesMatchFileNames`.~~
 - [x] ~~Four file names exist in both `functions/` and `+geometry/`. *Fixed: the `functions/` copies are deleted.* Test: `LegacyCodeTest/noDuplicateFileNames`.~~
 - [ ] `reconditionODEoperator.m`: the help text says growing eigenvalues are replaced by `-eps`, but the code uses `-0.1` s⁻¹, a 10-second relaxation. `computePeriodicInitialCondition.m` prints the condition number on every call. Tests: `SolversTest/reconditionReplacesGrowingModesByMinusEps`, `SolversTest/legacyPeriodicSolverIsQuiet`.
-- [ ] `pcolor_logvals.m` draws nothing. Test: `UtilitiesTest/pcolorLogValsDrawsSomething`.
+- [x] ~~`pcolor_logvals.m` draws nothing. *Deleted, with its docs entry and its test.* Test: `UtilitiesTest/pcolorLogValsDrawsSomething`.~~
 - [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder. Test: `UtilitiesTest/createMegathrustLeavesWorkingFolderClean`.
 
 ### Discretisation (known, handled by the solvers)
@@ -59,7 +59,7 @@ Each item names the failing test (`Class/test`).
 
 - [x] ~~**`functions/computeStressFault_bem.m` is broken.** *Deleted, with its docs entry and `LegacyCodeTest/stressFaultBemRuns`.* It called `computeFullTractionKernels`, which doesn't exist anywhere in the repo. Nothing called this function, but the docs listed it (`docs/api/kernels.rst`).~~
 - [x] ~~**`functions/getStrainratesLongterm_old.m` has the wrong function name inside it.** *Deleted.* The file declares `function ... = getStrainratesLongterm(...)`, so the declared name doesn't match the filename. Nothing calls it. → Delete it.~~
-- [ ] **`functions/pcolor_logvals.m` is unfinished.** It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.
+- [x] ~~**`functions/pcolor_logvals.m` is unfinished.** *Deleted, with its docs entry and `UtilitiesTest/pcolorLogValsDrawsSomething`.* It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.~~
 - [ ] **Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `PLOT_longtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.
 - [ ] **`computeLongTermVelocity.m` and `getStrainratesLongterm.m` repeat the same translate/rescale block** (`ocean_translate_params`, `continental_translate_params`, the `- 1` shift). → Pull it into one helper so the two can't drift apart.
 - [ ] **`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Moot if the function is deleted (§3): since the notebook was removed, nothing in the tracked code calls it.
@@ -90,14 +90,14 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 - [x] ~~`computeStressPlaneStrainTriangleShearZone.m` (**2,238 lines**, Barbot 2018 analytic stress): the code actually uses `computeStressPlaneStrainTriangleShearZoneFiniteDifference.m` instead. The tests show it gives **wrong stresses** (§0), so it cannot serve as a reference. → Delete it. This is the largest single file in the repo. *Deleted.*~~
 - [ ] `computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.
 - [ ] `filenameGenerator.m`: no callers. Its long `if/elseif` chain could be one line, `sprintf('%06d', num)`.
-- [ ] `pcolor_logvals.m`: see §1.
+- [x] ~~`pcolor_logvals.m`: see §1. *Deleted.*~~
 
 ## 4. File and function naming
 
 The repo mixes several naming styles:
 
 - **camelCase**: `computeLongTermVelocity`, `analyticSolveIVP`, `negateGrowingModes`
-- **snake_case**: `compute_cornerflow_velocityfield`, `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`, `pcolor_logvals`
+- **snake_case**: `compute_cornerflow_velocityfield`, `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`
 - **all lowercase**: `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
 - **UPPERCASE script prefixes**: `MAIN_`, `PLOT_`, `CREATE_`, `TEST_`, plus a lowercase `tests/test_*.m`
 

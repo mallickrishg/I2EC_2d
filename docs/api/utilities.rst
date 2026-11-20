@@ -9,8 +9,6 @@ Plotting helpers and miscellaneous tools.
 
 .. mat:autofunction:: plotshz2d
 
-.. mat:autofunction:: pcolor_logvals
-
 .. mat:autofunction:: bluewhitered
 
 .. mat:autofunction:: cline

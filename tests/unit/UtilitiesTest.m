@@ -1,6 +1,6 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) UtilitiesTest < matlab.unittest.TestCase
     %UTILITIESTEST  Plotting and small helpers: plotpatch2d, plotshz2d, cline,
-    % bluewhitered, pcolor_logvals, drchrnd, filenameGenerator,
+    % bluewhitered, drchrnd, filenameGenerator,
     % create_megathrust.  Figures are created invisibly.
 
     properties
@@ -78,14 +78,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) UtilitiesTest < matlab.unittes
     end
 
     methods (Test, TestTags = {'KnownIssue'})
-        function pcolorLogValsDrawsSomething(tc)
-            % computes log-scaled values, then returns without plotting
-            figure;
-            [x, y] = meshgrid(1:5);
-            pcolor_logvals(x, y, x - 3, 1e-3);
-            tc.verifyNotEmpty(get(gca, 'Children'), 'nothing was drawn');
-        end
-
         function createMegathrustLeavesWorkingFolderClean(tc)
             % writes megathrust2d.seg into the current folder: run from the
             % repository root it creates a stray file next to inputs/
