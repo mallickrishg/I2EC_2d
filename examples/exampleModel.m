@@ -54,7 +54,7 @@ p.parse(varargin{:});
 opt = p.Results;
 
 m.root = fileparts(fileparts(mfilename('fullpath')));
-addpath(m.root, fullfile(m.root, 'functions'), fullfile(m.root, 'meshing'), ...
+addpath(m.root, fullfile(m.root, 'functions'), ...
     fullfile(m.root, 'examples'));
 
 m.mu = 30e3;      % MPa

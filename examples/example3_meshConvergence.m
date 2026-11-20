@@ -8,7 +8,7 @@
 % difference between the three solutions comes from the mesh. The fault
 % and boundary meshes are the same in all three runs.
 %
-% Meshes are made with meshing/createShearZoneMesh (PDE Toolbox) and
+% Meshes are made with createShearZoneMesh (PDE Toolbox) and
 % their kernels (default: cell-averaged, certified) are cached as HDF5
 % files in examples/kernels/meshconvergence/ (git-ignored). The first run computes them,
 % about a minute for the fine mesh; later runs load them.

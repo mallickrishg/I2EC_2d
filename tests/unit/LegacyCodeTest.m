@@ -1,7 +1,7 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unittest.TestCase
     %LEGACYCODETEST  Static checks on the code base (see tasks.md §1-§3).
     %
-    % Scans every function file in functions/, +geometry/ and meshing/.
+    % Scans every function file in functions/ and +geometry/.
 
     methods (Test)
         function functionNamesMatchFileNames(tc)
@@ -31,7 +31,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LegacyCodeTest < matlab.unitte
         function files = functionFiles()
             root = i2ecRoot();
             files = {};
-            for d = {'functions', '+geometry', 'meshing'}
+            for d = {'functions', '+geometry'}
                 l = dir(fullfile(root, d{1}, '*.m'));
                 files = [files; fullfile({l.folder}, {l.name})']; %#ok<AGROW>
             end

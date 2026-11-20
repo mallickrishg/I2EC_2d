@@ -145,9 +145,8 @@ fixed. See `tests/README.md` for how to read the results.
 | Path | Contents |
 | --- | --- |
 | `examples/` | Four examples (numerical $n = 3$, semi-analytical $n = 1$, mesh convergence, the two solvers compared) and the long-term velocity plot. |
-| `functions/` | Solvers, kernel assembly, long-term loading and plotting helpers. |
+| `functions/` | Solvers, kernel assembly, long-term loading, mesh generation (`createShearZoneMesh`, PDE Toolbox) and plotting helpers. |
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
-| `meshing/` | `createShearZoneMesh.m`: builds the triangular shear-zone mesh (PDE Toolbox). |
 | `examples/inputs/` | Example fault, boundary and shear-zone geometry files. |
 | `examples/kernels/` | Pre-computed stress (`evl_orig.h5`) and displacement (`devl.h5`) kernels, as HDF5 (see {doc}`inputs`). |
 | `tests/` | Test suite (`matlab.unittest`); see `tests/README.md`. |

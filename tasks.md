@@ -43,6 +43,7 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §7: one `setup.m`.
 - [x] ~~Move the example geometry from `inputs/` to `examples/inputs/`, next to the driver scripts that use it.~~ *Done (2026-11-21); `createShearZoneMesh` now writes there by default.*
 - [x] ~~Move the cached example kernels from `kernels/` to `examples/kernels/` (including the git-ignored `meshconvergence/` caches).~~ *Done (2026-11-21).*
+- [x] ~~Move `meshing/createShearZoneMesh.m` into `functions/` (a folder for one function); `meshing/` is gone.~~ *Done (2026-11-21).*
 - [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
 - [x] ~~§9: one help-block format; README dependency list.~~ *Done: every help block has an H1 line and INPUTS/OUTPUTS; the README no longer has a dependency list (rewritten in #13).*
 
