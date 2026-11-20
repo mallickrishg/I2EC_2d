@@ -6,7 +6,7 @@ function m = loadExampleModel(withKernels)
 %
 % Output struct m: em, rcv (49 patches), bnd (112), shz (521 triangles),
 % and with kernels: evl (evl_orig), devl, obs (the 401 surface points that
-% MAIN_analyticsolve_singleeqcycle.m pairs with devl.mat).
+% examples/exampleModel.m pairs with devl.mat).
 
 if nargin < 1
     withKernels = false;

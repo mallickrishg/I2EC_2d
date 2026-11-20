@@ -55,7 +55,7 @@ tests/
     UtilitiesTest.m           plotting and small helpers
     LegacyCodeTest.m          duplicate copies, dead and broken files, name checks
   system/
-    ExampleScriptsTest.m      end-to-end MAIN_* / PLOT_* scripts (Slow)
+    ExampleScriptsTest.m      end-to-end runs of examples/ (Slow)
   test_negate_exact_solver.m  stand-alone verification of the negate + exact solver
                               (also run by ExampleScriptsTest)
 ```

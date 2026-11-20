@@ -6,7 +6,7 @@ function test_negate_exact_solver
 % (inputs/ and kernels/).  Run from the I2EC_2d root:
 %   addpath('tests'); test_negate_exact_solver
 %
-% The forcing is built as in MAIN_analyticsolve_singleeqcycle.m, with the
+% The forcing is built as in the former MAIN_analyticsolve_singleeqcycle.m (now examples/newtonianCycle.m), with the
 % negated operator: c = edot_lock - A_neg * y_pl.
 %
 % Tests:
@@ -316,7 +316,7 @@ end
 %% ======== Local functions ========
 
 function [A, A_neg, c, b, c_lock] = build_system(evl_orig, stresskernel, locked, Asigma, eta_mantle, slip_co, flv, y_pl)
-% Operator, forcing and coseismic jump as in MAIN_analyticsolve_singleeqcycle.m
+% Operator, forcing and coseismic jump as in the former MAIN_analyticsolve_singleeqcycle.m (now examples/newtonianCycle.m)
 viscvec = [Asigma(~locked); eta_mantle * 1e-6; eta_mantle * 1e-6];
 A = diag(1 ./ viscvec) * stresskernel;
 [~, ~, A_neg] = negateGrowingModes(A);

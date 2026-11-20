@@ -68,6 +68,9 @@ cyc.stress_change = struct('Nevents', 1, 'Timing', 0, ...
 
 % linear system dy/dt = A*y + c, y = [v(creeping); e22dot; e23dot]
 cyc.eta = [rcv.Asigma(~locked); 1./shz.alpha; 1./shz.alpha];
+% the certified kernels give an operator with no growing modes, so it is
+% used as it is (with centroid kernels, negate first and build c with the
+% negated operator: [~, ~, A] = negateGrowingModes(A))
 cyc.A = assembleStressKernel(evl, locked) ./ cyc.eta;
 vlock = Vpl .* locked;
 c_locking = -[evl.KK(~locked,:)*vlock; evl.KL(:,:,1)*vlock; evl.KL(:,:,2)*vlock] ./ cyc.eta;

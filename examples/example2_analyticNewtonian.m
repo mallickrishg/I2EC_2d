@@ -15,6 +15,9 @@
 
 clear
 addpath(fileparts(mfilename('fullpath')))
+% meshes and kernels: the default kernels (3-point cell average,
+% certified free of growing modes); see exampleModel for the earlier
+% centroid kernels and their options
 m = exampleModel('StressKernels', true, 'DisplacementKernels', true);
 rcv = m.rcv; shz = m.shz; Vpl = m.Vpl; yr = m.yr;
 

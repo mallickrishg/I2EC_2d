@@ -24,6 +24,19 @@ The codebase utilizes an extended Boundary Element Method (BEM) framework that r
 * **Certified Mantle Kernels (default):** The mantle stress kernels average the stress over each cell (3-point quadrature, a Galerkin discretisation) and are certified free of spurious growing modes, so no eigenvalue modification is needed in any solver, for linear or power-law rheology. The earlier centroid kernels and their fixes (`kernelmodify`, `negateGrowingModes`) remain available as options.
 * **Geodynamical Integration:** Directly incorporates long-term strain rates derived from geodynamic solutions (e.g., Newtonian corner-flow approximations) as a loading term.
 
+## Getting Started
+
+The [`examples/`](examples/) folder has four runnable examples of the same subduction zone (MATLAB R2023b or later; run from any folder):
+
+```matlab
+run examples/example2_analyticNewtonian     % Newtonian mantle, semi-analytical solver
+run examples/example1_numericalPowerLaw     % power-law (n = 3) mantle, ode45
+run examples/example3_meshConvergence       % strain rates on three mesh resolutions
+run examples/example4_analyticVsNumerical   % both solvers on the same cycle
+```
+
+See the [quick start](https://mallickrishg.github.io/I2EC_2d/quickstart.html) for what each one does.
+
 ## Mathematical Overview
 
 The code operates by splitting deformation into two components:

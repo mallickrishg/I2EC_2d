@@ -24,53 +24,59 @@ import('geometry.*')
 
 Units are SI-like throughout: lengths in metres, time in seconds, stress in MPa.
 
-## Semi-analytical solver (linear viscoelasticity)
+## Examples
 
-`MAIN_analyticsolve_singleeqcycle.m` is the fastest way to get results. It loads
-pre-computed kernels from `kernels/`, so no boundary-element assembly is needed:
+The `examples/` folder holds four examples of the same subduction zone: a
+megathrust locked above 30 km depth with an earthquake every 500 years that
+releases the slip deficit of the locked zone, a creeping fault below it, and a
+viscous mantle loaded by corner flow. Run them from any folder:
 
 ```matlab
-run MAIN_analyticsolve_singleeqcycle
+run examples/example2_analyticNewtonian
 ```
 
-The script steps through:
+| Example | Solver | Rheology | Shows |
+| --- | --- | --- | --- |
+| `example1_numericalPowerLaw` | numerical (`ode45`), 15 spin-up cycles | power law, $n = 3$; rate-strengthening fault | slip rate through the cycle, strain-rate snapshots, surface velocity |
+| `example2_analyticNewtonian` | semi-analytical, periodic cycle solved directly | Newtonian, $\eta = 10^{19}$ Pa s; linear viscous fault | strain-rate snapshots, slip rate, surface velocity |
+| `example3_meshConvergence` | semi-analytical | as example 2 | strain-rate snapshots and profiles on three meshes (127, 495, 1955 cells) |
+| `example4_analyticVsNumerical` | both | as example 2 | the two solvers agree to about $10^{-9}$ over the cycle |
 
-1. **Geometry**: the earth model {mat:class}`geometry.LDhs <LDhs>`, the
-   megathrust and model boundary ({mat:class}`geometry.receiver <receiver>`) and
-   the triangulated mantle
-   ({mat:class}`geometry.shearZoneReceiver <shearZoneReceiver>`).
-2. **Kernels**: loads `evl_orig` (stress) and `devl` (surface displacement). To
-   recompute them, use {mat:func}`computeAllStressKernelsBem` and
-   {mat:func}`computeAllDisplacementKernelsBem`. The stress kernels are the
-   default ones: 3-point cell-averaged and certified (see
-   [Kernel options](#kernel-options) below).
-3. **Rheology**: an effective fault viscosity `rcv.Asigma`, mantle viscosities
-   through `shz.alpha`, and the locked zone `rcv.pinnedPosition`.
-4. **Long-term loading**: corner-flow strain rates from
+`plotLongtermVelocity` plots the long-term (corner-flow) velocity field. The
+shared helpers are `exampleModel` (paths, meshes, cached kernels) and
+`newtonianCycle` (the model of examples 2-4).
+
+Examples 1, 2 and 4 load the cached kernels in `kernels/` and take one to two
+minutes. Example 3 builds and caches the kernels of its three meshes in
+`kernels/meshconvergence/` on its first run (about 15 minutes, mostly the fine
+mesh); later runs take about a minute.
+
+### Semi-analytical solver (linear viscoelasticity)
+
+For $n = 1$ and a linear viscous fault the cycle is a linear ODE,
+$dy/dt = A\,y + c$, with $y$ the slip rate on the creeping patches and the
+mantle strain rates. `examples/newtonianCycle.m` sets up example 2's model:
+
+1. **Rheology**: a linear viscous fault (`rcv.Asigma` is the viscosity per unit
+   length, `rcv.faultLaw = 'linear'`), mantle viscosity through `shz.alpha`,
+   and the locked zone `rcv.pinnedPosition`.
+2. **Long-term loading**: corner-flow strain rates from
    {mat:func}`getStrainratesLongterm`.
-5. **Coseismic stress change** from slip on the locked zone.
-6. **Operator**: assembles $A = \eta^{-1} K$ with {mat:func}`assembleStressKernel`.
+3. **Coseismic stress change** from slip on the locked zone.
+4. **Operator**: $A = \eta^{-1} K$ with {mat:func}`assembleStressKernel`.
    With the default (certified) kernels $A$ has no growing modes and is used
    as it is.
-7. **Periodic cycle**: the steady periodic initial condition from
-   {mat:func}`computePeriodicInitialConditionBalanced`.
-8. **Postseismic evolution** at chosen times with {mat:func}`analyticSolveIVP`,
-   split into fault slip rate and strain rates with
-   {mat:func}`extractComponentsSolutionVector`.
-9. **Plots** of strain-rate snapshots, surface velocities and station time series.
+5. **Periodic cycle**: the steady periodic initial condition from
+   {mat:func}`computePeriodicInitialConditionBalanced`, evaluated at any time
+   with {mat:func}`analyticSolveIVP`.
 
 The core of the solve:
 
 ```matlab
-stresskernel = assembleStressKernel(evl_orig, locked);
-rheoparam    = diag(1./viscosityvector) * stresskernel;   % no growing modes
-
-c  = edot_locking + edot_lt;          % forcing
-y0 = computePeriodicInitialConditionBalanced(rheoparam, c, deltastrainrate, Trecur);
-
-tvec = [40, 365, 10*365, 50*365] .* 86400;
-[sol, sol_integrated] = analyticSolveIVP(rheoparam, c, y0, tvec);
-[V, e22dot, e23dot] = extractComponentsSolutionVector(sol, locked, rcv.N, shz.N);
+A  = assembleStressKernel(evl, locked) ./ eta;      % no growing modes
+y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+[Y, U] = analyticSolveIVP(A, c, y0, tvec);          % state and its time integral
+[V, e22dot, e23dot] = extractComponentsSolutionVector(Y, locked, rcv.N, shz.N);
 ```
 
 :::{important}
@@ -84,29 +90,24 @@ operator, such as the long-term loading `edot_lt = -A * y_pl`, with the negated
 operator. See {ref}`caveats-keeping-the-system-damped`.
 :::
 
-## Numerical integration (general rheology)
+### Numerical integration (general rheology)
 
-`MAIN_i2ec_singleeqcycle.m` computes the kernels from scratch and integrates the
-equations in time:
-
-```matlab
-run MAIN_i2ec_singleeqcycle
-```
-
-After setting up geometry, kernels, rheology and coseismic stress changes as
-above, it calls:
+Example 1 integrates the equations in time, which works for any rheology:
 
 ```matlab
-Ncycles = 5;   % cycles to spin up to a periodic state
 [t, V, e22dot, e23dot] = runImposedEarthquakeCycles(rcv, shz, evl, stress_change, Ncycles, Trecur);
 ```
 
-{mat:func}`runImposedEarthquakeCycles` repeats the imposed events until the
-response is periodic, using {mat:func}`ode_viscoelastic` and MATLAB's adaptive
-Runge-Kutta 4(5) solver `ode45` in {mat:func}`viscoeq_sequence_simulation`. Use this path
-for power-law rheology, where the semi-analytical solver does not apply. The
-default (certified) kernels are stable for any power-law exponent, so no
-`kernelmodify` is needed.
+{mat:func}`runImposedEarthquakeCycles` starts from the long-term state and
+repeats the imposed events `Ncycles` times, using {mat:func}`ode_viscoelastic`
+and MATLAB's adaptive Runge-Kutta 4(5) solver `ode45` in
+{mat:func}`viscoeq_sequence_simulation`; the last cycle is returned. Check that
+it is periodic: example 1 prints how much the strain and slip rates change over
+the last cycle. The fault law is set by `rcv.faultLaw`: `'ratestrengthening'`
+(default, $d \log v/dt = \dot\tau/(a-b)\sigma$) or `'linear'` (linear viscous,
+$\tau = \eta' v$, the law of the semi-analytical solver; example 4 uses it to
+compare the two solvers). The default (certified) kernels are stable for any
+power-law exponent, so no `kernelmodify` is needed.
 
 (kernel-options)=
 ## Kernel options
@@ -136,7 +137,7 @@ From the repository root:
 ```matlab
 addpath tests
 runTests            % fast tests, under a minute
-runTests('all')     % also rebuilds the example kernels and runs the driver scripts
+runTests('all')     % also rebuilds the example kernels and runs the examples
 ```
 
 The suite checks the Green's functions, kernels, corner flow and solvers
@@ -149,9 +150,7 @@ fixed. See `tests/README.md` for how to read the results.
 
 | Path | Contents |
 | --- | --- |
-| `MAIN_i2ec_singleeqcycle.m` | Driver: imposed earthquake cycles by numerical integration (`ode45`). |
-| `MAIN_analyticsolve_singleeqcycle.m` | Driver: linear viscoelastic cycles with the semi-analytical solver. |
-| `PLOT_longtermVelocity.m` | Plots the long-term (corner-flow) velocity field. |
+| `examples/` | Four examples (numerical $n = 3$, semi-analytical $n = 1$, mesh convergence, the two solvers compared) and the long-term velocity plot. |
 | `functions/` | Solvers, kernel assembly, long-term loading and plotting helpers. |
 | `+geometry/` | MATLAB package with the earth model and the fault and shear-zone classes. |
 | `meshing/` | `createShearZoneMesh.m`: builds the triangular shear-zone mesh (PDE Toolbox). |

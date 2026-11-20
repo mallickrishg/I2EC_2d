@@ -49,5 +49,5 @@ docs/_build/
 # Test run output (tests/runTests.m)
 tests/results/
 
-# Mesh-convergence example cache (MAIN_meshconvergence_strainrate.m)
+# Mesh-convergence example cache (examples/example3_meshConvergence.m)
 kernels/meshconvergence/

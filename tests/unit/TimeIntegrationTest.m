@@ -1,5 +1,5 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.unittest.TestCase
-    %TIMEINTEGRATIONTEST  Numerical earthquake-cycle path (MAIN_i2ec_*):
+    %TIMEINTEGRATIONTEST  Numerical earthquake-cycle path (examples/example1, example4):
     % ode_viscoelastic, viscoeq_sequence_simulation,
     % runImposedEarthquakeCycles, extract_v_edot_from_statevector.
     %

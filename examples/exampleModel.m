@@ -76,6 +76,17 @@ m.shz = geometry.shearZoneReceiver(shzPrefix, m.earthModel);
 m.obs = [linspace(-100, 500, 401)' * 1e3, zeros(401, 1)];
 
 if opt.StressKernels
+    % Default kernels: the mantle stress is averaged over each cell with a
+    % 3-point rule ('cellaverage', 3) and the mantle-mantle kernel is certified
+    % free of growing modes ('kernelcertify', true), so no mode treatment is
+    % needed in any solver. The earlier centroid kernels remain available, with
+    % the earlier fixes for their spurious growing modes:
+    %   evl = computeAllStressKernelsBem(rcv,shz,boundary,'cellaverage',1, ...
+    %                                    'kernelcertify',false,'kernelmodify',1);
+    % ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
+    % semi-analytical solvers use negateGrowingModes on the operator instead.)
+    % kernels/evl_orig.mat holds the default kernels for inputs/shearzone:
+    %   evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
     cached = fullfile(m.root, 'kernels', 'evl_orig.mat');
     if isfile(cached)
         S = load(cached, 'evl_orig');

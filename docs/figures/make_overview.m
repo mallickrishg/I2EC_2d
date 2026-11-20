@@ -13,7 +13,7 @@ root = fullfile(here, '..', '..');
 addpath(root, fullfile(root, 'functions'));
 outfile = fullfile(root, 'docs', '_static', 'overview.png');
 
-% ---- geometry (as in MAIN_analyticsolve_singleeqcycle.m)
+% ---- geometry (as in examples/exampleModel.m and newtonianCycle.m)
 earthModel = geometry.LDhs(30e3, 0.25);
 rcv      = geometry.receiver(fullfile(root, 'inputs', 'megathrust2d.seg'), earthModel);
 shz      = geometry.shearZoneReceiver(fullfile(root, 'inputs', 'shearzone'), earthModel);

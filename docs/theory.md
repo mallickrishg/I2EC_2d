@@ -214,7 +214,7 @@ The earlier treatments remain for centroid kernels
     at the fastest rate the kernel has. Prefer this for long spin-ups and for
     power-law ($n = 3$) runs.
 
-  *Used by* the numerical integration (`MAIN_i2ec_singleeqcycle.m`). Not for
+  *Used by* the numerical integration (`examples/example1_numericalPowerLaw.m`). Not for
   the semi-analytical solvers, which take the full kernel.
 - **Negate them in the operator (semi-analytical solves)** —
   {mat:func}`negateGrowingModes`. Balances $A$, eigendecomposes it and
