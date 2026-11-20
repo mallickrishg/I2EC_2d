@@ -73,6 +73,26 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyEqual(sort(real(eig(An))), sort(real(eig(tc.A))), 'RelTol', 1e-8);
         end
 
+        function solversRejectGrowingModes(tc)
+            % the solvers no longer negate: an operator with growing modes
+            % (centroid kernels) must be negated explicitly first
+            y0 = ones(size(tc.c));
+            tc.verifyError(@() analyticSolveIVP(tc.Aunst, tc.c, y0, tc.T), 'I2EC:growingModes');
+            tc.verifyError(@() computePeriodicInitialConditionBalanced(tc.Aunst, tc.c, tc.b, tc.T), 'I2EC:growingModes');
+            [~, ~, An] = negateGrowingModes(tc.Aunst);
+            tc.verifyWarningFree(@() analyticSolveIVP(An, tc.c, y0, tc.T));
+            tc.verifyWarningFree(@() computePeriodicInitialConditionBalanced(An, tc.c, tc.b, tc.T));
+        end
+
+        function eigBalancedMatchesEig(tc)
+            [V, lam, ng] = eigBalanced(tc.A);
+            tc.verifyEqual(sort(lam, 'ComparisonMethod', 'real'), sort(eig(tc.A), 'ComparisonMethod', 'real'), 'RelTol', 1e-8);
+            tc.verifyEqual(real(V*diag(lam)/V), tc.A, 'AbsTol', 1e-8*norm(tc.A));
+            tc.verifyEqual(ng, 0);
+            [~, ~, ng] = eigBalanced(tc.Aunst);
+            tc.verifyEqual(ng, 2);
+        end
+
         %% ---------------- analyticSolveIVP ----------------
         function ivpMatchesMatrixExponential(tc)
             y0 = randn(6,1);

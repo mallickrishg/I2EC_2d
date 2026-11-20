@@ -216,20 +216,21 @@ The earlier treatments remain for centroid kernels
 
   *Used by* the numerical integration (`MAIN_i2ec_singleeqcycle.m`). Not for
   the semi-analytical solvers, which take the full kernel.
-- **Negate them in the operator** — {mat:func}`negateGrowingModes`. Balances
-  $A$, eigendecomposes it and replaces each $\lambda$ with
-  $\mathrm{Re}(\lambda) > 0$ by $-\lambda$, keeping its eigenvector. Acts on
-  the full coupled operator, after viscosities are applied. *Used by* the
-  semi-analytical solver ({mat:func}`analyticSolveIVP` and
-  {mat:func}`computePeriodicInitialConditionBalanced`). With the default
-  certified kernels there is nothing to negate and the operator is unchanged.
+- **Negate them in the operator (semi-analytical solves)** —
+  {mat:func}`negateGrowingModes`. Balances $A$, eigendecomposes it and
+  replaces each $\lambda$ with $\mathrm{Re}(\lambda) > 0$ by $-\lambda$,
+  keeping its eigenvector. Acts on the full coupled operator, after
+  viscosities are applied. Opt-in: call it on the operator yourself and pass
+  the result to {mat:func}`analyticSolveIVP` and
+  {mat:func}`computePeriodicInitialConditionBalanced`, which no longer negate
+  and raise an error when the operator has growing modes.
 - **Replace them by a fast decay** — {mat:func}`reconditionODEoperator`. Sets
   eigenvalues with $\mathrm{Re}(\lambda) \ge 0$ to the real value
   $-0.1\ \mathrm{s^{-1}}$ (dropping their imaginary parts), so they decay
   within seconds; no balancing. *Used by* the legacy
   {mat:func}`computePeriodicInitialCondition` only.
 
-Consequences to keep in mind:
+Consequences to keep in mind when using these treatments (centroid kernels only):
 
 - **Results at the cell scale are not reliable.** The modified modes are the
   mesh-scale ones, so the treatments are appropriate for smoothly varying
@@ -287,10 +288,13 @@ Consequences to keep in mind:
 ### Practical guidance
 
 - Use meshes fine enough that the features you interpret span several cells.
-- After changing the mesh or the viscosity structure, check how many
-  eigenvalues were modified and how large they were
-  (`[~, lambda] = negateGrowingModes(A)` against `eig(A)`); a large number, or
-  ones with large $|\lambda|$, suggests a mesh problem.
+- After building kernels for a new mesh, look at `evl.certificate`: the
+  asymmetry removed (about 1-2%) and the largest eigenvalue of the
+  symmetrised kernel (negative, or clipped to zero within the tolerance). A
+  failed certification is an error; it points to a mesh or kernel problem.
+- With centroid kernels, check how many eigenvalues a treatment modifies and
+  how large they are (`[~, lambda] = negateGrowingModes(A)` against
+  `eig(A)`).
 - Recompute the kernels after any geometry change; the files in `kernels/`
   match the example meshes only, and `evl_orig.mat` holds the default
   (cell-averaged, certified) kernels; `evl_orig.certificate` records the

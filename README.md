@@ -21,6 +21,7 @@ The codebase utilizes an extended Boundary Element Method (BEM) framework that r
     * **ODE Integration:** Solves the coupled system (IVP) using MATLAB's adaptive Runge-Kutta 4(5) solver (`ode45`) for non-linear cases.
     * **Semi-Analytical Speedup:** Transforms linear viscoelastic problems into an eigenvalue problem, reducing computational time by orders of magnitude.
 * **Optimized Stress Kernels:** Implements regularized stress kernels to eliminate unphysical instabilities common in standard hypersingular BEM formulations.
+* **Certified Mantle Kernels (default):** The mantle stress kernels average the stress over each cell (3-point quadrature, a Galerkin discretisation) and are certified free of spurious growing modes, so no eigenvalue modification is needed in any solver, for linear or power-law rheology. The earlier centroid kernels and their fixes (`kernelmodify`, `negateGrowingModes`) remain available as options.
 * **Geodynamical Integration:** Directly incorporates long-term strain rates derived from geodynamic solutions (e.g., Newtonian corner-flow approximations) as a loading term.
 
 ## Mathematical Overview

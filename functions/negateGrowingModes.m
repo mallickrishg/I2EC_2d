@@ -9,8 +9,15 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %   -lam. The eigenvectors are kept, so
 %       A_neg = V*diag(lambda)/V
 %   has the same modes as A, with the growing ones turned into decaying
-%   ones. analyticSolveIVP and computePeriodicInitialConditionBalanced
-%   both call this function, so they treat eigenvalues identically.
+%   ones.
+%
+%   Opt-in. The default kernels of computeAllStressKernelsBem are
+%   cell-averaged and certified, so the operator has no growing modes and
+%   needs no negation; analyticSolveIVP and
+%   computePeriodicInitialConditionBalanced do not negate and raise an
+%   error if the operator has growing modes. For centroid kernels
+%   ('cellaverage', 1) negate explicitly and pass A_neg to the solvers:
+%       [~, ~, A] = negateGrowingModes(A);   % then build c with this A
 %
 % INPUTS
 %   A       [n x n] real ODE operator matrix (1/s)
@@ -22,8 +29,9 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %           when requested
 %
 % NOTES
-%   - Stability: this is the damping rule of the semi-analytical path.
-%     It assumes every eigenvalue with Re(lam) > 0 is spurious, i.e. a
+%   - Stability: this was the damping rule of the semi-analytical path
+%     before certified kernels. It assumes every eigenvalue with
+%     Re(lam) > 0 is spurious, i.e. a
 %     product of the spatial discretisation (such eigenvalues depend on
 %     the mesh). Negating them is a regularisation, not a claim about the
 %     true continuum physics.
@@ -38,20 +46,14 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %     modes.
 %
 % SEE ALSO
-%   analyticSolveIVP, computePeriodicInitialConditionBalanced, balance, eig
+%   eigBalanced, analyticSolveIVP, computePeriodicInitialConditionBalanced,
+%   computeAllStressKernelsBem, modifyGrowingModes
 %
 % AUTHORS
 %   Sharadha Sathiakumar (EOS), 2026
 
-% ---- Balancing for numerical conditioning ----
-[T_bal, Ab] = balance(A);
-
-% ---- Eigendecomposition of balanced matrix ----
-[Vb, Db] = eig(Ab);
-lambda = diag(Db);
-
-% ---- Recover physical eigenvectors: A = T_bal * Ab / T_bal ----
-V = T_bal * Vb;
+% ---- Balanced eigendecomposition (A = V*diag(lambda)/V) ----
+[V, lambda] = eigBalanced(A);
 
 % ---- Negate growing eigenvalues ----
 pos = real(lambda) > 0;

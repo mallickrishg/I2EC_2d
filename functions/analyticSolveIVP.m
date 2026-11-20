@@ -4,8 +4,8 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %
 %   Evaluates the state y(t) and its time integral u(t) at each time in
-%   tvec. The operator is balanced and eigendecomposed with its growing
-%   modes negated (negateGrowingModes); each mode is then evolved exactly
+%   tvec. The operator is balanced and eigendecomposed (eigBalanced); each
+%   mode is then evolved exactly
 %   with the modal integrals of egh_modal:
 %       z(t) = e(t).*z0 + g(t).*zc,    uz(t) = g(t).*z0 + h(t).*zc
 %   with z0 = V\y0 and zc = V\c. This is the time stepper of the
@@ -22,20 +22,18 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   U       [n x m] integral of y from 0 to tvec(j) in column j
 %
 % NOTES
-%   - Stability: every eigenvalue with Re(lam) > 0 is negated
-%     (lam -> -lam), on the assumption that such modes are spurious
-%     products of the spatial discretisation (they depend on the mesh).
-%     This is a regularisation, not a statement about the continuum
-%     physics. No mode is dropped or frozen.
-%   - Build the forcing c with the negated operator, e.g.
-%     [~, ~, A] = negateGrowingModes(A); c = edot_lock - A*y_pl;
-%     otherwise the long-term state y_pl is not a steady state.
-%   - Outputs depend continuously on the viscosities except where a
-%     complex-conjugate pair of eigenvalues crosses Re(lam) = 0: negation
-%     flips the sign of its imaginary part, a jump of 2|sin(Im(lam) t)|
-%     in that mode's amplitude (about 2|Im(lam)| t when small). A
-%     spurious eigenvalue close to zero stays nearly neutral after
-%     negation and decays slowly.
+%   - Stability: the operator must have no growing modes (Re(lam) >
+%     1e-10 max|lam|), or the function raises an error
+%     ('I2EC:growingModes'). The default kernels of
+%     computeAllStressKernelsBem (cell-averaged, certified) guarantee this
+%     for any viscosity. For centroid kernels ('cellaverage', 1) negate
+%     the growing modes explicitly first and build the forcing with the
+%     negated operator:
+%         [~, ~, A] = negateGrowingModes(A); c = edot_lock - A*y_pl;
+%     (Until 2026-11 this function negated growing modes itself.)
+%   - With a negated operator, outputs jump where a complex-conjugate
+%     pair of eigenvalues crosses Re(lam) = 0 as the viscosities change
+%     (see negateGrowingModes).
 %   - Changed in 2026: modes with |Re(lam)| <= 1e-10*max(1,max|lam|) 1/s
 %     were previously frozen (evolved as lam = 0) and modes with larger
 %     Re(lam) > 0 dropped. Against the matrix exponential, the freeze
@@ -47,15 +45,23 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   - Y and U are the real parts of the modal sums.
 %
 % SEE ALSO
-%   negateGrowingModes, egh_modal, computePeriodicInitialConditionBalanced
+%   eigBalanced, egh_modal, computePeriodicInitialConditionBalanced,
+%   negateGrowingModes, computeAllStressKernelsBem
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2025; modified by Sharadha Sathiakumar (EOS), 2026
 
 n = size(A, 1);
 
-% ---- Eigendecomposition with growing modes negated ----
-[V, lambda] = negateGrowingModes(A);
+% ---- Balanced eigendecomposition; growing modes are an error ----
+[V, lambda, nGrowing] = eigBalanced(A);
+if nGrowing > 0
+    error('I2EC:growingModes', ['analyticSolveIVP: the operator has %d growing modes (largest ' ...
+        'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
+        '(cell-averaged, certified), or negate them explicitly with ' ...
+        '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
+        nGrowing, max(real(lambda)));
+end
 
 % ---- Modal coordinates ----
 z0 = V \ y0;

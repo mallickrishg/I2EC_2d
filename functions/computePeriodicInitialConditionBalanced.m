@@ -24,28 +24,24 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %   y0      [n x 1] initial state that satisfies y(0) = y(T) + b
 %
 % NOTES
-%   - Stability: eigenvalues with Re(lam) > 0 are negated by
-%     negateGrowingModes, exactly as in analyticSolveIVP, on the
-%     assumption that they are spurious products of the discretisation.
-%     Then |exp(lam*T)| < 1 for every mode with Re(lam) ~= 0, so the cycle
-%     contracts and y0 is the state that a spin-up converges to. Build c
-%     with the negated operator (see negateGrowingModes).
+%   - Stability: as in analyticSolveIVP, the operator must have no
+%     growing modes, or the function raises an error ('I2EC:growingModes').
+%     The default (cell-averaged, certified) kernels guarantee this; for
+%     centroid kernels negate explicitly first (negateGrowingModes) and
+%     build c with the negated operator. Then |exp(lam*T)| < 1 for every
+%     mode with Re(lam) ~= 0, so the cycle contracts and y0 is the state
+%     that a spin-up converges to.
 %   - Modes with |lam| < 1e-16 1/s (integrator modes that neither grow nor
 %     decay) get z0 = 0, the minimum-norm solution. The threshold is
 %     absolute, so the result is not continuous across it.
 %   - Evaluating 1 - exp(lam*T) as -lam.*g(T) avoids cancellation for
 %     small |lam*T|, where g(T) comes from a series.
 %   - Warns if cond(V) > 1e14 (ill-conditioned eigenvectors).
-%   - Changed in 2026: modes with Re(lam) > 1e-10 1/s were previously
-%     dropped (z0 = 0) and modes with 0 < Re(lam) <= 1e-10 1/s solved with
-%     their growing exponential. With negation the periodic state is
-%     consistent with analyticSolveIVP (an IVP started from y0 returns to
-%     y0 - b after one period) and depends continuously on the
-%     viscosities, except where a complex-conjugate pair crosses
-%     Re(lam) = 0 (see analyticSolveIVP).
+%   - The periodic state is consistent with analyticSolveIVP (an IVP
+%     started from y0 returns to y0 - b after one period).
 %
 % SEE ALSO
-%   negateGrowingModes, egh_modal, analyticSolveIVP,
+%   eigBalanced, egh_modal, analyticSolveIVP, negateGrowingModes,
 %   computePeriodicInitialCondition
 %
 % AUTHORS
@@ -53,8 +49,15 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 
 n = size(A, 1);
 
-% ---- Eigendecomposition with growing modes negated ----
-[V, lambda] = negateGrowingModes(A);
+% ---- Balanced eigendecomposition; growing modes are an error ----
+[V, lambda, nGrowing] = eigBalanced(A);
+if nGrowing > 0
+    error('I2EC:growingModes', ['computePeriodicInitialConditionBalanced: the operator has %d growing modes (largest ' ...
+        'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
+        '(cell-averaged, certified), or negate them explicitly with ' ...
+        '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
+        nGrowing, max(real(lambda)));
+end
 
 if cond(V) > 1e14
     warning('System remains ill-conditioned even after balancing.');

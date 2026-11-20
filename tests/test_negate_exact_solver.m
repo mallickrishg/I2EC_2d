@@ -241,11 +241,12 @@ t7 = [1e6, 1e8, 1e9, 1e10];     % |lam t| from 1e-7 (series) to 10
 
 [~, ~, A7_neg] = negateGrowingModes(A7);
 err7a = norm(A7_neg - A7_ref) / norm(A7_ref);
-[Y7, U7] = analyticSolveIVP(A7, c7, y7, t7);
+% the solvers no longer negate: pass the negated operator
+[Y7, U7] = analyticSolveIVP(A7_neg, c7, y7, t7);
 [Y7r, U7r] = expm_ivp(A7_ref, c7, y7, t7);
 err7b = max([vecnorm(Y7 - Y7r) ./ vecnorm(Y7r), vecnorm(U7 - U7r) ./ vecnorm(U7r)]);
 T7 = 1e10;
-y07 = computePeriodicInitialConditionBalanced(A7, c7, b7, T7);
+y07 = computePeriodicInitialConditionBalanced(A7_neg, c7, b7, T7);
 eM7 = expm([A7_ref c7; zeros(1, 6)] * T7);
 err7c = norm((eye(5) - eM7(1:5, 1:5)) * y07 - (eM7(1:5, 6) + b7)) / norm(eM7(1:5, 6) + b7);
 

@@ -44,8 +44,17 @@ shz = geometry.shearZoneReceiver('inputs/shearzone',earthModel);
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
-% use original unmodified kernels for this solve
-% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary); % cell-averaged, certified (default)
+% Default kernels: the mantle stress is averaged over each cell with a
+% 3-point rule ('cellaverage', 3) and the mantle-mantle kernel is certified
+% free of growing modes ('kernelcertify', true), so no mode treatment is
+% needed in any solver. The earlier centroid kernels remain available, with
+% the earlier fixes for their spurious growing modes:
+%   evl = computeAllStressKernelsBem(rcv,shz,boundary,'cellaverage',1, ...
+%                                    'kernelcertify',false,'kernelmodify',1);
+% ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
+% semi-analytical solvers use negateGrowingModes on the operator instead.)
+% kernels/evl_orig.mat holds the default kernels for this mesh:
+% evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
 load('kernels/evl_orig.mat','evl_orig');
 
 % compute displacement kernels
@@ -111,16 +120,15 @@ stress_change.dtau = dtau;
 stress_change.dsigma22 = evl_orig.KL(:,:,1)*slip_coseismic;
 stress_change.dsigma23 = evl_orig.KL(:,:,2)*slip_coseismic;
 
-%% construct stress interaction kernel (use unmodified stress kernel for interseismic calculation)
+%% construct stress interaction kernel
 stresskernel = assembleStressKernel(evl_orig,locked);
 viscosityvector = [rcv.Asigma(~locked);1./shz.alpha;1./shz.alpha];
 % construct Operator matrix for dy/dt = [A].y 
 % where [A] = [K/η] - linear operator that contains all rheological parameters
 rheoparam = diag(1./viscosityvector)*stresskernel;
-% negate spurious growing modes (Re(lambda) > 0, from the discretisation)
-% before building the forcing, so that the long-term state stays the
-% steady state of the evolved system (see negateGrowingModes)
-[~, ~, rheoparam] = negateGrowingModes(rheoparam);
+% the certified kernels give an operator with no growing modes, so it is
+% used as it is (with centroid kernels, negate first:
+% [~, ~, rheoparam] = negateGrowingModes(rheoparam);)
 
 % combine all stress change into a single vector that captures coseismic
 % strain rate change

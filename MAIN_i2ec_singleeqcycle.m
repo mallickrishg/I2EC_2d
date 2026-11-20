@@ -67,6 +67,15 @@ set(gca,'YDir','normal','Fontsize',20,'Linewidth',2)
 % KL - fault-shz interactions [shz.N x rcv.N x 2]
 % LK - shz-fault interactions [rcv.N x shz.N x 2]
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
+% Default kernels: the mantle stress is averaged over each cell with a
+% 3-point rule ('cellaverage', 3) and the mantle-mantle kernel is certified
+% free of growing modes ('kernelcertify', true), so no mode treatment is
+% needed in any solver. The earlier centroid kernels remain available, with
+% the earlier fixes for their spurious growing modes:
+%   evl = computeAllStressKernelsBem(rcv,shz,boundary,'cellaverage',1, ...
+%                                    'kernelcertify',false,'kernelmodify',1);
+% ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
+% semi-analytical solvers use negateGrowingModes on the operator instead.)
 evl = computeAllStressKernelsBem(rcv,shz,boundary);
 
 Nobs = 401;
