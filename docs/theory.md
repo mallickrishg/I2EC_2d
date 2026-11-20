@@ -61,15 +61,21 @@ $$
 with the fluidity `shz.alpha` $= 1/\eta$ in the Newtonian case ($n = 1$) and
 `shz.n` the stress exponent.
 
-**Fault.** The two solvers treat the fault differently:
+**Fault.** The fault law depends on the solver:
 
-- *Numerical integration* uses rate-strengthening friction with parameter
-  $(a-b)\sigma$ (`rcv.Asigma`, MPa), integrated in $\log v$:
-  $\;d \log v/dt = \dot{\tau}/\bigl((a-b)\sigma\bigr)$.
+- *Numerical integration* uses, by default, rate-strengthening friction with
+  parameter $(a-b)\sigma$ (`rcv.Asigma`, MPa), integrated in $\log v$:
+  $\;d \log v/dt = \dot{\tau}/\bigl((a-b)\sigma\bigr)$
+  (`rcv.faultLaw = 'ratestrengthening'`).
 - *Semi-analytical solution* replaces friction by a linear viscous fault,
   $dv/dt = \dot\tau/\eta'$, where `rcv.Asigma` now holds an effective
   viscosity per unit length $\eta' = \eta/L$ (MPa s/m). The example script
   uses $\eta = 5\times10^{17}$ Pa s spread over the creeping length.
+- The numerical integration can use the same linear viscous fault:
+  set `rcv.faultLaw = 'linear'` (read by {mat:func}`isLinearFaultLaw`). The
+  state is then $v$ instead of $\log v$, so $v$ may become negative. With
+  $n = 1$ both solvers then integrate the same linear equations, which
+  {doc}`examples` (example 4) uses to check one against the other.
 
 Locked patches (`rcv.pinnedPosition`) have $v = 0$ between earthquakes and are
 removed from the unknowns. Earthquakes are imposed: the slip deficit of the
@@ -82,7 +88,7 @@ mantle) is applied as an instantaneous step.
 ### Numerical integration (general rheology)
 
 {mat:func}`ode_viscoelastic` evaluates the right-hand side for slip rate
-($\log v$) and mantle stress, and {mat:func}`viscoeq_sequence_simulation`
+($\log v$, or $v$ for a linear viscous fault) and mantle stress, and {mat:func}`viscoeq_sequence_simulation`
 integrates it with MATLAB's adaptive Runge–Kutta 4(5) solver `ode45`
 (absolute and relative tolerance $10^{-10}$), restarting after each imposed
 event. {mat:func}`runImposedEarthquakeCycles` repeats the cycle `nreps` times

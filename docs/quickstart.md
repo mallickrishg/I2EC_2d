@@ -44,7 +44,8 @@ run examples/example2_analyticNewtonian
 
 `plotLongtermVelocity` plots the long-term (corner-flow) velocity field. The
 shared helpers are `exampleModel` (paths, meshes, cached kernels) and
-`newtonianCycle` (the model of examples 2-4).
+`newtonianCycle` (the model of examples 2-4). {doc}`examples` describes each
+example in detail, with its figures.
 
 Examples 1, 2 and 4 load the cached kernels in `kernels/` and take one to two
 minutes. Example 3 builds and caches the kernels of its three meshes in

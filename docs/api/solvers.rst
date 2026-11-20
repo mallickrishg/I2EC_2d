@@ -9,6 +9,8 @@ Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
 
 .. mat:autofunction:: negateGrowingModes
 
+.. mat:autofunction:: eigBalanced
+
 .. mat:autofunction:: egh_modal
 
 .. mat:autofunction:: computePeriodicInitialConditionBalanced

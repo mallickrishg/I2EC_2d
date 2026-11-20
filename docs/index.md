@@ -24,6 +24,7 @@ outside this window. Made by `docs/figures/make_overview.m`.
 :maxdepth: 2
 
 quickstart
+examples
 theory
 inputs
 ```
