@@ -38,7 +38,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
         end
 
         function meshConvergenceExampleRuns(tc)
-            % needs the cached kernels of the three meshes (an hour to build)
+            % needs the cached kernels of the three meshes (about a minute to build)
             cache = fullfile(i2ecRoot(), 'kernels', 'meshconvergence');
             tc.assumeTrue(all(isfile(fullfile(cache, "evl_shearzone_h" + ["40" "20" "10"] + ".h5"))), ...
                 'run examples/example3_meshConvergence once to build its kernel cache');

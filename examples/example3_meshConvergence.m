@@ -38,12 +38,8 @@ for k = 1:numel(res)
     shz = mk.shz;
 
     kernelfile = fullfile(cachedir, ['evl_' name '.h5']);
-    oldfile = fullfile(cachedir, ['evl_' name '.mat']);   % cache of earlier versions
     if isfile(kernelfile)
         evl = loadKernels(kernelfile);
-    elseif isfile(oldfile)
-        load(oldfile, 'evl');
-        saveKernels(kernelfile, evl, 'rcv', mk.rcv, 'shz', shz);
     else
         fprintf('computing kernels for the %s mesh (%d cells)\n', res(k).name, shz.N);
         evl = computeAllStressKernelsBem(mk.rcv, shz, mk.boundary);
