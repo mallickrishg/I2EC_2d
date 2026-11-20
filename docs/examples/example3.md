@@ -13,8 +13,8 @@ relative difference from the fine mesh at $t/T = 0.01$, $0.1$ and $0.99$ and
 plots strain-rate snapshots and profiles on the three meshes.
 
 The kernels of the three meshes are cached in `kernels/meshconvergence/`
-(git-ignored). The first run computes them, about 15 minutes, mostly for the
-fine mesh; later runs take about a minute.
+(git-ignored). The first run computes them in about a minute (most of it for
+the fine mesh); later runs load them and take about a minute.
 
 The script prints, for points on a 2 km grid inside the mantle, the
 difference of the coarse and regular solutions from the fine one:
