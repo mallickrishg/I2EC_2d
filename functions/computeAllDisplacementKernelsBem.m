@@ -45,7 +45,6 @@ disp('Computing displacement kernels')
 Nobs=length(obs(:,1));
 %% compute fault displacement kernels
 
-% Gf_d = computedisplacementGFs(rcv,obs);
 [Gx_d,Gz_d] = computeFaultDisplacementKernelsBem(rcv,obs,boundary,scalar_value);
 
 % Nobs x shz.N x 2 corresponding to the horizontal and vertical kernels
