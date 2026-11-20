@@ -317,7 +317,7 @@ Consequences to keep in mind when using these treatments (centroid kernels only)
   how large they are (`[~, lambda] = negateGrowingModes(A)` against
   `eig(A)`).
 - Recompute the kernels after any geometry change; the files in `kernels/`
-  match the example meshes only, and `evl_orig.mat` holds the default
+  match the example meshes only, and `evl_orig.h5` holds the default
   (cell-averaged, certified) kernels; `evl_orig.certificate` records the
   check.
 - `tests/test_negate_exact_solver.m` checks the semi-analytical solver

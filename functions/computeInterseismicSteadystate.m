@@ -66,7 +66,7 @@ shz.e23pl = -e23.*Vpl;% 1/s
 % LL - shz-shz interactions [shz.N x shz.N x 2 x 2]
 
 % evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
-% load('kernels/evl_orig.mat','evl_orig');
+% evl_orig = loadKernels('kernels/evl_orig.h5');
 
 %% compute quasi-steady rates for 
 

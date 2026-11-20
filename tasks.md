@@ -20,7 +20,7 @@ Tests tagged `KnownIssue` check the *correct* behaviour of the bugs listed in §
 Everything else in this file is done. Details are in the sections named.
 
 **Next up**
-- [ ] Example 3 (mesh convergence): build the Hmax 10 kernel cache (`kernels/meshconvergence/evl_shearzone_h10.mat`, about 13 min) by running `examples/example3_meshConvergence`, then add example 3's figures to `docs/examples.md`. The cache failed to build before the nearly-aligned-edge fix (4ed5e8d); it certifies now.
+- [x] ~~Example 3 (mesh convergence): build the Hmax 10 kernel cache by running `examples/example3_meshConvergence`, then add example 3's figures to the docs.~~ *Done: the cache certifies after the nearly-aligned-edge fix (4ed5e8d), and the figures are on `docs/examples/example3.md` (e34907c). The caches are now `kernels/meshconvergence/evl_shearzone_h*.h5`.*
 - [ ] §0a: certify the coupled fault-mantle operator, not only `LL` (a guarantee for a creeping fault; today checked case by case).
 - [ ] §0a, optional: rename `evl_orig` (it is no longer an "original, unmodified" kernel).
 
@@ -39,7 +39,7 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] §2: write down the rule for `+geometry/` vs `functions/`.
 - [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`, `computeInterseismicSteadystate`; optional `filenameGenerator` tidy-up.
 - [ ] §4: naming convention, snake_case renames, `+geometry` class names, third-party credits.
-- [ ] §6: a regeneration script or hash check for `kernels/*.mat`.
+- [ ] §6: a regeneration script or hash check for `kernels/*.h5`.
 - [ ] §7: one `setup.m`.
 - [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
 - [ ] §9: one help-block format; README dependency list.
@@ -274,7 +274,8 @@ Tasks:
 
 ## 6. Cached kernels and data
 
-- [ ] `kernels/evl_orig.mat` (~9 MB) and `kernels/devl.mat` (~6.7 MB) were committed in Jan 2024. They're loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
+- [ ] `kernels/evl_orig.h5` (~8.7 MB) and `kernels/devl.h5` (~6.2 MB) are loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code beyond their sizes. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
+- [x] ~~Store kernels in a format usable outside MATLAB.~~ *Done (2026-11-20): `saveKernels`/`loadKernels` write and read HDF5 (format 'I2EC kernels', version 1). Each kernel block is a compressed dataset with description and units attributes; the certificate, the build options (`evl.options`, now recorded by `computeAllStressKernelsBem`) and optionally the fault and mantle geometry are stored too. Row-major readers (h5py/NumPy) see the MATLAB shape and index order. `kernels/evl_orig.mat` and `devl.mat` were converted to `.h5` (identical on reading back) and removed; example 3 caches `.h5` and converts an existing `.mat` cache once. Layout: `docs/inputs.md`. Tests: `KernelsTest/kernelFilesRoundTrip`, `kernelFilesShowTheMatlabShapeToRowMajorReaders`, `loadKernelsRejectsOtherFiles`.*
 - [x] ~~`MAIN_analyticsolve_singleeqcycle.m` keeps the `computeAll*KernelsBem` calls as comments and loads the `.mat` files instead. → Replace this with an explicit `if exist(...) load else compute` switch.~~ *Done: `examples/exampleModel.m` loads the cached kernels when they exist and match the mesh sizes, and computes them otherwise.*
 
 ## 7. Path handling and project setup

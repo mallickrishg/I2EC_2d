@@ -35,8 +35,8 @@ function m = exampleModel(varargin)
 %       .evl, .devl, .Ghx, .Ghz  kernels, when requested
 %
 % NOTES
-%   - The cached kernels are kernels/evl_orig.mat (stress, default options)
-%     and kernels/devl.mat (displacement at m.obs), both for
+%   - The cached kernels are kernels/evl_orig.h5 (stress, default options)
+%     and kernels/devl.h5 (displacement at m.obs), both for
 %     inputs/shearzone. They are used only when their sizes match the
 %     meshes; a different mantle mesh gets its kernels computed.
 %   - rcv, shz and the other receivers are handle objects: examples set
@@ -85,27 +85,29 @@ if opt.StressKernels
     %                                    'kernelcertify',false,'kernelmodify',1);
     % ('kernelmodify' 1 zeroes the growing modes, 2 damps them; for the
     % semi-analytical solvers use negateGrowingModes on the operator instead.)
-    % kernels/evl_orig.mat holds the default kernels for inputs/shearzone:
+    % kernels/evl_orig.h5 holds the default kernels for inputs/shearzone
+    % (HDF5, written by saveKernels; readable outside MATLAB):
     %   evl_orig = computeAllStressKernelsBem(rcv,shz,boundary);
-    cached = fullfile(m.root, 'kernels', 'evl_orig.mat');
+    %   saveKernels('kernels/evl_orig.h5', evl_orig, 'rcv', rcv, 'shz', shz);
+    cached = fullfile(m.root, 'kernels', 'evl_orig.h5');
     if isfile(cached)
-        S = load(cached, 'evl_orig');
+        evl_orig = loadKernels(cached);
     end
-    if isfile(cached) && size(S.evl_orig.KK, 1) == m.rcv.N && size(S.evl_orig.LL, 1) == m.shz.N
-        m.evl = S.evl_orig;
+    if isfile(cached) && size(evl_orig.KK, 1) == m.rcv.N && size(evl_orig.LL, 1) == m.shz.N
+        m.evl = evl_orig;
     else
         m.evl = computeAllStressKernelsBem(m.rcv, m.shz, m.boundary);
     end
 end
 
 if opt.DisplacementKernels
-    cached = fullfile(m.root, 'kernels', 'devl.mat');
+    cached = fullfile(m.root, 'kernels', 'devl.h5');
     if isfile(cached)
-        S = load(cached, 'devl');
+        devl = loadKernels(cached);
     end
-    if isfile(cached) && isequal(size(S.devl.KO), [size(m.obs, 1) m.rcv.N 2]) ...
-            && size(S.devl.LO, 2) == m.shz.N
-        m.devl = S.devl;
+    if isfile(cached) && isequal(size(devl.KO), [size(m.obs, 1) m.rcv.N 2]) ...
+            && size(devl.LO, 2) == m.shz.N
+        m.devl = devl;
     else
         m.devl = computeAllDisplacementKernelsBem(m.obs, m.rcv, m.shz, m.boundary, 1);
     end
