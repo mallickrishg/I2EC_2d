@@ -49,8 +49,8 @@ example in detail, with its figures.
 
 Examples 1, 2 and 4 load the cached kernels in `kernels/` and take one to two
 minutes. Example 3 builds and caches the kernels of its three meshes in
-`kernels/meshconvergence/` on its first run (about 15 minutes, mostly the fine
-mesh); later runs take about a minute.
+`kernels/meshconvergence/` on its first run, which adds about a minute; later
+runs take about a minute.
 
 ### Semi-analytical solver (linear viscoelasticity)
 
@@ -82,13 +82,9 @@ y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
 
 :::{important}
 The default kernels are cell-averaged and certified, so the operator has no
-growing modes and nothing is modified. {mat:func}`analyticSolveIVP` and
-{mat:func}`computePeriodicInitialConditionBalanced` raise an error if the
-operator has growing modes, which happens only with centroid kernels
-(`'cellaverage', 1`). For those, negate them explicitly with
-{mat:func}`negateGrowingModes` and build every forcing term that contains the
-operator, such as the long-term loading `edot_lt = -A * y_pl`, with the negated
-operator. See {ref}`caveats-keeping-the-system-damped`.
+growing modes and is used as it is. {mat:func}`analyticSolveIVP` and
+{mat:func}`computePeriodicInitialConditionBalanced` raise an error if it has
+any, which happens only with centroid kernels; see {ref}`mantle-kernels`.
 :::
 
 ### Numerical integration (general rheology)
@@ -113,23 +109,20 @@ power-law exponent, so no `kernelmodify` is needed.
 (kernel-options)=
 ## Kernel options
 
-{mat:func}`computeAllStressKernelsBem` builds certified kernels by default. The
-earlier centroid kernels and their fixes for spurious growing modes remain
-available:
+{mat:func}`computeAllStressKernelsBem` builds the mantle stress from the
+analytic triangle solution and, by default, averages it over each cell and
+certifies it ({ref}`mantle-kernels`):
 
 | Call | Mantle stress | Growing modes | Use |
 | --- | --- | --- | --- |
 | `computeAllStressKernelsBem(rcv, shz, bnd)` | averaged over each cell, 3-point rule; certified | none, for any viscosity and power-law exponent | default, both solvers |
-| `..., 'cellaverage', 7` | 7-point rule; certified | none | finer quadrature, about 2x the cost of 3-point |
-| `..., 'cellaverage', 1, 'kernelcertify', false` | at the cell centroid | a few (43 on the example mesh) | earlier kernels; need one of the fixes below |
-| `..., 'cellaverage', 1, 'kernelcertify', false, 'kernelmodify', 1` | at the centroid | zeroed (neutral) | earlier default for `ode45` runs |
-| `..., 'cellaverage', 1, 'kernelcertify', false, 'kernelmodify', 2` | at the centroid | damped to $-\max\lvert\lambda\rvert$ | `ode45` runs with long spin-ups |
+| `..., 'cellaverage', 7` | 7-point rule; certified | none | finer quadrature, about twice the cost |
+| `..., 'cellaverage', 1, 'kernelcertify', false` | at the cell centroid | a few (43 on the example mesh) | comparison only |
 
-For the semi-analytical solvers with centroid kernels, negate the growing
-modes of the operator explicitly: `[~, ~, A] = negateGrowingModes(A)`.
-{mat:func}`modifyGrowingModes` applies `kernelmodify` 1 or 2 to an existing
-kernel struct. See {ref}`caveats-keeping-the-system-damped` for why centroid
-kernels have growing modes and how the treatments differ.
+Centroid kernels need a fix for their growing modes: `'kernelmodify', 1` or
+`2` (zero or damp them in the kernel, for `ode45`), or
+`[~, ~, A] = negateGrowingModes(A)` on the operator for the semi-analytical
+solvers.
 
 ## Tests
 
