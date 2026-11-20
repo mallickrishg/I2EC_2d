@@ -4,8 +4,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
     % egh_modal, negateGrowingModes, analyticSolveIVP,
     % computePeriodicInitialConditionBalanced, plus the older
     % computePeriodicInitialCondition / reconditionODEoperator pair,
-    % assembleStressKernel, extractComponentsSolutionVector,
-    % computeInterseismicSteadystate and computeKLmodesMesh.
+    % assembleStressKernel, extractComponentsSolutionVector and
+    % computeKLmodesMesh.
     %
     % The matrix exponential of the augmented system [A c; 0 0] is the
     % reference solution throughout.  tests/test_negate_exact_solver.m
@@ -163,13 +163,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyEqual(V'*V, eye(size(V,2)), 'AbsTol', 1e-10);
             tc.verifyTrue(issorted(lam, 'descend'));
             tc.verifySize(Vx, size(V)); tc.verifySize(Vy, size(V));
-        end
-
-        function interseismicSteadyStateRuns(tc)
-            ex = loadExampleModel(true);
-            ex.rcv.pinnedPosition = abs(ex.rcv.xc(:,2)) < 30e3;
-            f = @() computeInterseismicSteadystate(ex.rcv, ex.shz, ex.evl, 1e-9, 10);
-            tc.verifyWarningFree(f);
         end
 
         function klModeDerivativesMatchNystromExtension(tc)

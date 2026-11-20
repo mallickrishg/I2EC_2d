@@ -35,9 +35,9 @@ Everything else in this file is done. Details are in the sections named.
 - [ ] Future: particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
 
 **Clean-up backlog**
-- [ ] §1: one corner-flow implementation (switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)`, delete the old one); one helper for the translate/rescale block; `computeInterseismicSteadystate` hard-coded geometry.
+- [ ] §1: one corner-flow implementation (switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)`, delete the old one); one helper for the translate/rescale block.
 - [ ] §2: write down the rule for `+geometry/` vs `functions/`.
-- [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`, `computeInterseismicSteadystate`; optional `filenameGenerator` tidy-up.
+- [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`; optional `filenameGenerator` tidy-up.
 - [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
 - [ ] §6: a regeneration script or hash check for `kernels/*.h5`.
 - [ ] §7: one `setup.m`.
@@ -214,7 +214,7 @@ The zeroed modes are neutral, so in the spun-up cycle they hold cell-scale noise
 - [x] ~~**`functions/pcolor_logvals.m` is unfinished.** *Deleted, with its docs entry and `UtilitiesTest/pcolorLogValsDrawsSomething`.* It builds `pos_logvals` and `neg_logvals` and then returns without plotting or outputting anything. Nothing calls it, but the docs list it (`docs/api/utilities.rst`). → Finish it or delete it.~~
 - [ ] **Two corner-flow implementations.** `compute_cornerflow_velocityfield.m` (old, JPL 2023, Newtonian only) is still used by `computeLongTermVelocity.m` (and so by `examples/plotLongtermVelocity.m`). `getStrainratesLongterm.m` uses the newer `computeCornerflowVelocityfield.m` (supports n = 1 and n = 3). The test suite shows the two agree to 1e-14 for n = 1 (`LongTermFlowTest/oldAndNewNewtonianCornerFlowAgree`). → Switch `computeLongTermVelocity` to `computeCornerflowVelocityfield(…, 1)` and delete the old one.
 - [ ] **`computeLongTermVelocity.m` and `getStrainratesLongterm.m` repeat the same translate/rescale block** (`ocean_translate_params`, `continental_translate_params`, the `- 1` shift). → Pull it into one helper so the two can't drift apart.
-- [ ] **`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Moot if the function is deleted (§3): since the notebook was removed, nothing in the tracked code calls it.
+- [x] ~~**`computeInterseismicSteadystate.m` hard-codes geometry inputs:** `[0,20e3]` and `[-140e3,35e3]` are passed to `getStrainratesLongterm`. → Make them arguments, or document them. Moot if the function is deleted (§3): since the notebook was removed, nothing in the tracked code calls it.~~ *Moot: deleted.*
 
 ## 2. Duplicate code: `+geometry/` vs `functions/`
 
@@ -240,7 +240,7 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 - [ ] `computePeriodicInitialCondition.m` (with `reconditionODEoperator.m`, which only it uses): replaced by `computePeriodicInitialConditionBalanced.m` and `negateGrowingModes.m`. → Delete both, or keep one as a documented fallback.
 - [ ] `computeSiteVelocitiesBem.m`: nothing calls it, and it carries a block of commented-out `devl`-based code.
 - [x] ~~`computeStressPlaneStrainTriangleShearZone.m` (**2,238 lines**, Barbot 2018 analytic stress): the code actually uses `computeStressPlaneStrainTriangleShearZoneFiniteDifference.m` instead. The tests show it gives **wrong stresses** (§0), so it cannot serve as a reference. → Delete it. This is the largest single file in the repo. *Deleted.*~~
-- [ ] `computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.
+- [x] ~~`computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.~~ *Deleted, with `SolversTest/interseismicSteadyStateRuns` and its docs entries. With the certified kernels the locked steady state is well posed (the 1061 x 1061 block has condition number 3e5, all eigenvalues negative; the Tikhonov weight changed the result by at most 0.1% from 0.01 to 10), and it is the steady point of the semi-analytical system, `y = -A \ c`, so no separate solver is needed.*
 - [x] ~~`filenameGenerator.m`: no callers in the tracked code.~~ *Kept on purpose:* it gives each run its own numbered folder (`000001/results.mat`, `000002/…`), which suits batch jobs of many forward models (strain rates, stresses, surface observations) whose outputs should be stored systematically. `experiments/EXPT1_run.m` uses it this way.
 - [ ] Optional tidy-up of `filenameGenerator.m`: the long `if/elseif` chain could be one line, `sprintf('%06d', num)`.
 - [x] ~~`pcolor_logvals.m`: see §1. *Deleted.*~~
