@@ -85,8 +85,10 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 %     Maxwell time is much shorter than the recurrence); damped ones decay.
 %     Kept as the earlier, empirical fix.
 %   - KK, KL and LK are never modified.
-%   - A comment in the code says the index construction of the deviatoric
-%     LL kernel still needs to be checked.
+%   - The deviatoric LL is built from the full half-space kernel (stress
+%     component x source strain, each sxx/exx, sxz/exz, szz/ezz) with
+%     ezz = -exx imposed; KernelsTest/deviatoricKernelsMatchDirectStress
+%     checks it against the stress of single strained cells.
 %   - Units assume the shear modulus of the earth model is in MPa.
 %   - Prints progress and timings to the command window.
 %
@@ -188,17 +190,15 @@ shz.xc = xc0;
 % deviatoric stress kernels [2x2]
 evl.LL = zeros(shz.N,shz.N,2,2);
 
-% construct deviatoric stress kernel and remove positive eigen values
-% here the first 2 indices are for eigen strain source
-%           last 2 indices are for the stress component
-% evl.LL2333 corresponds to e23 source resulting in a change in s33
-% in the large 3x3 matrix this would be in position [3-row,2-column]
-% L2222 = (evl.LL2222 - evl.LL3322 - evl.LL2233 + evl.LL3333)./2;
-% L2322 = (evl.LL2322 - evl.LL2333)./2;
-% L2223 = (evl.LL2223 - evl.LL3323);
-% L2323 = evl.LL2323;
-
-% need to check/verify this construction (the indices always confuse me)
+% Deviatoric kernel. LL is [M x M x 3 x 3]: 3rd index = stress component
+% (1: sxx, 2: sxz, 3: szz), 4th index = source strain (1: exx, 2: exz,
+% 3: ezz); see geometry.computeShzStressKernels. Deviatoric strain imposes
+% ezz = -exx, so the e22 source is (source 1 - source 3); the stress
+% components kept are (sxx - szz)/2 and sxz. evl.LL(:,:,i,j) is stress
+% component i due to strain component j:
+%   L11: (sxx - szz)/2 due to exx = -ezz      L12: (sxx - szz)/2 due to exz
+%   L21: sxz due to exx = -ezz                L22: sxz due to exz
+% Checked against single strained cells (KernelsTest/deviatoricKernelsMatchDirectStress).
 L11 = (LL(:,:,1,1) - LL(:,:,1,3) - LL(:,:,3,1) + LL(:,:,3,3))./2;
 L12 = (LL(:,:,1,2) - LL(:,:,3,2))./2;
 L21 = (LL(:,:,2,1) - LL(:,:,2,3));
