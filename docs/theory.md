@@ -1,225 +1,243 @@
 # Theory and methods
 
-This page summarises the model, the solvers and how the kernels are computed.
-The full derivation is in Mallick & Sathiakumar (2026), listed on the
+I2EC models the earthquake cycle as small departures from steady plate motion.
+The fault and the mantle are discretised into patches and triangular cells,
+elastic kernels link them, and the result is a system of ordinary differential
+equations that is either integrated in time or, when it is linear, solved
+exactly. The full derivation is in Mallick & Sathiakumar (2026), listed on the
 {doc}`contributors` page.
 
-## Splitting the deformation
+**In five steps:**
 
-Deformation is split into two parts:
+1. [Long-term loading](#long-term-loading): steady plate motion and mantle
+   corner flow.
+2. [Governing equations](#governing-equations): fault slip and mantle flow
+   change the stress through elastic kernels.
+3. [Rheology](#rheology): the stress sets the fault slip rate and the mantle
+   strain rate.
+4. [Solvers](#solvers): integrate in time, or solve the linear case exactly.
+5. [Kernels](#kernels): how the elastic kernels are computed.
 
-1. **Long-term component**: a quasi-static boundary value problem for the
-   background flow (corner flow, Newtonian or power-law with $n = 3$, see
-   {mat:func}`getStrainratesLongterm`) and steady fault slip at the plate rate
-   $v^{\infty}$. At this timescale the elastic plates behave rigidly.
-2. **Earthquake-cycle component**: a time-dependent perturbation about the
-   long-term state, solved with an integral representation of the elastic
-   response of the medium.
+## Long-term loading
+
+Deformation is split into a **long-term** part and an **earthquake-cycle**
+part. Over geological time the plates move steadily: the fault slips at the
+plate rate $v^{\infty}$ and the mantle flows as corner flow (Newtonian, or
+power-law with $n = 3$). The cycle is a time-dependent departure from this
+state, driven by locking and imposed earthquakes.
+
+:::{admonition} In the code
+:class: in-code
+
+{mat:func}`getStrainratesLongterm` gives the corner-flow
+strain rates in each cell, {mat:func}`computeLongTermVelocity` the velocity
+field ({doc}`examples/index` plots it).
+:::
 
 ## Governing equations
 
-The medium is discretised into fault patches on a boundary $\Gamma$ and
-triangular cells (shear zones) in the mantle $\Omega$. The stress rate at any
-point is
+The fault is a set of patches on a boundary $\Gamma$ and the mantle a set of
+triangular cells $\Omega$. Slip and viscous strain that depart from the
+long-term state change the stress everywhere:
 
 $$
 \dot{\sigma}_i(\mathbf{x}) =
 \int_{\Gamma} K_i(\mathbf{x};\xi)\,\bigl(v(\xi) - v^{\infty}\bigr)\,d\xi
 + \iint_{\Omega} K_{ji}(\mathbf{x};\alpha)\,
   \bigl(\dot{\epsilon}_{\mathrm{v}_j}(\alpha) -
-        \dot{\epsilon}^{\infty}_{\mathrm{v}_j}(\alpha)\bigr)\,d\alpha ,
+        \dot{\epsilon}^{\infty}_{\mathrm{v}_j}(\alpha)\bigr)\,d\alpha .
 $$
 
-where $K$ are elastostatic kernels that map fault slip and viscous strain to
-stress. Only the deviatoric part of the mantle strain is evolved: the viscous
-flow is incompressible, so $\dot\epsilon_{33} = -\dot\epsilon_{22}$, and the two
-mantle unknowns per cell are $\dot\epsilon_{22}$ and $\dot\epsilon_{23}$.
-After discretisation the kernels become the matrices returned by
-{mat:func}`computeAllStressKernelsBem`:
+The kernels $K$ are elastic Green's functions. Mantle flow is incompressible,
+so each cell has two unknowns, the deviatoric strain rates
+$\dot\epsilon_{22}$ and $\dot\epsilon_{23}$. Discretised, the kernels are four
+matrices ($N$ fault patches, $M$ mantle cells):
 
-| Kernel | Size | Maps |
+| Kernel | Maps | Size |
 | --- | --- | --- |
-| `KK` | $N \times N$ | fault slip → fault shear traction |
-| `KL` | $M \times N \times 2$ | fault slip → mantle deviatoric stress ($(\sigma_{22}-\sigma_{33})/2$, $\sigma_{23}$) |
-| `LK` | $N \times M \times 2$ | mantle deviatoric strain → fault shear traction |
-| `LL` | $M \times M \times 2 \times 2$ | mantle deviatoric strain → mantle deviatoric stress |
+| `KK` | fault slip → fault shear traction | $N \times N$ |
+| `KL` | fault slip → mantle stress | $M \times N \times 2$ |
+| `LK` | mantle strain → fault shear traction | $N \times M \times 2$ |
+| `LL` | mantle strain → mantle stress | $M \times M \times 2 \times 2$ |
 
-with $N$ fault patches and $M$ mantle cells. Units: MPa per metre of slip, or
-MPa per unit strain.
+:::{admonition} In the code
+:class: in-code
+
+{mat:func}`computeAllStressKernelsBem` returns all four, in MPa
+per metre of slip or per unit strain. Mantle stresses are the deviatoric pair
+$(\sigma_{22}-\sigma_{33})/2$ and $\sigma_{23}$.
+:::
 
 ## Rheology
 
-**Mantle.** Each cell follows a power law,
+**Mantle.** Each cell flows as a power law in the deviatoric stress $\tau$:
 
 $$
 \dot{\epsilon}_{ij} = \alpha\, \tau^{\,n-1}\, \sigma_{ij},
-\qquad \tau = \sqrt{\sigma_{22}^2 + \sigma_{23}^2},
+\qquad \tau = \sqrt{\sigma_{22}^2 + \sigma_{23}^2}.
 $$
 
-with the fluidity `shz.alpha` $= 1/\eta$ in the Newtonian case ($n = 1$) and
-`shz.n` the stress exponent.
+With $n = 1$ the mantle is Newtonian and $\alpha = 1/\eta$.
 
-**Fault.** The fault law depends on the solver:
+**Fault.** The creeping fault follows one of two laws:
 
-- *Numerical integration* uses, by default, rate-strengthening friction with
-  parameter $(a-b)\sigma$ (`rcv.Asigma`, MPa), integrated in $\log v$:
-  $\;d \log v/dt = \dot{\tau}/\bigl((a-b)\sigma\bigr)$
-  (`rcv.faultLaw = 'ratestrengthening'`).
-- *Semi-analytical solution* replaces friction by a linear viscous fault,
-  $dv/dt = \dot\tau/\eta'$, where `rcv.Asigma` now holds an effective
-  viscosity per unit length $\eta' = \eta/L$ (MPa s/m). The example script
-  uses $\eta = 5\times10^{17}$ Pa s spread over the creeping length.
-- The numerical integration can use the same linear viscous fault:
-  set `rcv.faultLaw = 'linear'` (read by {mat:func}`isLinearFaultLaw`). The
-  state is then $v$ instead of $\log v$, so $v$ may become negative. With
-  $n = 1$ both solvers then integrate the same linear equations, which
-  {doc}`examples/example4` uses to check one against the other.
+| Law | Equation | Used by |
+| --- | --- | --- |
+| rate-strengthening friction | $\dfrac{d \log v}{dt} = \dfrac{\dot{\tau}}{(a-b)\sigma}$ | numerical solver (default) |
+| linear viscous | $\dfrac{dv}{dt} = \dfrac{\dot\tau}{\eta'}$ | both solvers |
 
-Locked patches (`rcv.pinnedPosition`) have $v = 0$ between earthquakes and are
-removed from the unknowns. Earthquakes are imposed: the slip deficit of the
-locked zone, $v^{\infty} T$, is released every recurrence interval $T$, and its
-stress change ($\Delta\tau = $ `KK`·slip on the fault, `KL`·slip in the
-mantle) is applied as an instantaneous step.
+**Locking and earthquakes.** Locked patches do not slip between earthquakes.
+Every recurrence interval $T$ an earthquake releases their slip deficit,
+$v^{\infty} T$, and its stress change is applied as an instantaneous step.
+
+:::{admonition} In the code
+:class: in-code
+
+the mantle takes `shz.alpha` and `shz.n`. The fault takes
+`rcv.faultLaw` (`'ratestrengthening'` or `'linear'`, read by
+{mat:func}`isLinearFaultLaw`) and `rcv.Asigma`, which holds $(a-b)\sigma$ (MPa)
+or $\eta'$, a viscosity per unit length (MPa s/m). Locked patches are
+`rcv.pinnedPosition`.
+:::
 
 ## Solvers
 
-### Numerical integration (general rheology)
+| | Numerical | Semi-analytical |
+| --- | --- | --- |
+| Rheology | any (power law, friction) | linear: $n = 1$, linear viscous fault |
+| Method | time integration with `ode45` | eigendecomposition, exact in time |
+| Periodic cycle | spin-up over many cycles | solved directly |
+| Example | {doc}`examples/example1` | {doc}`examples/example2` |
 
-{mat:func}`ode_viscoelastic` evaluates the right-hand side for slip rate
-($\log v$, or $v$ for a linear viscous fault) and mantle stress, and {mat:func}`viscoeq_sequence_simulation`
-integrates it with MATLAB's adaptive Runge–Kutta 4(5) solver `ode45`
-(absolute and relative tolerance $10^{-10}$), restarting after each imposed
-event. {mat:func}`runImposedEarthquakeCycles` repeats the cycle `nreps` times
-from the long-term state so that the last cycle is (close to) periodic; the
-spin-up is brute force, and its convergence is not checked.
+{doc}`examples/example4` runs both on the same linear model; they agree to
+about $10^{-9}$.
 
-### Semi-analytical solution (linear case)
+### Numerical integration
 
-For $n = 1$ and a linear viscous fault, the state $y$ (creeping-fault slip rate
+The equations are integrated with MATLAB's adaptive Runge–Kutta solver
+`ode45` (tolerance $10^{-10}$), restarting after each earthquake. Repeating the
+cycle from the long-term state spins the model up until it is periodic.
+
+:::{admonition} In the code
+:class: in-code
+
+{mat:func}`runImposedEarthquakeCycles` repeats the cycle;
+{mat:func}`viscoeq_sequence_simulation` integrates one sequence of events and
+{mat:func}`ode_viscoelastic` is the right-hand side. Spin-up convergence is
+not checked: compare the start and end of the last cycle, as example 1 does.
+:::
+
+### Semi-analytical solution
+
+When everything is linear, the state $y$ (slip rate on the creeping patches
 and mantle strain rates) obeys
 
 $$
 \frac{dy}{dt} = A\,y + c, \qquad A = \operatorname{diag}(1/\eta)\, K,
 $$
 
-where $K$ is assembled by {mat:func}`assembleStressKernel` (locked patches
-removed), $\eta$ stacks the fault and cell viscosities, and $c$ is the forcing
-from locking and long-term loading. $A$ is far from symmetric and badly
-scaled (fault and mantle rows differ by their viscosities), so it is balanced
-(MATLAB `balance`) before its eigendecomposition, which reduces round-off
-({mat:func}`eigBalanced`). With $A = V\,\mathrm{diag}(\lambda)\,V^{-1}$
-each mode evolves on its own:
+with $c$ the forcing from locking and long-term loading. In the eigenvectors of
+$A$ each mode evolves on its own,
 
 $$
-z_k(t) = e^{\lambda_k t} z_k(0) + g_k(t)\, c_k,
-\qquad g_k(t) = \frac{e^{\lambda_k t}-1}{\lambda_k},
+z_k(t) = e^{\lambda_k t} z_k(0) + \frac{e^{\lambda_k t}-1}{\lambda_k}\, c_k ,
 $$
 
-and the integrated state (slip, strain) uses
-$h_k(t) = (g_k(t) - t)/\lambda_k$. {mat:func}`egh_modal` evaluates $e$, $g$
-and $h$ exactly, with an 8-term Taylor series when $|\lambda t| < 10^{-2}$ so
-that they stay accurate for slow modes at short times, where the closed forms
-lose digits to cancellation. The solution at any time costs one
-matrix–vector product ({mat:func}`analyticSolveIVP`).
+so the solution at any time costs one matrix–vector product. If each
+earthquake makes the state jump by $b$, the periodic cycle,
+$y(0) = y(T) + b$, has the closed form
 
-**Periodic cycle.** For events with recurrence time $T$ that cause a jump $b$
-in the state ($b = \Delta\sigma/\eta$), the steady cycle satisfies
-$y(0) = y(T) + b$. In modal coordinates each mode gives
-$z_k(0) = \bigl(g_k(T)\,c_k + b_k\bigr)/\bigl(1 - e^{\lambda_k T}\bigr)$
-({mat:func}`computePeriodicInitialConditionBalanced`), so no spin-up is needed.
-This is well defined only if every mode decays, $|e^{\lambda_k T}| < 1$, which
-the default mantle kernels guarantee (see [Mantle kernels](#mantle-kernels)).
+$$
+z_k(0) = \frac{g_k(T)\,c_k + b_k}{1 - e^{\lambda_k T}},
+\qquad g_k(T) = \frac{e^{\lambda_k T}-1}{\lambda_k},
+$$
+
+which needs every mode to decay, $\mathrm{Re}(\lambda_k) < 0$. The default
+kernels guarantee this ([mantle kernels](#mantle-kernels)).
+
+:::{admonition} In the code
+:class: in-code
+
+{mat:func}`assembleStressKernel` builds $K$ without the
+locked patches; {mat:func}`computePeriodicInitialConditionBalanced` gives the
+periodic state and {mat:func}`analyticSolveIVP` evaluates it at any time.
+$A$ is badly scaled, so it is balanced before the eigendecomposition
+({mat:func}`eigBalanced`), and {mat:func}`egh_modal` switches to a Taylor
+series for small $|\lambda t|$, where the closed forms lose digits.
+:::
 
 (kernels)=
 ## Kernels
 
-**Half-space solutions plus a boundary correction.** Fault kernels use the
-plane-strain line-dislocation solutions of Davis & Martel (`LDstressHS`,
-`LDdispHS`); mantle kernels use the triangle strain-volume solutions of
-Barbot (2018). Both are for a half-space. The finite model box
-(`examples/inputs/boundary2d.seg`) is imposed afterwards by a boundary-element solve
-({mat:func}`computeShzStressKernelsBem`, {mat:func}`computeFaultTractionKernelsBem`):
-zero displacement where `boundary.Vpl == 0` (Dirichlet) and zero traction where
-`boundary.Vpl == 1` (Neumann). The boundary slip that cancels a mantle source
-does not depend on where the stress is evaluated, so it is solved once for all
-sources ({mat:func}`computeShzBoundaryCorrection`, one factorisation) and
-reused for every receiver set. There is no topography.
+The kernels are **half-space** solutions with a **boundary correction**:
 
-**Homogeneous boundary problem.** All the BEM kernels (stress, traction and
-displacement) have zero displacement on Dirichlet patches and zero traction on
-Neumann patches. The prescribed boundary motion in the `.seg` file (`bcx`,
-`bcz`) is not used: the background rate comes from the long-term solution.
+- **Fault patches** use the plane-strain line-dislocation solutions of Davis &
+  Martel.
+- **Mantle cells** use the analytic stress of a uniformly strained triangle:
+  the exact derivative of Barbot's (2018) closed-form displacement. It agrees
+  with an independent quadrature to about $10^{-12}$ and satisfies Betti
+  reciprocity to rounding.
+- **The model box** is imposed by a boundary-element solve: zero displacement
+  on its fixed sides and zero traction on its free sides. The background rate
+  comes from the long-term solution, not from boundary motion.
 
-**Analytic mantle stress.** The stress of a uniformly strained triangle is the
-exact derivative of Barbot's (2018) closed-form displacement, generated with
-the Symbolic Math Toolbox (`derivation/generateTriangleStress.m`), with the
-source's own anelastic strain removed inside the triangle
-({mat:func}`computeStressPlaneStrainTriangleShearZone`). Some terms, such as
-$\arctan(N/D)/D$, cancel only between the two ends of an edge and lose
-precision close to the lines through image edges and through horizontal or
-vertical edges; there that edge's contribution is integrated numerically
-(Gauss-Legendre or tanh-sinh quadrature). The stress agrees with an independent
-quadrature to about $10^{-12}$, satisfies Betti reciprocity and the
-traction-free surface to rounding, and is singular only on the triangle's own
-edges, where cell-averaged kernels never evaluate it.
+:::{admonition} In the code
+:class: in-code
 
-**Deviatoric projection.** `KL`, `LK` and `LL` are combinations of the full
-$\sigma_{22}, \sigma_{23}, \sigma_{33}$ kernels with $\epsilon_{33} =
--\epsilon_{22}$ imposed. The source code flags the index construction of the
-deviatoric `LL` kernel as still to be verified.
+{mat:func}`computeStressPlaneStrainTriangleShearZone` is the
+triangle stress, generated with the Symbolic Math Toolbox by
+`derivation/generateTriangleStress.m`; near a few lines through its edges,
+where the closed form loses precision, that edge's contribution is integrated
+numerically. {mat:func}`computeShzBoundaryCorrection` solves the boundary
+problem once for all mantle sources. The fixed and free sides are set by
+`boundary.Vpl` (0 and 1) in `examples/inputs/boundary2d.seg`.
+:::
 
 (mantle-kernels)=
 ### Mantle kernels: cell-averaged and certified
 
-The continuous operator from a deviatoric eigenstrain to the stress it causes
-is symmetric and negative semidefinite: stress always opposes the eigenstrain,
-so viscous relaxation can only decay. Sampling the stress at each cell's
-centroid (collocation) breaks both properties between neighbouring cells and
-gives a few spurious growing modes (43 on the example mesh), however exactly
-the stress is computed.
+Physically, the stress caused by a viscous strain always opposes it, so
+viscous relaxation can only decay. Sampling the stress at each cell's centre
+breaks this between neighbouring cells and creates a few spurious growing
+modes (43 on the example mesh), however exactly the stress is computed.
 
-{mat:func}`computeAllStressKernelsBem` therefore averages the stress over each
-receiving cell (3-point rule, option `cellaverage`). With piecewise-constant
-strain this is a Galerkin discretisation, which keeps the symmetry and sign of
-the continuous operator. The area-weighted `LL` is then symmetrised and checked
-to be negative semidefinite ({mat:func}`certifyMantleKernel`, option
-`kernelcertify`); the build fails if the check fails. A certified kernel has no
-growing modes for any viscosity and any power-law exponent, so both solvers use
-it as it is. The fault blocks (`KK`, `LK`) are not averaged.
+I2EC therefore **averages the stress over each cell**, a Galerkin
+discretisation that keeps the right symmetry and sign, and **certifies** the
+result: the mantle–mantle kernel is checked to have no growing mode. A
+certified kernel is stable for any viscosity and any power-law exponent, in
+both solvers.
 
-**Centroid kernels** (`'cellaverage', 1, 'kernelcertify', false`) remain
-available for comparison, with the earlier fixes for their growing modes:
-`kernelmodify` 1 or 2 ({mat:func}`modifyGrowingModes`) sets them to zero or
-damps them in `LL` before an `ode45` run, and {mat:func}`negateGrowingModes`
-negates them in the operator $A$ for the semi-analytical solvers. These are
-regularisations: results at the cell scale depend on the fix and should not be
-interpreted, and with a negated operator every forcing term that contains it
-(such as $c = \dot\epsilon_\text{lock} - A_\text{neg}\,y_\text{pl}$) must use
-the negated operator too.
+:::{admonition} In the code
+:class: in-code
 
-## Modelling assumptions and approximations
+this is the default of {mat:func}`computeAllStressKernelsBem`
+(options `cellaverage` and `kernelcertify`, check by
+{mat:func}`certifyMantleKernel`, recorded in `evl.certificate`). Centre-sampled
+kernels (`'cellaverage', 1, 'kernelcertify', false`) remain for comparison.
+Their growing modes need a fix: `kernelmodify` ({mat:func}`modifyGrowingModes`)
+for `ode45`, or {mat:func}`negateGrowingModes` on $A$, with every forcing term
+built from the negated operator. Their results at the cell scale should not be
+interpreted.
+:::
 
-- **Corner-flow loading.** The long-term strain rates come from analytic
-  corner flow (Turcotte & Schubert, 2002; $n = 1$ or $n = 3$), which is singular at the
-  corner. The evaluation points are shifted (`ocean_translate_params`,
-  `continental_translate_params`) to stay away from it, and the strain rate in
-  each cell comes from a planar fit of the velocity at its three vertices. The
-  shifts are tuning choices that should match the mesh.
-- **Hinge fault.** Surface velocities and displacements include a vertical
-  "hinge" fault (`examples/inputs/hinge2d.seg`) that stands in for plate bending. It is
-  kinematic: it is added to the surface predictions only and is not part of
-  the dynamical system.
-- **Imposed, characteristic earthquakes.** Events are prescribed (slip, timing),
-  not computed; the periodic solution describes a perfectly repeating cycle.
+## Assumptions
+
+- **Imposed earthquakes.** Slip and timing are prescribed, not computed; the
+  periodic solution is a perfectly repeating cycle.
+- **Analytic corner flow.** The long-term loading is the corner-flow solution
+  (Turcotte & Schubert, 2002), shifted away from its singular corner. The
+  shifts (`ocean_translate_params`, `continental_translate_params`) are tuning
+  choices that should match the mesh.
+- **Kinematic hinge.** A vertical "hinge" fault (`examples/inputs/hinge2d.seg`)
+  stands in for plate bending in the surface predictions only.
 
 ## Practical guidance
 
-- Use meshes fine enough that the features you interpret span several cells
-  ({doc}`examples/example3` shows the effect of mesh size).
-- After building kernels for a new mesh, look at `evl.certificate`: the
-  asymmetry removed and the largest eigenvalue of the symmetrised kernel. A
-  failed certification is an error; it points to a mesh or kernel problem.
-- Recompute the kernels after any geometry change. The files in `examples/kernels/`
-  match the example meshes only.
+- Use meshes fine enough that the features you interpret span several cells;
+  {doc}`examples/example3` shows the effect of mesh size.
+- Recompute the kernels after any geometry change; the files in
+  `examples/kernels/` match the example meshes only.
+- After building kernels for a new mesh, look at `evl.certificate`. A failed
+  certification is an error that points to a mesh or kernel problem.
 - `runTests` checks the Green's functions, kernels and solvers against
   physical identities; see `tests/README.md`.

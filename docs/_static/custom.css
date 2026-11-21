@@ -60,3 +60,30 @@ dl.field-list span > code.xref.mat-obj {
   position: absolute;
   inset: 0;
 }
+
+/* Theory page: quiet "In the code" boxes for implementation details. */
+.admonition.in-code {
+  border: none;
+  border-left: 3px solid var(--color-background-border);
+  border-radius: 0;
+  background: var(--color-background-secondary);
+  box-shadow: none;
+  font-size: 0.88em;
+  padding: 0.5rem 0.9rem;
+}
+.admonition.in-code > .admonition-title {
+  background: transparent;
+  color: var(--color-foreground-secondary);
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 -0.9rem 0.2rem;
+  padding: 0 0.9rem;
+}
+.admonition.in-code > .admonition-title::before {
+  display: none;
+}
+.admonition.in-code > p:last-child {
+  margin-bottom: 0;
+}
