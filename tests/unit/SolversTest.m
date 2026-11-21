@@ -98,6 +98,17 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyWarningFree(@() analyticSolveIVP(A0, [tc.c; 1e-12], [ones(size(tc.c)); 0], tc.T));
         end
 
+        function periodicSolverAcceptsWidelySeparatedTimescales(tc)
+            % a strong mantle with a weak fault: modes 1e-11 of max|lambda|
+            % that still relax over many cycles (|lambda|*T ~ 1e-9) are
+            % solved, not rejected as neutral, and close the cycle
+            As = blkdiag(tc.A, 1e-8*tc.A);
+            cs = [tc.c; 1e-8*tc.c]; bs = [tc.b; tc.b];
+            y0 = computePeriodicInitialConditionBalanced(As, cs, bs, tc.T);
+            yT = analyticSolveIVP(As, cs, y0, tc.T);
+            tc.verifyLessThan(norm(yT + bs - y0) / norm(y0), 1e-6);
+        end
+
         function eigBalancedMatchesEig(tc)
             [V, lam, ng] = eigBalanced(tc.A);
             tc.verifyEqual(sort(lam, 'ComparisonMethod', 'real'), sort(eig(tc.A), 'ComparisonMethod', 'real'), 'RelTol', 1e-8);
