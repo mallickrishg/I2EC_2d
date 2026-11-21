@@ -216,8 +216,67 @@ the negated operator too.
 - **Imposed, characteristic earthquakes.** Events are prescribed (slip, timing),
   not computed; the periodic solution describes a perfectly repeating cycle.
 
+(valid-range)=
+## Valid range of Maxwell times
+
+How faithful a simulation is depends on the ratio of the mantle Maxwell time
+$t_M = \eta/\mu$ to the earthquake recurrence time $T$, and on the fault,
+which sets the fastest timescale of the system. The two solvers have
+different limits.
+
+**Semi-analytical solver (linear case).** The periodic state is solved mode by
+mode, so its accuracy is set by how far the slowest mode relaxes in one cycle,
+$|\lambda_\text{min}|\,T$; the error grows roughly as
+$1/(|\lambda_\text{min}|\,T)$. Measured on the example 2 model (linear viscous
+fault, $\eta' = 5\times10^{17}$ Pa s divided by the fault width, locked above
+30 km, $T = 500$ yr) with a uniform Newtonian mantle, against an independent
+direct solve of the periodic condition:
+
+| $t_M/T$ | $10^{-5}$ | $0.02$ (example 2) | $10^{2}$ | $10^{4}$ | $10^{5}$ | $10^{6}$ |
+| --- | --- | --- | --- | --- | --- | --- |
+| slowest $\lvert\lambda\rvert\,T$ | $3\times10^{2}$ | $0.14$ | $3\times10^{-5}$ | $3\times10^{-7}$ | $3\times10^{-8}$ | $3\times10^{-9}$ |
+| relative error, mantle state | $10^{-10}$ | $4\times10^{-12}$ | $2\times10^{-10}$ | $10^{-8}$ | $3\times10^{-7}$ | $10^{-6}$ |
+
+- Weak mantles have no limit: fast modes simply decay within the cycle.
+- Strong mantles lose about one digit per factor of 10 in $t_M/T$. By
+  extrapolation the mantle state keeps about three digits up to
+  $t_M/T \approx 10^{9}$.
+- Modes that relax by less than $10^{-12}$ per cycle
+  ($|\mathrm{Re}\,\lambda|\,T \le 10^{-12}$) are an error
+  (`I2EC:neutralModes`), since their periodic state is not determined.
+- In the strong-mantle limit the cycle perturbation of the mantle strain rate
+  vanishes and the mantle follows its long-term rate; the solver reproduces
+  this rather than having to be avoided there.
+- Before 2026-11-21 the periodic solver set modes with
+  $|\lambda| < 10^{-16}$ s$^{-1}$ to zero. For $t_M/T \gtrsim 10^{4}$ (with this
+  fault) that dropped real mantle modes and the periodic mantle state was 58 %
+  to 100 % wrong; results from that range made with earlier versions should be
+  recomputed.
+
+**Numerical integration (`ode45`, any rheology).** Accuracy is set by the
+solver tolerances, but the cost has limits at both ends:
+
+- *Spin-up length.* Each cycle reduces the distance to the periodic state by
+  the factor $\rho = \max_k |e^{\lambda_k T}|$, so reaching $10^{-6}$ takes about
+  $14/(|\lambda_\text{min}|\,T)$ cycles: a few cycles for $t_M/T \lesssim 10^{-3}$,
+  about 100 for example 2 ($t_M/T = 0.02$), about 5000 for $t_M/T = 1$ and
+  about $5\times10^{5}$ for $t_M/T = 10^{2}$. For linear rheology use the
+  semi-analytical solver beyond $t_M/T \sim 0.1$. For power-law rheology the
+  effective Maxwell time varies with stress through the cycle, so check
+  convergence directly, as example 1 does by printing the change over the
+  last cycle.
+- *Step count.* `ode45` is explicit, so its steps per cycle grow with the
+  fastest rate, $\max_k|\lambda_k|\,T$. With this fault the fault sets that rate
+  down to $t_M/T \approx 10^{-5}$; a weaker fault or mantle makes each cycle
+  slower to integrate.
+
+Both limits depend on the fault as well as the mantle: the fault sets the
+fastest timescale, so a stiffer or weaker fault shifts the numbers above.
+
 ## Practical guidance
 
+- Check that the Maxwell time of your model is in the range the solver
+  handles ({ref}`valid-range`).
 - Use meshes fine enough that the features you interpret span several cells
   ({doc}`examples/example3` shows the effect of mesh size).
 - After building kernels for a new mesh, look at `evl.certificate`: the

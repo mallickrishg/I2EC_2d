@@ -85,6 +85,8 @@ The default kernels are cell-averaged and certified, so the operator has no
 growing modes and is used as it is. {mat:func}`analyticSolveIVP` and
 {mat:func}`computePeriodicInitialConditionBalanced` raise an error if it has
 any, which happens only with centroid kernels; see {ref}`mantle-kernels`.
+For the range of mantle Maxwell times each solver handles, see
+{ref}`valid-range`.
 :::
 
 ### Numerical integration (general rheology)
