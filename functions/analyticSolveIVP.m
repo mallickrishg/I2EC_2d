@@ -4,7 +4,7 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %
 %   Evaluates the state y(t) and its time integral u(t) at each time in
-%   tvec. The operator is balanced and eigendecomposed (eigBalanced); each
+%   tvec. The operator is eigendecomposed (eigBalanced); each
 %   mode is then evolved exactly
 %   with the modal integrals of egh_modal:
 %       z(t) = e(t).*z0 + g(t).*zc,    uz(t) = g(t).*z0 + h(t).*zc
@@ -53,7 +53,7 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 
 n = size(A, 1);
 
-% ---- Balanced eigendecomposition; growing modes are an error ----
+% ---- Eigendecomposition; growing modes are an error ----
 [V, lambda, nGrowing] = eigBalanced(A);
 if nGrowing > 0
     error('I2EC:growingModes', ['analyticSolveIVP: the operator has %d growing modes (largest ' ...

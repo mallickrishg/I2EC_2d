@@ -57,7 +57,7 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026
 
 
-% ---- Balanced eigendecomposition; growing modes are an error ----
+% ---- Eigendecomposition; growing modes are an error ----
 [V, lambda, nGrowing] = eigBalanced(A);
 if nGrowing > 0
     error('I2EC:growingModes', ['computePeriodicInitialConditionBalanced: the operator has %d growing modes (largest ' ...
@@ -78,7 +78,7 @@ if any(neutral)
 end
 
 if cond(V) > 1e14
-    warning('System remains ill-conditioned even after balancing.');
+    warning('The eigenvectors of the operator are ill-conditioned (cond(V) > 1e14).');
 end
 
 % ---- Modal coordinates ----
