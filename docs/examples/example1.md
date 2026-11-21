@@ -20,7 +20,7 @@ rcv = m.rcv; shz = m.shz; evl = m.evl; Vpl = m.Vpl; yr = m.yr;
 `exampleModel` (in `examples/`) adds the I2EC folders to the path and returns
 the megathrust `rcv` (49 patches), the mantle mesh `shz` (521 triangles), the
 plate rate and the kernels: `evl` for stress, `m.devl` for surface
-displacement, loaded from `kernels/`. To build kernels for your own geometry,
+displacement, loaded from `examples/kernels/`. To build kernels for your own geometry,
 see {doc}`../inputs` and {mat:func}`computeAllStressKernelsBem`.
 
 ## 2. Set the rheology
@@ -116,6 +116,11 @@ G = @(j) [m.devl.KO(:,:,j), m.devl.LO(:,:,j,1), m.devl.LO(:,:,j,2)];
 dstate = [V(i,:)'; e22dot(i,:)'; e23dot(i,:)'] - [rcv.Vpl; shz.e22pl; shz.e23pl];
 vx = G(1)*dstate - m.Ghx*(m.hinge.Vpl*Vpl);     % j = 2 for vz
 ```
+
+Five years after the earthquake the surface velocity alternates along the
+profile. This comes from the power-law mantle (the Newtonian {doc}`example2`
+has none of it): the same pattern, with amplitudes within about 0.6 of the
+plate rate, appears on the meshes of {doc}`example3` with 495 and 1955 cells.
 
 ```{figure} ../_static/examples/example1_numericalPowerLaw_3.png
 :alt: Surface velocity at three times in the last cycle

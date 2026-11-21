@@ -69,6 +69,7 @@ run examples/plotLongtermVelocity
 :alt: Long-term velocity field of the example model
 :width: 100%
 
-Long-term velocity field (arrows) over the whole model box, with the mantle
-mesh (red), the megathrust and the model boundary.
+Long-term velocity (arrows) over the whole model box: the oceanic plate
+subducts at the plate rate and drives corner flow in the mantle wedge. The
+mantle mesh is shaded, the megathrust is the thick line.
 ```

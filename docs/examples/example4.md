@@ -1,30 +1,78 @@
 # Example 4: semi-analytical against numerical
 
+The cycle of {doc}`example2` solved twice: semi-analytically, and by
+integrating the same equations in time with `ode45`, the solver of
+{doc}`example1`. With a linear viscous fault (`rcv.faultLaw = 'linear'`) both
+solve the same linear ODE, so they must agree at every time. Run it with
+
 ```matlab
 run examples/example4_analyticVsNumerical
 ```
 
-The script solves the cycle of {doc}`example2` with both solvers. The
-numerical run uses the linear viscous fault law (`rcv.faultLaw = 'linear'`,
-set by `newtonianCycle`), so both solve the same linear ODE. It starts from
-the analytic state just before the earthquake and integrates one cycle with
-{mat:func}`viscoeq_sequence_simulation` and {mat:func}`ode_viscoelastic`. It
-must follow the analytic solution at every time and end where it started. On
-the example they agree to $3.8\times10^{-9}$ in slip rate and
-$3.6\times10^{-11}$ in strain rate (relative), and the numerical end state
-matches its start to $3\times10^{-11}$.
+The steps below are the script, shortened.
+
+## 1. Solve the cycle semi-analytically
+
+```matlab
+m = exampleModel('StressKernels', true);
+rcv = m.rcv; shz = m.shz; evl = m.evl;
+cyc = newtonianCycle(rcv, shz, evl, m.Vpl, m.yr);
+```
+
+As in {doc}`example2`. The script also prints how slowly a numerical spin-up
+from the long-term state would converge, from the slowest mode of `cyc.A`:
+
+```text
+slowest mode: 3715 yr (rho = 0.874 per cycle, 103 cycles to spin up to 1e-6)
+```
+
+So the numerical run below starts from the periodic state instead.
+
+## 2. Integrate one cycle numerically
+
+The numerical solver's state is slip rate and mantle *stress*, so convert the
+analytic state just before the earthquake:
+
+```matlab
+locked = cyc.locked; Nc = sum(~locked); M = shz.N;
+ypre = cyc.y0 - cyc.b;                          % [v(creeping); e22dot; e23dot]
+Y0 = zeros(rcv.N + 2*M, 1);                     % [v; s22, s23 interleaved]
+Y0(~locked) = ypre(1:Nc);
+Y0(rcv.N+1:2:end) = ypre(Nc+1:Nc+M) ./ shz.alpha;
+Y0(rcv.N+2:2:end) = ypre(Nc+M+1:end) ./ shz.alpha;
+
+[t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+    Y0, rcv, shz, cyc.stress_change, cyc.Trecur);
+[Vn, e22n, e23n] = extract_v_edot_from_statevector(Y, rcv, shz);
+```
+
+{mat:func}`viscoeq_sequence_simulation` integrates
+{mat:func}`ode_viscoelastic` with `ode45`, applying the earthquake in
+`cyc.stress_change` at $t = 0$, and
+{mat:func}`extract_v_edot_from_statevector` turns the state back into slip
+and strain rates.
+
+## 3. Compare
+
+```matlab
+sol = cyc.solve(t');                            % analytic, at the same times
+```
+
+The script prints the largest difference over the cycle and whether the
+numerical run ends where it started:
+
+```text
+largest difference over the cycle: slip rate 4.0e-09, strain rate 3.4e-11 (relative)
+numerical end state vs start state: 3.2e-11 (relative)
+```
+
+## 4. Plot the results
+
+Slip rate at three creeping patches and strain rate at three mantle cells
+through the cycle: semi-analytical (coloured) and numerical (black dashed).
+The curves lie on top of each other.
 
 ```{figure} ../_static/examples/example4_analyticVsNumerical_1.png
 :alt: Time series of fault slip rate and mantle strain rate from both solvers
 :width: 100%
-
-Slip rate at three creeping patches (32, 40 and 48 km depth) and strain rate
-at three mantle cells through one cycle: semi-analytical (coloured) and
-numerical (black dashed).
 ```
-
-Starting the numerical run from the long-term state instead would need a
-spin-up. The slowest mode of this model decays over about 3700 years, so the
-remaining error shrinks only by a factor of 0.87 per 500-year cycle, and about
-100 cycles are needed to reach $10^{-6}$ (printed by the script).
-`TimeIntegrationTest/spunUp*` checks the spin-up on a smaller model.
