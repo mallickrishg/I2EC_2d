@@ -84,6 +84,20 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyWarningFree(@() computePeriodicInitialConditionBalanced(An, tc.c, tc.b, tc.T));
         end
 
+        function periodicSolverRejectsNeutralModes(tc)
+            % a mode that neither decays nor grows (an integrator, or an
+            % undamped oscillation) leaves the periodic state undetermined
+            A0 = blkdiag(tc.A, 0);
+            tc.verifyError(@() computePeriodicInitialConditionBalanced(A0, [tc.c; 0], [tc.b; 0], tc.T), ...
+                'I2EC:neutralModes');
+            w = 2*pi/(7*tc.T);
+            Aosc = blkdiag(tc.A, [0 w; -w 0]);
+            tc.verifyError(@() computePeriodicInitialConditionBalanced(Aosc, [tc.c; 0; 0], [tc.b; 0; 0], tc.T), ...
+                'I2EC:neutralModes');
+            % the IVP is still defined
+            tc.verifyWarningFree(@() analyticSolveIVP(A0, [tc.c; 1e-12], [ones(size(tc.c)); 0], tc.T));
+        end
+
         function eigBalancedMatchesEig(tc)
             [V, lam, ng] = eigBalanced(tc.A);
             tc.verifyEqual(sort(lam, 'ComparisonMethod', 'real'), sort(eig(tc.A), 'ComparisonMethod', 'real'), 'RelTol', 1e-8);

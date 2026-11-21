@@ -31,9 +31,13 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %     build c with the negated operator. Then |exp(lam*T)| < 1 for every
 %     mode with Re(lam) ~= 0, so the cycle contracts and y0 is the state
 %     that a spin-up converges to.
-%   - Modes with |lam| < 1e-16 1/s (integrator modes that neither grow nor
-%     decay) get z0 = 0, the minimum-norm solution. The threshold is
-%     absolute, so the result is not continuous across it.
+%   - Neutral modes are an error too ('I2EC:neutralModes'): modes with
+%     |Re(lam)| <= 1e-10*max|lam|, the same relative band within which
+%     eigBalanced cannot call a mode growing. Such a mode neither decays
+%     nor grows (an integrator, lam = 0, or an undamped oscillation), so
+%     the periodic state is not determined: it exists only if the
+%     forcing has no component along the mode, and is then not unique.
+%     A spin-up does not converge either.
 %   - Evaluating 1 - exp(lam*T) as -lam.*g(T) avoids cancellation for
 %     small |lam*T|, where g(T) comes from a series.
 %   - Warns if cond(V) > 1e14 (ill-conditioned eigenvectors).
@@ -47,7 +51,6 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 % AUTHORS
 %   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026
 
-n = size(A, 1);
 
 % ---- Balanced eigendecomposition; growing modes are an error ----
 [V, lambda, nGrowing] = eigBalanced(A);
@@ -57,6 +60,26 @@ if nGrowing > 0
         '(cell-averaged, certified), or negate them explicitly with ' ...
         '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
         nGrowing, max(real(lambda)));
+end
+
+tolNeutral = 1e-10;
+neutral = abs(real(lambda)) <= tolNeutral * max(abs(lambda));
+if any(neutral)
+    error('I2EC:neutralModes', ['computePeriodicInitialConditionBalanced: the operator has %d modes that ' ...
+        'neither decay nor grow (|Re(lambda)| <= %.0e of max|lambda|, smallest |lambda| = %.3g 1/s), ' ...
+        'so the periodic state is not determined. Check the kernel (computeAllStressKernelsBem ' ...
+        'certifies it) and that every degree of freedom is restored by the operator.'], ...
+        nnz(neutral), tolNeutral, min(abs(lambda)));
+end
+
+tolNeutral = 1e-10;
+neutral = abs(real(lambda)) <= tolNeutral * max(abs(lambda));
+if any(neutral)
+    error('I2EC:neutralModes', ['computePeriodicInitialConditionBalanced: the operator has %d modes that ' ...
+        'neither decay nor grow (|Re(lambda)| <= %.0e of max|lambda|, smallest |lambda| = %.3g 1/s), ' ...
+        'so the periodic state is not determined. Check the kernel (computeAllStressKernelsBem ' ...
+        'certifies it) and that every degree of freedom is restored by the operator.'], ...
+        nnz(neutral), tolNeutral, min(abs(lambda)));
 end
 
 if cond(V) > 1e14
@@ -73,10 +96,8 @@ zb = V \ b;
 %  above), so the denominator is too.
 [~, gT] = egh_modal(lambda, T);
 
-z0 = zeros(n, 1);
-active = abs(lambda) >= 1e-16;
-one_minus_eT = -lambda(active) .* gT(active);
-z0(active) = (gT(active) .* zc(active) + zb(active)) ./ one_minus_eT;
+one_minus_eT = -lambda .* gT;
+z0 = (gT .* zc + zb) ./ one_minus_eT;
 
 y0 = real(V * z0);
 

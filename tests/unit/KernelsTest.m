@@ -185,6 +185,23 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             tc.verifyError(@() certifyMantleKernel(tc.Evl, tc.Sm.shz), 'certifyMantleKernel:notNegative');
         end
 
+        function certificationRejectsZeroEnergyModes(tc)
+            % a zero eigenvalue nudged just above zero by quadrature (as on
+            % criss-cross meshes) is an error, not clipped to zero
+            M = 4; rng(3);
+            [Q, ~] = qr(randn(2*M));
+            S = Q * diag([-1; -0.5; -0.3; -0.2; -0.1; -0.05; -0.02; 1e-5]) * Q';
+            a = [1; 2; 3; 4];
+            L = S ./ [a; a];
+            e.LL = cat(4, cat(3, L(1:M,1:M), L(M+1:end,1:M)), cat(3, L(1:M,M+1:end), L(M+1:end,M+1:end)));
+            tc.verifyError(@() certifyMantleKernel(e, struct('area', a)), 'certifyMantleKernel:zeroEnergyModes');
+            S(:) = Q * diag([-1; -0.5; -0.3; -0.2; -0.1; -0.05; -0.02; -1e-5]) * Q';
+            L = S ./ [a; a];
+            e.LL = cat(4, cat(3, L(1:M,1:M), L(M+1:end,1:M)), cat(3, L(1:M,M+1:end), L(M+1:end,M+1:end)));
+            c = certifyMantleKernel(e, struct('area', a));
+            tc.verifyLessThan(c.certificate.maxEigenvalue, 0);
+        end
+
         function certifiedKernelHasNoGrowingModesForPowerLaw(tc, n)
             % the guarantee: no growing modes for any SPD power-law
             % Jacobian (random stress states, magnitudes and prefactors)

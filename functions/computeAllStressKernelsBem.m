@@ -31,10 +31,11 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 %                 1: the value at the centroid (collocation), or
 %                 3, 7: the average over the cell with a 3- or 7-point
 %                    interior quadrature rule  [3]
-%   kernelcertify true: symmetrise the area-weighted LL and check that it
-%                 is negative semidefinite (certifyMantleKernel), which
-%                 guarantees no growing modes for any viscosity and
-%                 power-law exponent; errors if the check fails. Needs
+%   kernelcertify true: symmetrise the area-weighted LL and check that
+%                 all its eigenvalues are negative (certifyMantleKernel),
+%                 which guarantees no growing or neutral modes for any
+%                 viscosity and power-law exponent; errors if the check
+%                 fails (including zero-energy modes of the mesh). Needs
 %                 'cellaverage' 3 or 7  [true]
 %   kernelmodify  empirical fix for the growing modes of centroid
 %                 kernels (see modifyGrowingModes); not needed with
@@ -72,7 +73,7 @@ function evl = computeAllStressKernelsBem(rcv,shz,boundary,varargin)
 %     mesh). Averaging costs about 3x (or 7x) the time of the KL and LL
 %     blocks. KK and LK (fault receivers) are not averaged.
 %   - Certification (default): the area-weighted LL is symmetrised and
-%     checked to be negative semidefinite (certifyMantleKernel), which
+%     checked to be negative definite (certifyMantleKernel), which
 %     guarantees no growing modes for any viscosity distribution and
 %     power-law exponent; the call errors if the check fails. The result
 %     is stored in evl.certificate.
@@ -212,8 +213,8 @@ evl.LL(:,:,2,2) = L22;
 % cell-averaged kernels: symmetrise and certify negative semidefinite
 if kernelcertify
     evl = certifyMantleKernel(evl, shz);
-    fprintf('Mantle kernel certified: asymmetry removed %.2e, max eigenvalue %.2e of the spectrum, %d zero-energy modes clipped\n', ...
-        evl.certificate.asymmetry, evl.certificate.maxEigenvalue, evl.certificate.clipped);
+    fprintf('Mantle kernel certified: asymmetry removed %.2e, max eigenvalue %.2e of the spectrum\n', ...
+        evl.certificate.asymmetry, evl.certificate.maxEigenvalue);
 end
 
 % change the growing modes (numerical solves only)

@@ -182,10 +182,14 @@ the stress is computed.
 receiving cell (3-point rule, option `cellaverage`). With piecewise-constant
 strain this is a Galerkin discretisation, which keeps the symmetry and sign of
 the continuous operator. The area-weighted `LL` is then symmetrised and checked
-to be negative semidefinite ({mat:func}`certifyMantleKernel`, option
-`kernelcertify`); the build fails if the check fails. A certified kernel has no
-growing modes for any viscosity and any power-law exponent, so both solvers use
-it as it is. The fault blocks (`KK`, `LK`) are not averaged.
+to have only negative eigenvalues ({mat:func}`certifyMantleKernel`, option
+`kernelcertify`); the build fails if the check fails, including for meshes with
+zero-energy modes (e.g. criss-cross meshes), which are not set to zero. A
+certified kernel has no growing or neutral modes for any viscosity and any
+power-law exponent, so both solvers use it as it is. The periodic solver
+({mat:func}`computePeriodicInitialConditionBalanced`) also raises an error for
+an operator with modes that neither decay nor grow, since the periodic state is
+then not determined. The fault blocks (`KK`, `LK`) are not averaged.
 
 **Centroid kernels** (`'cellaverage', 1, 'kernelcertify', false`) remain
 available for comparison, with the earlier fixes for their growing modes:

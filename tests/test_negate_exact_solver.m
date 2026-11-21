@@ -208,17 +208,20 @@ u_int = y00 * tvec + c0 * tvec.^2 / 2;
 err6b = max([abs(Y6(end,:) - y_int) ./ abs(y_int), abs(U6(end,:) - u_int) ./ abs(u_int)]);
 err6b_rest = max([vecnorm(Y6(1:n,:) - Y) ./ vecnorm(Y), vecnorm(U6(1:n,:) - U) ./ vecnorm(U)]);
 
-% 6c: periodic with the integrator; a periodic solution exists only if
-% c0*T + b0 = 0, and the guard |lam| < 1e-16 gives the minimum-norm z0 = 0
-y0_6 = computePeriodicInitialConditionBalanced(A6, [c; c0], [b; -c0*Trecur], Trecur);
-err6c = abs(y0_6(end)) / norm(y0_per);
-err6c_rest = norm(y0_6(1:n) - y0_per) / norm(y0_per);
+% 6c: periodic with the integrator: the periodic state is not
+% determined, so the solver raises I2EC:neutralModes
+try
+    computePeriodicInitialConditionBalanced(A6, [c; c0], [b; -c0*Trecur], Trecur);
+    err6c = Inf;
+catch err
+    err6c = double(~strcmp(err.identifier, 'I2EC:neutralModes'));
+end
 
 tol6 = 1e-10;
-pass6 = max([err6a, err6b, err6b_rest, err6c, err6c_rest]) < tol6;
+pass6 = max([err6a, err6b, err6b_rest, err6c]) < tol6;
 report(pass6, sprintf(['egh %.1e; IVP integrator %.1e, rest %.1e; ' ...
-    'periodic integrator %.1e, rest %.1e (tol %.0e)'], ...
-    err6a, err6b, err6b_rest, err6c, err6c_rest, tol6));
+    'periodic integrator rejected %d (tol %.0e)'], ...
+    err6a, err6b, err6b_rest, err6c == 0, tol6));
 [npass, nfail] = tally(pass6, npass, nfail);
 
 %% ---- Test 7: negation on a hand-built operator ----
