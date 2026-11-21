@@ -78,6 +78,23 @@ after any change in geometry, recompute them with
 {mat:func}`computeAllStressKernelsBem` and
 {mat:func}`computeAllDisplacementKernelsBem`.
 
+(kernel-options)=
+### Kernel options
+
+{mat:func}`computeAllStressKernelsBem` computes the mantle stress from the
+analytic triangle solution and, by default, averages it over each cell and
+certifies it (see {ref}`mantle-kernels`):
+
+| Call | Mantle stress | Growing modes | Use |
+| --- | --- | --- | --- |
+| `computeAllStressKernelsBem(rcv, shz, bnd)` | averaged over each cell (3 points), certified | none | default, both solvers |
+| `..., 'cellaverage', 7` | averaged (7 points), certified | none | finer quadrature, about twice the cost |
+| `..., 'cellaverage', 1, 'kernelcertify', false` | at the cell centre | a few | comparison only |
+
+Centre-sampled kernels need a fix for their growing modes: `'kernelmodify', 1`
+or `2` for `ode45`, or `[~, ~, A] = negateGrowingModes(A)` for the
+semi-analytical solvers.
+
 ### Kernel files (HDF5)
 
 Kernels are stored as HDF5 files, so they can be read outside MATLAB.
