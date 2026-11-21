@@ -77,49 +77,61 @@ fprintf('change over the last cycle: strain rate median %.1e, max %.1e; slip rat
     median(dE), max(dE), max(dV));
 
 %% fault slip rate through the cycle
-figure(1),clf
-pcolor(t/Trecur, rcv.xc(:,1)/1e3, V'/Vpl), shading interp
-xlabel('t/T'), ylabel('x (km)')
-cb = colorbar; cb.Label.String = 'v/v_{pl}';
-clim(10.^[-1 2]), colormap(turbo)
-set(gca, 'ColorScale', 'log', 'XScale', 'log', 'YDir', 'reverse', 'FontSize', 12, 'LineWidth', 1)
-xlim([1e-4 1])
-title('Slip rate on the megathrust (0 on the locked zone)')
+st = exampleStyle();
+Vplot = V'/Vpl;  Vplot(locked,:) = NaN;          % locked zone: blank
+st.figure(1, 760, 420)
+pcolor(t/Trecur, rcv.xc(:,1)/1e3, Vplot), shading interp, hold on
+text(1e-2, mean(rcv.xc(locked,1))/1e3, 'locked zone (no slip)', 'Color', st.ink2, ...
+    'HorizontalAlignment', 'center', 'FontSize', 11)
+xlabel('time since the earthquake, t/T'), ylabel('distance from the trench (km)')
+cb = colorbar; cb.Label.String = 'slip rate / plate rate';
+clim(10.^[-1 2]), colormap(st.orange)
+set(gca, 'ColorScale', 'log', 'XScale', 'log', 'YDir', 'reverse')
+xlim([1e-4 1]), title('Slip rate on the megathrust')
+st.axes()
 
 %% mantle strain rate snapshots
 tfrac = [0.01 0.1 0.99];
 idx = arrayfun(@(f) find(t >= f*Trecur, 1), tfrac);
-figure(2),clf
-tiledlayout(2, 2, 'TileSpacing', 'compact')
+st.figure(2, 1000, 470)
+tl = tiledlayout(2, 2, 'TileSpacing', 'tight', 'Padding', 'compact');
 nexttile
 plotshz2d(shz, edot_lt), hold on, plotpatch2d(rcv)
 title('long-term')
 for i = 1:numel(tfrac)
     nexttile
     plotshz2d(shz, edot(idx(i),:)'), hold on, plotpatch2d(rcv)
-    title(sprintf('t/T = %.2f', t(idx(i))/Trecur))
+    title(sprintf('%.0f yr after the earthquake (t/T = %.2f)', t(idx(i))/yr, t(idx(i))/Trecur))
 end
-for ax = findobj(gcf, 'Type', 'axes')'
-    axis(ax, 'tight', 'equal'), box(ax, 'on'), clim(ax, 10.^[-15 -12])
-    set(ax, 'ColorScale', 'log', 'FontSize', 12, 'LineWidth', 1)
-    xlabel(ax, 'x (km)'), ylabel(ax, 'z (km)')
-end
-colormap(turbo(30))
+ax = findobj(gcf, 'Type', 'axes');
+set(ax, 'ColorScale', 'log', 'CLim', 10.^[-15 -12])
+xlabel(tl, 'distance from the trench (km)', 'FontSize', 11, 'Color', st.ink2)
+ylabel(tl, 'depth (km)', 'FontSize', 11, 'Color', st.ink2)
+colormap(st.blue)
 cb = colorbar; cb.Layout.Tile = 'east'; cb.Label.String = 'strain rate (1/s)';
+st.map()
 
 %% surface velocity
 G = @(j) [m.devl.KO(:,:,j), m.devl.LO(:,:,j,1), m.devl.LO(:,:,j,2)];
 dstate = [V(idx,:)'; e22dot(idx,:)'; e23dot(idx,:)'] - [rcv.Vpl; shz.e22pl; shz.e23pl];
 vx = G(1)*dstate - m.Ghx*(m.hinge.Vpl*Vpl);
 vz = G(2)*dstate - m.Ghz*(m.hinge.Vpl*Vpl);
-figure(3),clf
-tiledlayout(2, 1, 'TileSpacing', 'compact')
-nexttile
-plot(m.obs(:,1)/1e3, vx/Vpl + (m.obs(:,1) <= 0), 'LineWidth', 2)
-grid on, box on, ylabel('v_x/v_{pl}')
-legend(compose('t/T = %.2f', t(idx)/Trecur), 'Location', 'best')
-title('Surface velocity')
-nexttile
-plot(m.obs(:,1)/1e3, vz/Vpl, 'LineWidth', 2)
-grid on, box on, ylabel('v_z/v_{pl}'), xlabel('distance from the trench (km)')
-set(findobj(gcf, 'Type', 'axes'), 'FontSize', 12, 'LineWidth', 1)
+xo = m.obs(:,1)/1e3;
+st.figure(3, 760, 520)
+tl = tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
+nexttile, hold on
+yline(0, 'Color', st.grid, 'LineWidth', 1, 'HandleVisibility', 'off')
+for i = 1:numel(idx)
+    plot(xo, vx(:,i)/Vpl + (xo <= 0), 'Color', st.times(i,:), 'LineWidth', 2, ...
+        'DisplayName', sprintf('%.0f yr (t/T = %.2f)', t(idx(i))/yr, t(idx(i))/Trecur))
+end
+grid on, ylabel('horizontal / plate rate')
+legend('Location', 'northeast', 'Box', 'off')
+title('Surface velocity after the earthquake')
+nexttile, hold on
+yline(0, 'Color', st.grid, 'LineWidth', 1)
+for i = 1:numel(idx)
+    plot(xo, vz(:,i)/Vpl, 'Color', st.times(i,:), 'LineWidth', 2)
+end
+grid on, ylabel('vertical / plate rate'), xlabel('distance from the trench (km)')
+st.axes()

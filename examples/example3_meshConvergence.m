@@ -76,63 +76,61 @@ for k = 1:numel(res)-1
 end
 
 %% plot: snapshots, one row per mesh, one column per time
-figure(1),clf
-tl = tiledlayout(numel(res), numel(tfrac), 'TileSpacing', 'compact');
+st = exampleStyle();
+st.figure(1, 1100, 560)
+tl = tiledlayout(numel(res), numel(tfrac), 'TileSpacing', 'tight', 'Padding', 'compact');
 for k = 1:numel(res)
     for i = 1:numel(tfrac)
         nexttile
         plotshz2d(res(k).shz, res(k).edot(:,i)), hold on, plotpatch2d(res(k).rcv)
-        axis tight equal, box on
-        clim(10.^[-15 -12])
-        set(gca, 'ColorScale', 'log', 'FontSize', 11, 'LineWidth', 1, 'TickDir', 'in')
         if k == 1
-            title(sprintf('t/T = %.2f (%.0f yr)', tfrac(i), tfrac(i)*res(k).Trecur/yr))
+            title(sprintf('%.0f yr (t/T = %.2f)', tfrac(i)*res(k).Trecur/yr, tfrac(i)))
         end
         if i == 1
-            ylabel(sprintf('%s, %d cells\nz (km)', res(k).name, res(k).shz.N))
+            ylabel(sprintf('%s, %d cells', res(k).name, res(k).shz.N))
         end
-        if k == numel(res), xlabel('x (km)'), end
     end
 end
-colormap(turbo(30))
-cb = colorbar; cb.Layout.Tile = 'east';
-cb.Label.Interpreter = 'latex';     % before the string, which is LaTeX
-cb.Label.String = 'strain rate $\sqrt{\dot\epsilon_{22}^2 + \dot\epsilon_{23}^2}$ (1/s)';
-title(tl, 'Mantle strain rate over the earthquake cycle on three meshes')
+set(findobj(gcf, 'Type', 'axes'), 'ColorScale', 'log', 'CLim', 10.^[-15 -12])
+xlabel(tl, 'distance from the trench (km)', 'FontSize', 11, 'Color', st.ink2)
+ylabel(tl, 'depth (km)', 'FontSize', 11, 'Color', st.ink2)
+colormap(st.blue)
+cb = colorbar; cb.Layout.Tile = 'east'; cb.Label.String = 'strain rate (1/s)';
+st.map()
 
 %% plot: profiles through all three meshes
-profiles = struct('label', {'z = -60 km', 'x = 300 km'}, ...
+profiles = struct('label', {'at 60 km depth', 'at 300 km from the trench'}, ...
     'pts', {[linspace(-100e3, 450e3, 551)' -60e3*ones(551,1)], ...
             [300e3*ones(331,1) linspace(-35e3, -200e3, 331)']}, ...
     'horizontal', {true, false});
-figure(2),clf
-tl = tiledlayout(numel(profiles), numel(tfrac), 'TileSpacing', 'compact');
+st.figure(2, 1100, 640)
+tl = tiledlayout(numel(profiles), numel(tfrac), 'TileSpacing', 'compact', 'Padding', 'compact');
 for p = 1:numel(profiles)
     for i = 1:numel(tfrac)
         nexttile, hold on
         for k = 1:numel(res)
             s = sampleOnPoints(res(k).shz, res(k).edot(:,i), profiles(p).pts);
+            name = sprintf('%s (%d cells)', res(k).name, res(k).shz.N);
             if profiles(p).horizontal
-                plot(profiles(p).pts(:,1)/1e3, s, 'LineWidth', 1.5)
+                plot(profiles(p).pts(:,1)/1e3, s, 'Color', st.series(k,:), 'LineWidth', 1.5, 'DisplayName', name)
             else
-                plot(s, profiles(p).pts(:,2)/1e3, 'LineWidth', 1.5)
+                plot(s, -profiles(p).pts(:,2)/1e3, 'Color', st.series(k,:), 'LineWidth', 1.5, 'DisplayName', name)
             end
         end
-        box on, grid on
+        grid on
         if profiles(p).horizontal
-            set(gca, 'YScale', 'log'), xlabel('x (km)'), ylabel('strain rate (1/s)')
+            set(gca, 'YScale', 'log'), xlim([-100 450]), xlabel('distance from the trench (km)')
+            if i == 1, ylabel('strain rate (1/s)'), end
         else
-            set(gca, 'XScale', 'log'), xlabel('strain rate (1/s)'), ylabel('z (km)')
+            set(gca, 'XScale', 'log', 'YDir', 'reverse'), xlabel('strain rate (1/s)')
+            if i == 1, ylabel('depth (km)'), end
         end
-        set(gca, 'FontSize', 11, 'LineWidth', 1)
-        title(sprintf('%s, t/T = %.2f', profiles(p).label, tfrac(i)))
-        if p == 1 && i == 1
-            legend(arrayfun(@(r) sprintf('%s (%d cells)', r.name, r.shz.N), res, ...
-                'UniformOutput', false), 'Location', 'best')
-        end
+        title(sprintf('%s, %.0f yr', profiles(p).label, tfrac(i)*res(1).Trecur/yr))
     end
 end
-title(tl, 'Strain-rate profiles on the three meshes')
+lg = legend(nexttile(1), 'Orientation', 'horizontal', 'Box', 'off');
+lg.Layout.Tile = 'south';
+st.axes()
 
 function s = sampleOnPoints(shz, values, pts)
 % value of the triangle that contains each point (NaN outside the mesh)
