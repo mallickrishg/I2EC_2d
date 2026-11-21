@@ -295,7 +295,7 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 
 Error identifiers follow their functions (`certifyShzKernel:notNegative`, `certifyShzKernel:zeroEnergyModes`, `computeRegionCornerFlow:region`).
 
-- [ ] Credit `bluewhitered`, `cline` and `drchrnd` under "Third-party components" in `docs/contributors.md`.
+- [x] ~~Credit `bluewhitered`, `cline` and `drchrnd` under "Third-party components" in `docs/contributors.md`.~~ *Done: bluewhitered (Nathan Childress, MATLAB File Exchange 4058, 2003) and cline (Sebastian Hölz, File Exchange 14677, 2007) are credited with links; drchrnd is described as the standard gamma-variate construction. The naming rules are in the docs (Contributors → Code conventions) and the old → new table is on the "Renamed functions" page.*
 
 ## 5. `meshing/` folder
 

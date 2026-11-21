@@ -72,5 +72,6 @@ api/utilities
 :hidden:
 
 contributors
+migration
 GitHub repository <https://github.com/mallickrishg/I2EC_2d>
 ```
