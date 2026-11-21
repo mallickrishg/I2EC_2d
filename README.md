@@ -81,7 +81,7 @@ description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.h
 | --- | --- |
 | Understand the equations and the method | [Theory](https://mallickrishg.github.io/I2EC_2d/theory.html) |
 | Set up my own fault, mesh or kernels | [Inputs](https://mallickrishg.github.io/I2EC_2d/inputs.html) |
-| Choose kernel options | [Quick start: kernel options](https://mallickrishg.github.io/I2EC_2d/quickstart.html#kernel-options) |
+| Choose kernel options | [Kernel options](https://mallickrishg.github.io/I2EC_2d/inputs.html#kernel-options) |
 | Look up a function | [API reference](https://mallickrishg.github.io/I2EC_2d/api/solvers.html) |
 | See worked examples with figures | [Examples](https://mallickrishg.github.io/I2EC_2d/examples/index.html) |
 
