@@ -14,7 +14,7 @@ function saveKernels(filename, K, varargin)
 %
 %   Layout (format 'I2EC kernels', version 1):
 %     /KK, /KL, ...          kernel blocks (float64, deflate-compressed)
-%     /certificate/...       scalars from certifyMantleKernel, if present
+%     /certificate/...       scalars from certifyShzKernel, if present
 %     /options/...           build options, if present
 %     /geometry/fault/...    xc, W, dip of the fault patches  (if 'rcv')
 %     /geometry/mantle/...   vertices, triangles, centroids, area  ('shz')

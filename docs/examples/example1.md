@@ -36,7 +36,7 @@ rcv.pinnedPosition = locked;
 rcv.Vpl = Vpl .* ones(rcv.N, 1);
 
 % long-term loading: n = 3 corner flow
-[e22_lt, e23_lt] = getStrainratesLongterm(shz, rcv.dip(1)*pi/180, ...
+[e22_lt, e23_lt] = computeLongTermStrainRates(shz, rcv.dip(1)*pi/180, ...
                                           [0, 20e3], [-140e3, 35e3], 3);
 shz.e22pl = e22_lt .* Vpl;
 shz.e23pl = -e23_lt .* Vpl;
@@ -48,7 +48,7 @@ edot_ref = median(sqrt(shz.e22pl.^2 + shz.e23pl.^2));
 shz.alpha = edot_ref ./ (eta_ref*edot_ref).^3 .* ones(shz.N, 1);
 ```
 
-{mat:func}`getStrainratesLongterm` gives the strain rates per unit plate rate.
+{mat:func}`computeLongTermStrainRates` gives the strain rates per unit plate rate.
 `shz.alpha` makes the effective viscosity $10^{19}$ Pa s at the median
 long-term strain rate; faster-deforming cells are weaker. The script prints the
 resulting range:
@@ -100,8 +100,8 @@ ends slowest.
 ```
 
 **Mantle strain rate**, $\sqrt{\dot\varepsilon_{22}^2 + \dot\varepsilon_{23}^2}$
-at three times, drawn with `plotshz2d(shz, edot(i,:)')` and
-`plotpatch2d(rcv)`. The stressed regions weaken, so the postseismic strain
+at three times, drawn with `plotShz2d(shz, edot(i,:)')` and
+`plotPatches2d(rcv)`. The stressed regions weaken, so the postseismic strain
 rates decay faster than in the Newtonian {doc}`example2`.
 
 ```{figure} ../_static/examples/example1_numericalPowerLaw_2.png

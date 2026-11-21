@@ -4,7 +4,7 @@
 % mantle, edot = alpha * tau^(n-1) * s with n = 3 everywhere, and a
 % rate-strengthening creeping fault, d log(v)/dt = (dtau/dt)/(a-b)sigma.
 % The power-law coefficient alpha is uniform, so the mantle is one
-% power-law material and the n = 3 corner flow (getStrainratesLongterm)
+% power-law material and the n = 3 corner flow (computeLongTermStrainRates)
 % is its long-term (plate-rate) solution. alpha gives an effective
 % viscosity of 1e19 Pa s, the viscosity of example 2, at the median
 % long-term strain rate.
@@ -38,7 +38,7 @@ rcv.pinnedPosition = locked;
 rcv.Vpl = Vpl .* ones(rcv.N, 1);
 
 % long-term strain rates (corner flow)
-[e22_lt, e23_lt] = getStrainratesLongterm(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 3);
+[e22_lt, e23_lt] = computeLongTermStrainRates(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 3);
 shz.e22pl = e22_lt .* Vpl;
 shz.e23pl = -e23_lt .* Vpl;
 edot_lt = sqrt(shz.e22pl.^2 + shz.e23pl.^2);
@@ -98,11 +98,11 @@ idx = arrayfun(@(f) find(t >= f*Trecur, 1), tfrac);
 st.figure(2, 1000, 470)
 tl = tiledlayout(2, 2, 'TileSpacing', 'tight', 'Padding', 'compact');
 nexttile
-plotshz2d(shz, edot_lt), hold on, plotpatch2d(rcv)
+plotShz2d(shz, edot_lt), hold on, plotPatches2d(rcv)
 title('long-term')
 for i = 1:numel(tfrac)
     nexttile
-    plotshz2d(shz, edot(idx(i),:)'), hold on, plotpatch2d(rcv)
+    plotShz2d(shz, edot(idx(i),:)'), hold on, plotPatches2d(rcv)
     title(sprintf('%.0f yr after the earthquake (t/T = %.2f)', t(idx(i))/yr, t(idx(i))/Trecur))
 end
 ax = findobj(gcf, 'Type', 'axes');

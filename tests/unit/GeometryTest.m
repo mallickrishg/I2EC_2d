@@ -183,7 +183,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
         function uniformSegmentMergesTheLastTwoPatches(tc)
             % Known quirk, kept on purpose (won't fix, see tasks.md):
             % megathrust2d.seg asks for W0 = W/50 with growth factor 1, but
-            % flt2flt merges the last two patches when the remainder is
+            % splitSegment merges the last two patches when the remainder is
             % 2*W0 (round-off makes 'Wt > Wc/2' true), so the example mesh
             % has 49 patches and the deepest one is 2*W0 wide. The cached
             % kernels in examples/kernels/ are built on this mesh, so this test pins

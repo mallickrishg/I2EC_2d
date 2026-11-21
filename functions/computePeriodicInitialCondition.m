@@ -1,7 +1,7 @@
-function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
-% COMPUTEPERIODICINITIALCONDITIONBALANCED  Steady periodic initial state.
+function y0 = computePeriodicInitialCondition(A, c, b, T)
+% COMPUTEPERIODICINITIALCONDITION  Steady periodic initial state.
 %
-%   y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
+%   y0 = computePeriodicInitialCondition(A, c, b, T)
 %
 %   Solves the periodic offset condition y(0) = y(T) + b for the linear
 %   ODE dy/dt = A*y + c on 0 <= t <= T: the initial state of an
@@ -12,7 +12,7 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %   In modal coordinates (A = V*diag(lam)/V, zc = V\c, zb = V\b) each mode
 %   is solved on its own:
 %       z0 = (g(T).*zc + zb) ./ (1 - exp(lam*T)),
-%   with g(T) from egh_modal and 1 - exp(lam*T) evaluated as -lam.*g(T).
+%   with g(T) from computeModalIntegrals and 1 - exp(lam*T) evaluated as -lam.*g(T).
 %
 % INPUTS
 %   A       [n x n] ODE operator matrix (1/s)
@@ -24,7 +24,7 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %   y0      [n x 1] initial state that satisfies y(0) = y(T) + b
 %
 % NOTES
-%   - Stability: as in analyticSolveIVP, the operator must have no
+%   - Stability: as in solveAnalyticIvp, the operator must have no
 %     growing modes, or the function raises an error ('I2EC:growingModes').
 %     The default (cell-averaged, certified) kernels guarantee this; for
 %     centroid kernels negate explicitly first (negateGrowingModes) and
@@ -46,20 +46,20 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %   - Evaluating 1 - exp(lam*T) as -lam.*g(T) avoids cancellation for
 %     small |lam*T|, where g(T) comes from a series.
 %   - Warns if cond(V) > 1e14 (ill-conditioned eigenvectors).
-%   - The periodic state is consistent with analyticSolveIVP (an IVP
+%   - The periodic state is consistent with solveAnalyticIvp (an IVP
 %     started from y0 returns to y0 - b after one period).
 %
 % SEE ALSO
-%   eigBalanced, egh_modal, analyticSolveIVP, negateGrowingModes
+%   eigOperator, computeModalIntegrals, solveAnalyticIvp, negateGrowingModes
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026
 
 
 % ---- Eigendecomposition; growing modes are an error ----
-[V, lambda, nGrowing] = eigBalanced(A);
+[V, lambda, nGrowing] = eigOperator(A);
 if nGrowing > 0
-    error('I2EC:growingModes', ['computePeriodicInitialConditionBalanced: the operator has %d growing modes (largest ' ...
+    error('I2EC:growingModes', ['computePeriodicInitialCondition: the operator has %d growing modes (largest ' ...
         'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
         '(cell-averaged, certified), or negate them explicitly with ' ...
         '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
@@ -69,7 +69,7 @@ end
 tolNeutral = 1e-12;
 neutral = abs(real(lambda)) * T <= tolNeutral;
 if any(neutral)
-    error('I2EC:neutralModes', ['computePeriodicInitialConditionBalanced: the operator has %d modes that ' ...
+    error('I2EC:neutralModes', ['computePeriodicInitialCondition: the operator has %d modes that ' ...
         'neither decay nor grow over a cycle (|Re(lambda)|*T <= %.0e, smallest |lambda| = %.3g 1/s), ' ...
         'so the periodic state is not determined. Check the kernel (computeAllStressKernelsBem ' ...
         'certifies it) and that every degree of freedom is restored by the operator.'], ...
@@ -88,7 +88,7 @@ zb = V \ b;
 %  1 - exp(lam*T) = -lam * g(T) follows from g(T) = (exp(lam*T) - 1)/lam;
 %  g(T) is accurate for all lam*T (series below |lam*T| = 1e-2, expm1
 %  above), so the denominator is too.
-[~, gT] = egh_modal(lambda, T);
+[~, gT] = computeModalIntegrals(lambda, T);
 
 one_minus_eT = -lambda .* gT;
 z0 = (gT .* zc + zb) ./ one_minus_eT;

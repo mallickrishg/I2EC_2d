@@ -1,7 +1,7 @@
-function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
-% COMPUTECORNERFLOWVELOCITYFIELD  Evaluate analytical subduction corner flow.
+function [Vx, Vz] = computeCornerFlowVelocity(dip, x, z, n)
+% COMPUTECORNERFLOWVELOCITY  Evaluate analytical subduction corner flow.
 %
-%   [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
+%   [Vx, Vz] = computeCornerFlowVelocity(dip, x, z, n)
 %
 %   Returns the corner-flow velocity for a unit plate speed in two regions
 %   at once: the mantle wedge (continental arc) between the fixed upper
@@ -25,7 +25,7 @@ function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 % NOTES
 %   - Both columns are evaluated at every point; the caller picks the column
 %     for the region each point lies in.
-%   - The solution is singular at the corner (origin). cornerFlowVelocity
+%   - The solution is singular at the corner (origin). computeRegionCornerFlow
 %     translates model points into this frame for each region (the
 %     ocean/continental translate parameters) and keeps them away from
 %     it; r = 0 is set to r^2 = Inf in the Newtonian branch.
@@ -34,17 +34,17 @@ function [Vx, Vz] = computeCornerflowVelocityfield(dip, x, z, n)
 %   - For n = 3 the four coefficients of each region come from the
 %     boundary conditions: a scalar equation for the phase is solved
 %     with fzero and the other three follow linearly. They depend only
-%     on the dip and are cached per dip (clear computeCornerflowVelocityfield
+%     on the dip and are cached per dip (clear computeCornerFlowVelocity
 %     to reset). An error is raised if no solution meets the boundary
 %     conditions.
 %
 % EXAMPLE
 %   dip = pi/4;
 %   [x, z] = meshgrid(linspace(0, 2, 50), linspace(-2, 0, 50));
-%   [Vx, Vz] = computeCornerflowVelocityfield(dip, x(:), z(:), 1);
+%   [Vx, Vz] = computeCornerFlowVelocity(dip, x(:), z(:), 1);
 %
 % SEE ALSO
-%   cornerFlowVelocity, getStrainratesLongterm, computeLongTermVelocity
+%   computeRegionCornerFlow, computeLongTermStrainRates, computeLongTermVelocity
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2025
@@ -161,7 +161,7 @@ end
 function [Vx, Vz] = computePowerLawVelocity(dip, x, z, theta)
 % Power-law corner flow (n = 3). The coefficients depend only on the dip,
 % so they are solved once per dip and cached (callers such as
-% getStrainratesLongterm evaluate one triangle at a time).
+% computeLongTermStrainRates evaluate one triangle at a time).
 
 persistent cache
 if isempty(cache)
@@ -224,12 +224,12 @@ for k = brackets'
 end
 
 if isempty(sols)
-    error('computeCornerflowVelocityfield:noSolution', ...
+    error('computeCornerFlowVelocity:noSolution', ...
         'No n = 3 corner-flow solution meets the boundary conditions in the %s for dip = %.4g deg.', ...
         region, dip*180/pi);
 end
 if max(vecnorm(vmid - vmid(1,:), 2, 2)) > 1e-6
-    error('computeCornerflowVelocityfield:ambiguous', ...
+    error('computeCornerFlowVelocity:ambiguous', ...
         'The n = 3 boundary conditions in the %s for dip = %.4g deg have more than one solution.', ...
         region, dip*180/pi);
 end

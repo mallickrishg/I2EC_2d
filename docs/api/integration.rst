@@ -7,10 +7,10 @@ Time-stepping solver for general (including power-law) rheology.
 
 .. mat:autofunction:: runImposedEarthquakeCycles
 
-.. mat:autofunction:: viscoeq_sequence_simulation
+.. mat:autofunction:: integrateImposedCycles
 
-.. mat:autofunction:: ode_viscoelastic
+.. mat:autofunction:: odeViscoelastic
 
-.. mat:autofunction:: extract_v_edot_from_statevector
+.. mat:autofunction:: extractRatesFromOdeState
 
 .. mat:autofunction:: isLinearFaultLaw

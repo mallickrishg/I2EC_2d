@@ -15,7 +15,7 @@ classdef fpatch < handle
 %   down-dip length (m), Dip the dip (degrees), W0 the approximate width of
 %   the first patch (m), qW the geometric growth factor of patch widths
 %   (1 = uniform), and bcx, bcz the boundary-condition values in x and z.
-%   seg2flt splits each segment into patches with geometry.flt2flt.
+%   seg2flt splits each segment into patches with geometry.splitSegment.
 %
 % PROPERTIES
 %   N           [1 x 1] number of patches
@@ -31,7 +31,7 @@ classdef fpatch < handle
 %   earthModel  geometry.LDhs object with the elastic properties
 %
 % SEE ALSO
-%   geometry.receiver, geometry.flt2flt
+%   geometry.receiver, geometry.splitSegment
 %
 % AUTHORS
 %   Rishav Mallick, 2023
@@ -104,7 +104,7 @@ classdef fpatch < handle
             %   fm = geometry.fpatch.seg2flt(filename)
             %
             %   Reads the ten-column segment file (see geometry.fpatch)
-            %   and splits each segment into patches with geometry.flt2flt.
+            %   and splits each segment into patches with geometry.splitSegment.
             %   Every patch inherits Vpl, bcx and bcz from its segment.
             %
             % INPUTS
@@ -117,7 +117,7 @@ classdef fpatch < handle
             %             downward (m)
             %
             % SEE ALSO
-            %   geometry.flt2flt, geometry.receiver
+            %   geometry.splitSegment, geometry.receiver
             %
             % AUTHORS
             %   Rishav Mallick, 2023
@@ -137,7 +137,7 @@ classdef fpatch < handle
             fm=[];
             for k=1:length(x1)
                 % list of patches for current segment
-                flt=geometry.flt2flt([x1(k);x3(k)],width(k),d(k),wo(k),alphaw(k));
+                flt=geometry.splitSegment([x1(k);x3(k)],width(k),d(k),wo(k),alphaw(k));
                 % list of patches for all segments
                 fm=[fm;[flt,Vpl(k).*ones(size(flt,1),1),Vx(k).*ones(size(flt,1),1),Vz(k).*ones(size(flt,1),1)]];
             end

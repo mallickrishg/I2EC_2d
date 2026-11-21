@@ -23,7 +23,7 @@ classdef shearZoneReceiver < geometry.shzpatch
 %   A, B, C, area, earthModel)
 %
 % SEE ALSO
-%   geometry.shzpatch, geometry.receiver, getStrainratesLongterm
+%   geometry.shzpatch, geometry.receiver, computeLongTermStrainRates
 %
 % AUTHORS
 %   Sharadha Sathiakumar, 2023

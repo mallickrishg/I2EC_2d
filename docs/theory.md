@@ -29,7 +29,7 @@ state, driven by locking and imposed earthquakes.
 :::{admonition} In the code
 :class: in-code
 
-{mat:func}`getStrainratesLongterm` gives the corner-flow
+{mat:func}`computeLongTermStrainRates` gives the corner-flow
 strain rates in each cell, {mat:func}`computeLongTermVelocity` the velocity
 field ({doc}`examples/index` plots it).
 :::
@@ -122,8 +122,8 @@ cycle from the long-term state spins the model up until it is periodic.
 :class: in-code
 
 {mat:func}`runImposedEarthquakeCycles` repeats the cycle;
-{mat:func}`viscoeq_sequence_simulation` integrates one sequence of events and
-{mat:func}`ode_viscoelastic` is the right-hand side. Spin-up convergence is
+{mat:func}`integrateImposedCycles` integrates one sequence of events and
+{mat:func}`odeViscoelastic` is the right-hand side. Spin-up convergence is
 not checked: compare the start and end of the last cycle, as example 1 does.
 :::
 
@@ -159,11 +159,11 @@ kernels guarantee this ([mantle kernels](#mantle-kernels)).
 :class: in-code
 
 {mat:func}`assembleStressKernel` builds $K$ without the
-locked patches; {mat:func}`computePeriodicInitialConditionBalanced` gives the
-periodic state and {mat:func}`analyticSolveIVP` evaluates it at any time.
-$A$ is eigendecomposed without balancing ({mat:func}`eigBalanced`): its
+locked patches; {mat:func}`computePeriodicInitialCondition` gives the
+periodic state and {mat:func}`solveAnalyticIvp` evaluates it at any time.
+$A$ is eigendecomposed without balancing ({mat:func}`eigOperator`): its
 eigenvectors are conditioned by the geometry, not by the viscosities, and
-balancing would work against that. {mat:func}`egh_modal` switches to a Taylor
+balancing would work against that. {mat:func}`computeModalIntegrals` switches to a Taylor
 series for small $|\lambda t|$, where the closed forms lose digits.
 :::
 
@@ -213,7 +213,7 @@ any power-law exponent, in both solvers.
 
 this is the default of {mat:func}`computeAllStressKernelsBem`
 (options `cellaverage` and `kernelcertify`, check by
-{mat:func}`certifyMantleKernel`, recorded in `evl.certificate`). Centre-sampled
+{mat:func}`certifyShzKernel`, recorded in `evl.certificate`). Centre-sampled
 kernels (`'cellaverage', 1, 'kernelcertify', false`) remain for comparison.
 Their growing modes need a fix: `kernelmodify` ({mat:func}`modifyGrowingModes`)
 for `ode45`, or {mat:func}`negateGrowingModes` on $A$, with every forcing term
@@ -268,7 +268,7 @@ fastest timescale and so the numbers above.
 :::{admonition} In the code
 :class: in-code
 
-the table compares {mat:func}`computePeriodicInitialConditionBalanced` with an
+the table compares {mat:func}`computePeriodicInitialCondition` with an
 independent direct solve of the periodic condition (example 2 fault, locked
 above 30 km, $T = 500$ yr). The direct solve becomes ill-conditioned itself
 (condition number $5\times10^{15}$ at $t_M/T = 10^{6}$), so beyond that the

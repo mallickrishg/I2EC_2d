@@ -1,12 +1,12 @@
-function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
-% ANALYTICSOLVEIVP  Solve the linear ODE dy/dt = A*y + c semi-analytically.
+function [Y, U] = solveAnalyticIvp(A, c, y0, tvec)
+% SOLVEANALYTICIVP  Solve the linear ODE dy/dt = A*y + c semi-analytically.
 %
-%   [Y, U] = analyticSolveIVP(A, c, y0, tvec)
+%   [Y, U] = solveAnalyticIvp(A, c, y0, tvec)
 %
 %   Evaluates the state y(t) and its time integral u(t) at each time in
-%   tvec. The operator is eigendecomposed (eigBalanced); each
+%   tvec. The operator is eigendecomposed (eigOperator); each
 %   mode is then evolved exactly
-%   with the modal integrals of egh_modal:
+%   with the modal integrals of computeModalIntegrals:
 %       z(t) = e(t).*z0 + g(t).*zc,    uz(t) = g(t).*z0 + h(t).*zc
 %   with z0 = V\y0 and zc = V\c. This is the time stepper of the
 %   semi-analytical (linear viscoelastic) path in I2EC.
@@ -45,7 +45,7 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 %   - Y and U are the real parts of the modal sums.
 %
 % SEE ALSO
-%   eigBalanced, egh_modal, computePeriodicInitialConditionBalanced,
+%   eigOperator, computeModalIntegrals, computePeriodicInitialCondition,
 %   negateGrowingModes, computeAllStressKernelsBem
 %
 % AUTHORS
@@ -54,9 +54,9 @@ function [Y, U] = analyticSolveIVP(A, c, y0, tvec)
 n = size(A, 1);
 
 % ---- Eigendecomposition; growing modes are an error ----
-[V, lambda, nGrowing] = eigBalanced(A);
+[V, lambda, nGrowing] = eigOperator(A);
 if nGrowing > 0
-    error('I2EC:growingModes', ['analyticSolveIVP: the operator has %d growing modes (largest ' ...
+    error('I2EC:growingModes', ['solveAnalyticIvp: the operator has %d growing modes (largest ' ...
         'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
         '(cell-averaged, certified), or negate them explicitly with ' ...
         '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
@@ -73,7 +73,7 @@ Z  = zeros(n, m);
 UZ = zeros(n, m);
 
 for j = 1:m
-    [ej, gj, hj] = egh_modal(lambda, tvec(j));
+    [ej, gj, hj] = computeModalIntegrals(lambda, tvec(j));
     Z(:,j)  = ej .* z0 + gj .* ct;
     UZ(:,j) = gj .* z0 + hj .* ct;
 end

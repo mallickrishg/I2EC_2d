@@ -4,7 +4,7 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %   [V, lambda] = negateGrowingModes(A)
 %   [V, lambda, A_neg] = negateGrowingModes(A)
 %
-%   Computes the eigendecomposition of A (eigBalanced) and replaces
+%   Computes the eigendecomposition of A (eigOperator) and replaces
 %   every eigenvalue with Re(lam) > 0 by -lam. The eigenvectors are kept, so
 %       A_neg = V*diag(lambda)/V
 %   has the same modes as A, with the growing ones turned into decaying
@@ -12,8 +12,8 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %
 %   Opt-in. The default kernels of computeAllStressKernelsBem are
 %   cell-averaged and certified, so the operator has no growing modes and
-%   needs no negation; analyticSolveIVP and
-%   computePeriodicInitialConditionBalanced do not negate and raise an
+%   needs no negation; solveAnalyticIvp and
+%   computePeriodicInitialCondition do not negate and raise an
 %   error if the operator has growing modes. For centroid kernels
 %   ('cellaverage', 1) negate explicitly and pass A_neg to the solvers:
 %       [~, ~, A] = negateGrowingModes(A);   % then build c with this A
@@ -22,7 +22,7 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %   A       [n x n] real ODE operator matrix (1/s)
 %
 % OUTPUTS
-%   V       [n x n] eigenvectors of A (from eigBalanced)
+%   V       [n x n] eigenvectors of A (from eigOperator)
 %   lambda  [n x 1] eigenvalues of A, with Re(lam) > 0 negated (1/s)
 %   A_neg   [n x n] real negated operator V*diag(lambda)/V; computed only
 %           when requested
@@ -45,14 +45,14 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %     modes.
 %
 % SEE ALSO
-%   eigBalanced, analyticSolveIVP, computePeriodicInitialConditionBalanced,
+%   eigOperator, solveAnalyticIvp, computePeriodicInitialCondition,
 %   computeAllStressKernelsBem, modifyGrowingModes
 %
 % AUTHORS
 %   Sharadha Sathiakumar (EOS), 2026
 
 % ---- Eigendecomposition (A = V*diag(lambda)/V) ----
-[V, lambda] = eigBalanced(A);
+[V, lambda] = eigOperator(A);
 
 % ---- Negate growing eigenvalues ----
 pos = real(lambda) > 0;

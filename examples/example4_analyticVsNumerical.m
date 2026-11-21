@@ -2,9 +2,9 @@
 %
 % Solves the cycle of example 2 twice:
 %   - semi-analytical: periodic state solved directly, evolved exactly
-%     (computePeriodicInitialConditionBalanced, analyticSolveIVP);
+%     (computePeriodicInitialCondition, solveAnalyticIvp);
 %   - numerical: the same equations integrated in time by ode45
-%     (viscoeq_sequence_simulation, ode_viscoelastic), with the fault law
+%     (integrateImposedCycles, odeViscoelastic), with the fault law
 %     set to linear viscous (rcv.faultLaw = 'linear', done by
 %     newtonianCycle) so that both solve the same linear ODE.
 % The numerical run starts from the analytic state just before the
@@ -36,10 +36,10 @@ Y0(~locked) = ypre(1:Nc);
 Y0(rcv.N+1:2:end) = ypre(Nc+1:Nc+M) ./ shz.alpha;
 Y0(rcv.N+2:2:end) = ypre(Nc+M+1:end) ./ shz.alpha;
 tic
-[t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+[t, Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), ...
     Y0, rcv, shz, cyc.stress_change, cyc.Trecur);       % earthquake at t = 0
 fprintf('numerical cycle: %d time steps, %.1f s\n', numel(t), toc);
-[Vn, e22n, e23n] = extract_v_edot_from_statevector(Y, rcv, shz);
+[Vn, e22n, e23n] = extractRatesFromOdeState(Y, rcv, shz);
 
 %% analytic: the same times
 sol = cyc.solve(t');

@@ -1,9 +1,9 @@
-function [V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz)
-% EXTRACT_V_EDOT_FROM_STATEVECTOR  Slip and strain rates from ODE states.
+function [V,e22dot,e23dot] = extractRatesFromOdeState(Y,rcv,shz)
+% EXTRACTRATESFROMODESTATE  Slip and strain rates from ODE states.
 %
-%   [V, e22dot, e23dot] = extract_v_edot_from_statevector(Y, rcv, shz)
+%   [V, e22dot, e23dot] = extractRatesFromOdeState(Y, rcv, shz)
 %
-%   Converts states of the numerical integration (see ode_viscoelastic) to
+%   Converts states of the numerical integration (see odeViscoelastic) to
 %   fault slip rate (v = exp(state), or v = state for rcv.faultLaw =
 %   'linear'; v = 0 on locked patches), and to
 %   mantle strain rates from the stresses through the power law
@@ -21,7 +21,7 @@ function [V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz)
 %   e23dot  [Nt x M] shear strain rate e23 (1/s)
 %
 % SEE ALSO
-%   runImposedEarthquakeCycles, ode_viscoelastic
+%   runImposedEarthquakeCycles, odeViscoelastic
 %
 % AUTHORS
 %   Rishav Mallick, 2023

@@ -1,9 +1,9 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.TestCase
     %SOLVERSTEST  Linear (Newtonian) semi-analytical solvers and their helpers.
     %
-    % egh_modal, negateGrowingModes, analyticSolveIVP,
-    % computePeriodicInitialConditionBalanced, assembleStressKernel and
-    % extractComponentsSolutionVector.
+    % computeModalIntegrals, negateGrowingModes, solveAnalyticIvp,
+    % computePeriodicInitialCondition, assembleStressKernel and
+    % extractRatesFromLinearState.
     %
     % The matrix exponential of the augmented system [A c; 0 0] is the
     % reference solution throughout.  tests/test_negate_exact_solver.m
@@ -32,11 +32,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
     end
 
     methods (Test)
-        %% ---------------- egh_modal ----------------
+        %% ---------------- computeModalIntegrals ----------------
         function modalIntegralsMatchClosedForm(tc)
             lam = [-1e-9; -3e-10 + 2e-10i; 2e-11; -1e-12];
             t = 3.15e9;
-            [e, g, h] = egh_modal(lam, t);
+            [e, g, h] = computeModalIntegrals(lam, t);
             tc.verifyEqual(e, exp(lam*t), 'RelTol', 1e-12);
             tc.verifyEqual(g, (exp(lam*t) - 1)./lam, 'RelTol', 1e-9);
             tc.verifyEqual(h, ((exp(lam*t) - 1)./lam - t)./lam, 'RelTol', 1e-6);
@@ -45,7 +45,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
         function modalIntegralsAreContinuousAtSeriesSwitch(tc)
             t = 1;
             lam = 1e-2 * [1 - 1e-12; 1 + 1e-12; -(1 - 1e-12); -(1 + 1e-12)];
-            [~, g, h] = egh_modal(lam, t);
+            [~, g, h] = computeModalIntegrals(lam, t);
             tc.verifyEqual(g(1), g(2), 'RelTol', 1e-12);
             tc.verifyEqual(h(1), h(2), 'RelTol', 1e-12);
             tc.verifyEqual(g(3), g(4), 'RelTol', 1e-12);
@@ -53,7 +53,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
         end
 
         function modalIntegralsHaveIntegratorLimit(tc)
-            [e, g, h] = egh_modal(0, 7);
+            [e, g, h] = computeModalIntegrals(0, 7);
             tc.verifyEqual([e g h], [1 7 49/2], 'AbsTol', 1e-14);
         end
 
@@ -75,25 +75,25 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             % the solvers no longer negate: an operator with growing modes
             % (centroid kernels) must be negated explicitly first
             y0 = ones(size(tc.c));
-            tc.verifyError(@() analyticSolveIVP(tc.Aunst, tc.c, y0, tc.T), 'I2EC:growingModes');
-            tc.verifyError(@() computePeriodicInitialConditionBalanced(tc.Aunst, tc.c, tc.b, tc.T), 'I2EC:growingModes');
+            tc.verifyError(@() solveAnalyticIvp(tc.Aunst, tc.c, y0, tc.T), 'I2EC:growingModes');
+            tc.verifyError(@() computePeriodicInitialCondition(tc.Aunst, tc.c, tc.b, tc.T), 'I2EC:growingModes');
             [~, ~, An] = negateGrowingModes(tc.Aunst);
-            tc.verifyWarningFree(@() analyticSolveIVP(An, tc.c, y0, tc.T));
-            tc.verifyWarningFree(@() computePeriodicInitialConditionBalanced(An, tc.c, tc.b, tc.T));
+            tc.verifyWarningFree(@() solveAnalyticIvp(An, tc.c, y0, tc.T));
+            tc.verifyWarningFree(@() computePeriodicInitialCondition(An, tc.c, tc.b, tc.T));
         end
 
         function periodicSolverRejectsNeutralModes(tc)
             % a mode that neither decays nor grows (an integrator, or an
             % undamped oscillation) leaves the periodic state undetermined
             A0 = blkdiag(tc.A, 0);
-            tc.verifyError(@() computePeriodicInitialConditionBalanced(A0, [tc.c; 0], [tc.b; 0], tc.T), ...
+            tc.verifyError(@() computePeriodicInitialCondition(A0, [tc.c; 0], [tc.b; 0], tc.T), ...
                 'I2EC:neutralModes');
             w = 2*pi/(7*tc.T);
             Aosc = blkdiag(tc.A, [0 w; -w 0]);
-            tc.verifyError(@() computePeriodicInitialConditionBalanced(Aosc, [tc.c; 0; 0], [tc.b; 0; 0], tc.T), ...
+            tc.verifyError(@() computePeriodicInitialCondition(Aosc, [tc.c; 0; 0], [tc.b; 0; 0], tc.T), ...
                 'I2EC:neutralModes');
             % the IVP is still defined
-            tc.verifyWarningFree(@() analyticSolveIVP(A0, [tc.c; 1e-12], [ones(size(tc.c)); 0], tc.T));
+            tc.verifyWarningFree(@() solveAnalyticIvp(A0, [tc.c; 1e-12], [ones(size(tc.c)); 0], tc.T));
         end
 
         function periodicSolverAcceptsWidelySeparatedTimescales(tc)
@@ -102,35 +102,35 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             % solved, not rejected as neutral, and close the cycle
             As = blkdiag(tc.A, 1e-8*tc.A);
             cs = [tc.c; 1e-8*tc.c]; bs = [tc.b; tc.b];
-            y0 = computePeriodicInitialConditionBalanced(As, cs, bs, tc.T);
-            yT = analyticSolveIVP(As, cs, y0, tc.T);
+            y0 = computePeriodicInitialCondition(As, cs, bs, tc.T);
+            yT = solveAnalyticIvp(As, cs, y0, tc.T);
             tc.verifyLessThan(norm(yT + bs - y0) / norm(y0), 1e-6);
         end
 
-        function eigBalancedOptionalBalancingGivesSameModes(tc)
+        function eigOperatorOptionalBalancingGivesSameModes(tc)
             % unbalanced by default; balancing is an option with the same
             % eigenvalues and eigenvectors of A
-            [V0, l0] = eigBalanced(tc.A);
-            [V1, l1] = eigBalanced(tc.A, [], true);
+            [V0, l0] = eigOperator(tc.A);
+            [V1, l1] = eigOperator(tc.A, [], true);
             tc.verifyEqual(sort(l1, 'ComparisonMethod', 'real'), sort(l0, 'ComparisonMethod', 'real'), 'RelTol', 1e-10);
             tc.verifyEqual(real(V0*diag(l0)/V0), tc.A, 'AbsTol', 1e-10*norm(tc.A));
             tc.verifyEqual(real(V1*diag(l1)/V1), tc.A, 'AbsTol', 1e-10*norm(tc.A));
         end
 
-        function eigBalancedMatchesEig(tc)
-            [V, lam, ng] = eigBalanced(tc.A);
+        function eigOperatorMatchesEig(tc)
+            [V, lam, ng] = eigOperator(tc.A);
             tc.verifyEqual(sort(lam, 'ComparisonMethod', 'real'), sort(eig(tc.A), 'ComparisonMethod', 'real'), 'RelTol', 1e-8);
             tc.verifyEqual(real(V*diag(lam)/V), tc.A, 'AbsTol', 1e-8*norm(tc.A));
             tc.verifyEqual(ng, 0);
-            [~, ~, ng] = eigBalanced(tc.Aunst);
+            [~, ~, ng] = eigOperator(tc.Aunst);
             tc.verifyEqual(ng, 2);
         end
 
-        %% ---------------- analyticSolveIVP ----------------
+        %% ---------------- solveAnalyticIvp ----------------
         function ivpMatchesMatrixExponential(tc)
             y0 = randn(6,1);
             tvec = [0.1 1 10 100 1000] * 3.15e7;
-            [Y, U] = analyticSolveIVP(tc.A, tc.c, y0, tvec);
+            [Y, U] = solveAnalyticIvp(tc.A, tc.c, y0, tvec);
             [Yr, Ur] = SolversTest.expmIVP(tc.A, tc.c, y0, tvec);
             tc.verifyEqual(Y, Yr, 'RelTol', 1e-9, 'AbsTol', 1e-14);
             tc.verifyEqual(U, Ur, 'RelTol', 1e-9, 'AbsTol', 1e-6);
@@ -138,7 +138,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
 
         function ivpAtTimeZeroReturnsInitialState(tc)
             y0 = randn(6,1);
-            [Y, U] = analyticSolveIVP(tc.A, tc.c, y0, 0);
+            [Y, U] = solveAnalyticIvp(tc.A, tc.c, y0, 0);
             tc.verifyEqual(Y, y0, 'AbsTol', 1e-12);
             tc.verifyEqual(U, zeros(6,1), 'AbsTol', 1e-12);
         end
@@ -146,8 +146,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
         %% ---------------- periodic initial condition ----------------
         function periodicStateClosesTheCycle(tc)
             % y(T) + b = y0, checked with the IVP solver
-            y0 = computePeriodicInitialConditionBalanced(tc.A, tc.c, tc.b, tc.T);
-            yT = analyticSolveIVP(tc.A, tc.c, y0, tc.T);
+            y0 = computePeriodicInitialCondition(tc.A, tc.c, tc.b, tc.T);
+            yT = solveAnalyticIvp(tc.A, tc.c, y0, tc.T);
             tc.verifyEqual(yT + tc.b, y0, 'RelTol', 1e-9, 'AbsTol', 1e-12);
         end
 
@@ -169,7 +169,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             V = rand(N, Nt); V(locked,:) = 0;
             e22 = rand(M, Nt); e23 = rand(M, Nt);
             sol = [V(~locked,:); e22; e23];
-            [V2, a, b] = extractComponentsSolutionVector(sol, locked, N, M);
+            [V2, a, b] = extractRatesFromLinearState(sol, locked, N, M);
             tc.verifyEqual(V2, V);
             tc.verifyEqual(a, e22);
             tc.verifyEqual(b, e23);

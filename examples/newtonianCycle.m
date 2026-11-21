@@ -12,7 +12,7 @@ function cyc = newtonianCycle(rcv, shz, evl, Vpl, yr)
 %     - locked above 30 km depth; one earthquake every 500 years at t = 0
 %       with the slip deficit of a cycle (500 yr x Vpl) on the locked zone
 %     - long-term loading: plate rate on the fault, corner-flow strain
-%       rates in the mantle (getStrainratesLongterm)
+%       rates in the mantle (computeLongTermStrainRates)
 %
 % INPUTS
 %   rcv, shz  geometry.receiver (megathrust) and geometry.shearZoneReceiver
@@ -36,12 +36,12 @@ function cyc = newtonianCycle(rcv, shz, evl, Vpl, yr)
 %                  from t = 0, relative to t = 0) at times tvec after the
 %                  earthquake
 %        .stress_change  the earthquake as a stress_change struct for
-%                  viscoeq_sequence_simulation / runImposedEarthquakeCycles
+%                  integrateImposedCycles / runImposedEarthquakeCycles
 %                  (Nevents = 1, Timing = 0)
 %
 % SEE ALSO
-%   exampleModel, computePeriodicInitialConditionBalanced,
-%   analyticSolveIVP, assembleStressKernel
+%   exampleModel, computePeriodicInitialCondition,
+%   solveAnalyticIvp, assembleStressKernel
 
 cyc.Trecur = 500*yr;
 
@@ -55,7 +55,7 @@ rcv.Vpl = Vpl .* ones(rcv.N, 1);
 % mantle: Newtonian, 1e19 Pa s everywhere
 shz.n = ones(shz.N, 1);
 shz.alpha = 1/(1e19*1e-6) .* ones(shz.N, 1);
-[e22_lt, e23_lt] = getStrainratesLongterm(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 1);
+[e22_lt, e23_lt] = computeLongTermStrainRates(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 1);
 shz.e22pl = e22_lt .* Vpl;
 shz.e23pl = -e23_lt .* Vpl;
 
@@ -79,12 +79,12 @@ sc = cyc.stress_change;
 cyc.b = [sc.dtau(~locked); sc.dsigma22; sc.dsigma23] ./ cyc.eta;
 
 % periodic cycle: y(T) + b = y(0)
-cyc.y0 = computePeriodicInitialConditionBalanced(cyc.A, cyc.c, cyc.b, cyc.Trecur);
+cyc.y0 = computePeriodicInitialCondition(cyc.A, cyc.c, cyc.b, cyc.Trecur);
 cyc.solve = @(tvec) evaluate(cyc, locked, rcv.N, shz.N, tvec);
 end
 
 function out = evaluate(cyc, locked, N, M, tvec)
-[Y, U] = analyticSolveIVP(cyc.A, cyc.c, cyc.y0, tvec);
-[out.V, out.e22dot, out.e23dot] = extractComponentsSolutionVector(Y, locked, N, M);
-[out.slip, out.e22, out.e23] = extractComponentsSolutionVector(U, locked, N, M);
+[Y, U] = solveAnalyticIvp(cyc.A, cyc.c, cyc.y0, tvec);
+[out.V, out.e22dot, out.e23dot] = extractRatesFromLinearState(Y, locked, N, M);
+[out.slip, out.e22, out.e23] = extractRatesFromLinearState(U, locked, N, M);
 end

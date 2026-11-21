@@ -1,23 +1,23 @@
-function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,stress_change,Trecur,nreps)
-% VISCOEQ_SEQUENCE_SIMULATION  Integrate cycles with imposed earthquakes.
+function [tfull,Yfull] = integrateImposedCycles(y_odefunction,Y0,rcv,shz,stress_change,Trecur,nreps)
+% INTEGRATEIMPOSEDCYCLES  Integrate cycles with imposed earthquakes.
 %
-%   [tfull, Yfull] = viscoeq_sequence_simulation(y_odefunction, Y0, rcv, ...
+%   [tfull, Yfull] = integrateImposedCycles(y_odefunction, Y0, rcv, ...
 %                                                shz, stress_change, Trecur)
-%   [tfull, Yfull] = viscoeq_sequence_simulation(..., nreps)
+%   [tfull, Yfull] = integrateImposedCycles(..., nreps)
 %
 %   Integrates the state from Y0 with ode45 through nreps cycles of length
 %   Trecur. A cycle with K imposed events at times T1 < ... < TK has K+1
 %   segments, [0,T1], [T1,T2], ..., [TK,Trecur]; each segment after the
 %   first starts by applying the stress change of the event at its start.
 %   An event adds dtau/Asigma to the fault state on each patch (log(v),
-%   or v for rcv.faultLaw = 'linear'; see ode_viscoelastic) and dsigma22,
+%   or v for rcv.faultLaw = 'linear'; see odeViscoelastic) and dsigma22,
 %   dsigma23 to the mantle stresses. Each cycle starts from the final
 %   state of the previous one, and only the last cycle is returned.
 %
 % INPUTS
 %   y_odefunction  function handle @(t, y) returning dY/dt, e.g.
-%                  @(t, y) ode_viscoelastic(t, y, rcv, shz, evl)
-%   Y0             [n x 1] initial state (layout as in ode_viscoelastic)
+%                  @(t, y) odeViscoelastic(t, y, rcv, shz, evl)
+%   Y0             [n x 1] initial state (layout as in odeViscoelastic)
 %   rcv            geometry.receiver object (uses .N, .dgf, .Asigma)
 %   shz            geometry.shearZoneReceiver object (uses .N, .dgf)
 %   stress_change  struct of imposed events (any number K >= 1)
@@ -49,7 +49,7 @@ function [tfull,Yfull] = viscoeq_sequence_simulation(y_odefunction,Y0,rcv,shz,st
 %     so the returned cycle starts exactly at t = 0.
 %
 % SEE ALSO
-%   runImposedEarthquakeCycles, ode_viscoelastic, ode45
+%   runImposedEarthquakeCycles, odeViscoelastic, ode45
 %
 % AUTHORS
 %   Rishav Mallick, 2023
@@ -59,11 +59,11 @@ if nargin < 7
 end
 Tk = stress_change.Timing(:);
 if numel(Tk) ~= stress_change.Nevents
-    error('viscoeq_sequence_simulation:events', ...
+    error('integrateImposedCycles:events', ...
         'stress_change.Timing must have Nevents = %d entries.', stress_change.Nevents);
 end
 if isempty(Tk) || any(diff(Tk) <= 0) || Tk(1) < 0 || Tk(end) >= Trecur
-    error('viscoeq_sequence_simulation:timing', ...
+    error('integrateImposedCycles:timing', ...
         'Event times must be strictly increasing, with 0 <= T < Trecur.');
 end
 

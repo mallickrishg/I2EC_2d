@@ -1,12 +1,12 @@
-function [V, lambda, nGrowing] = eigBalanced(A, tol, doBalance)
-% EIGBALANCED  Eigendecomposition of an ODE operator (unbalanced by default).
+function [V, lambda, nGrowing] = eigOperator(A, tol, doBalance)
+% EIGOPERATOR  Eigendecomposition of an ODE operator (unbalanced by default).
 %
-%   [V, lambda] = eigBalanced(A)
-%   [V, lambda, nGrowing] = eigBalanced(A, tol)
-%   [V, lambda, nGrowing] = eigBalanced(A, tol, true)    balance first
+%   [V, lambda] = eigOperator(A)
+%   [V, lambda, nGrowing] = eigOperator(A, tol)
+%   [V, lambda, nGrowing] = eigOperator(A, tol, true)    balance first
 %
 %   Eigendecomposes A and counts its growing modes. Used by
-%   analyticSolveIVP, computePeriodicInitialConditionBalanced and
+%   solveAnalyticIvp, computePeriodicInitialCondition and
 %   negateGrowingModes, so all three see the same modes.
 %
 % INPUTS
@@ -39,8 +39,8 @@ function [V, lambda, nGrowing] = eigBalanced(A, tol, doBalance)
 %     graded unbalanced matrix, that matters there.
 %
 % SEE ALSO
-%   negateGrowingModes, analyticSolveIVP,
-%   computePeriodicInitialConditionBalanced, balance, eig
+%   negateGrowingModes, solveAnalyticIvp,
+%   computePeriodicInitialCondition, balance, eig
 
 if nargin < 2 || isempty(tol)
     tol = 1e-10;

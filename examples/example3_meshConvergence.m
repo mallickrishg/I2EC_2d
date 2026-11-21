@@ -82,7 +82,7 @@ tl = tiledlayout(numel(res), numel(tfrac), 'TileSpacing', 'tight', 'Padding', 'c
 for k = 1:numel(res)
     for i = 1:numel(tfrac)
         nexttile
-        plotshz2d(res(k).shz, res(k).edot(:,i)), hold on, plotpatch2d(res(k).rcv)
+        plotShz2d(res(k).shz, res(k).edot(:,i)), hold on, plotPatches2d(res(k).rcv)
         if k == 1
             title(sprintf('%.0f yr (t/T = %.2f)', tfrac(i)*res(k).Trecur/yr, tfrac(i)))
         end

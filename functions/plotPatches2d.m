@@ -1,8 +1,8 @@
-function plotpatch2d(rcv,toplot)
-% PLOTPATCH2D  Plot fault or boundary patches as line segments.
+function plotPatches2d(rcv,toplot)
+% PLOTPATCHES2D  Plot fault or boundary patches as line segments.
 %
-%   plotpatch2d(rcv)
-%   plotpatch2d(rcv, toplot)
+%   plotPatches2d(rcv)
+%   plotPatches2d(rcv, toplot)
 %
 %   Draws every patch of a geometry.receiver object as a line from its
 %   upper end down-dip over its width, in km. With one input the patches
@@ -21,7 +21,7 @@ function plotpatch2d(rcv,toplot)
 %   none (draws into the current axes)
 %
 % SEE ALSO
-%   plotshz2d, cline
+%   plotShz2d, cline
 %
 % AUTHORS
 %   Rishav Mallick, 2023

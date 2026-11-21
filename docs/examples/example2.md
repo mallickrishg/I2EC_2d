@@ -44,7 +44,7 @@ c = c_locking - A*[rcv.Vpl(~locked); shz.e22pl; shz.e23pl];
 b = [dtau(~locked); dsigma22; dsigma23] ./ eta;          % jump at the earthquake
 
 % periodic cycle: the state after the earthquake repeats every Trecur
-y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+y0 = computePeriodicInitialCondition(A, c, b, Trecur);
 ```
 
 {mat:func}`assembleStressKernel` stacks the fault and mantle kernels with the
@@ -63,9 +63,9 @@ tfrac = [0.01 0.1 0.99];
 sol = cyc.solve(tfrac*cyc.Trecur);
 ```
 
-`cyc.solve` calls {mat:func}`analyticSolveIVP`, which evaluates the solution
+`cyc.solve` calls {mat:func}`solveAnalyticIvp`, which evaluates the solution
 exactly at the requested times (one matrix–vector product each), and splits it
-with {mat:func}`extractComponentsSolutionVector`. `sol.V` is the slip rate
+with {mat:func}`extractRatesFromLinearState`. `sol.V` is the slip rate
 (patches × times, 0 on the locked zone), `sol.e22dot` and `sol.e23dot` the
 mantle strain rates (cells × times); `sol.slip`, `sol.e22`, `sol.e23` are
 their integrals since the earthquake.
@@ -73,7 +73,7 @@ their integrals since the earthquake.
 ## 4. Plot the results
 
 **Mantle strain rate**, long-term and at three times, drawn with
-`plotshz2d(shz, edot(:,i))`. Just after the earthquake the whole mantle deforms
+`plotShz2d(shz, edot(:,i))`. Just after the earthquake the whole mantle deforms
 faster than in the long term; the excess decays through the cycle.
 
 ```{figure} ../_static/examples/example2_analyticNewtonian_1.png

@@ -1,8 +1,8 @@
 function test_negate_exact_solver
 %TEST_NEGATE_EXACT_SOLVER  Verification of the negate + exact solver.
 %
-% Self-contained tests of negateGrowingModes, egh_modal, analyticSolveIVP
-% and computePeriodicInitialConditionBalanced, using I2EC's example mesh
+% Self-contained tests of negateGrowingModes, computeModalIntegrals, solveAnalyticIvp
+% and computePeriodicInitialCondition, using I2EC's example mesh
 % (examples/inputs/ and examples/kernels/).  Run from the I2EC_2d root:
 %   addpath('tests'); test_negate_exact_solver
 %
@@ -19,13 +19,13 @@ function test_negate_exact_solver
 %   4. Series threshold: modal integrals unchanged when the switch moves
 %   5. Consistency: IVP from periodic y0 reproduces y(T) + b = y0, with
 %      the negated and the raw operator as input
-%   6. Integrator mode (lam = 0): egh_modal limits, IVP and periodic state
+%   6. Integrator mode (lam = 0): computeModalIntegrals limits, IVP and periodic state
 %   7. Negation on a small hand-built operator with a known answer
 %   8. Steady state: with long-term loading only, y_pl stays y_pl
 %   9. Balancing: same results as a balanced eigendecomposition
 %
 % Tolerances: the solvers eigendecompose the operator without balancing
-% (eigBalanced, since 2026-11-21), which keeps strong-mantle cases at
+% (eigOperator, since 2026-11-21), which keeps strong-mantle cases at
 % ~1e-9 but gives ~2e-9 to 5e-9 here (balanced: ~1e-13; it lost three
 % digits for strong mantles instead). Tests 1, 6, 8 and 9 therefore
 % allow 1e-8.
@@ -59,7 +59,7 @@ eta_mantle = 1e19 * ones(shz.N, 1);
 eta_mantle(~oceanic) = 10^18.5;
 locked = abs(rcv.xc(:,2)) > 0 & abs(rcv.xc(:,2)) < 30e3;
 rcv.Vpl = Vpl .* ones(rcv.N, 1);
-[e22_dev_lt, e23_lt] = getStrainratesLongterm(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 1);
+[e22_dev_lt, e23_lt] = computeLongTermStrainRates(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 1);
 y_pl = [rcv.Vpl(~locked); e22_dev_lt .* Vpl; -e23_lt .* Vpl];
 
 stresskernel = assembleStressKernel(evl_orig, locked);
@@ -75,19 +75,19 @@ imant = (n - 2*shz.N + 1):n;    % mantle strain-rate components
 lam0 = eig(A);
 fprintf('System size n = %d, growing modes negated: %d\n\n', n, sum(real(lam0) > 0));
 
-y0_per = computePeriodicInitialConditionBalanced(A_neg, c, b, Trecur);
+y0_per = computePeriodicInitialCondition(A_neg, c, b, Trecur);
 tvec = [40/365, 1, 10, 50, 500] * yr;     % 40 d to 500 yr
 
 %% ---- Test 1: IVP vs expm of augmented system ----
 fprintf('Test 1: IVP vs expm ... ');
 
-[Y, U] = analyticSolveIVP(A_neg, c, y0_per, tvec);
+[Y, U] = solveAnalyticIvp(A_neg, c, y0_per, tvec);
 [Yref, Uref] = expm_ivp(A_neg, c, y0_per, tvec);
 err_y = max(vecnorm(Y - Yref) ./ vecnorm(Yref));
 err_u = max(vecnorm(U - Uref) ./ vecnorm(Uref));
 
 % raw operator as input: the solver negates it itself
-[Yr, Ur] = analyticSolveIVP(A, c, y0_per, tvec);
+[Yr, Ur] = solveAnalyticIvp(A, c, y0_per, tvec);
 err_raw = max([vecnorm(Yr - Y) ./ vecnorm(Y), vecnorm(Ur - U) ./ vecnorm(U)]);
 
 tol1 = 1e-8;    % unbalanced eigendecomposition: ~4e-9 (see header)
@@ -106,7 +106,7 @@ eta = eM(1:n, n+1);
 res_rel = norm((eye(n) - Phi) * y0_per - (eta + b)) / norm(eta + b);
 
 % raw operator as input: the solver negates it itself
-y0_raw = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+y0_raw = computePeriodicInitialCondition(A, c, b, Trecur);
 res_rel = max(res_rel, norm((eye(n) - Phi) * y0_raw - (eta + b)) / norm(eta + b));
 
 % 2b: spin-up by doubling (2^40 cycles from y = 0)
@@ -141,8 +141,8 @@ t3 = [10, 100] * yr;
 Q = zeros(4 * 2*shz.N, npts);
 for ip = 1:npts
     [~, An, cn, bn] = sys(10^log_factors(ip));
-    y0n = computePeriodicInitialConditionBalanced(An, cn, bn, Trecur);
-    [Yn, Un] = analyticSolveIVP(An, cn, y0n, t3);
+    y0n = computePeriodicInitialCondition(An, cn, bn, Trecur);
+    [Yn, Un] = solveAnalyticIvp(An, cn, y0n, t3);
     Q(:, ip) = [Yn(imant, 1); Yn(imant, 2); Un(imant, 1); Un(imant, 2)];
 end
 nq = 2*shz.N;
@@ -167,7 +167,7 @@ fprintf('Test 4: series threshold ... ');
 lam_neg = eig(A_neg);
 max_diff = 0;
 for t4 = [40/365, 1, 10, 100] * yr
-    [~, g_def, h_def] = egh_modal(lam_neg, t4);
+    [~, g_def, h_def] = computeModalIntegrals(lam_neg, t4);
     for thr = [1e-3, 1e-1]
         [~, g_t, h_t] = egh_thresh(lam_neg, t4, thr);
         max_diff = max([max_diff, max(abs(g_t - g_def)) / max(abs(g_def)), ...
@@ -183,11 +183,11 @@ report(pass4, sprintf('max rel diff in g, h %.2e (tol %.0e)', max_diff, tol4));
 %% ---- Test 5: IVP-periodic consistency ----
 fprintf('Test 5: IVP-periodic consistency ... ');
 
-Y_T = analyticSolveIVP(A_neg, c, y0_per, Trecur);
+Y_T = solveAnalyticIvp(A_neg, c, y0_per, Trecur);
 cycle_err = norm(Y_T + b - y0_per) / norm(y0_per);
 
 % raw operator as input to both solvers
-Y_Tr = analyticSolveIVP(A, c, y0_raw, Trecur);
+Y_Tr = solveAnalyticIvp(A, c, y0_raw, Trecur);
 cycle_err = max(cycle_err, norm(Y_Tr + b - y0_raw) / norm(y0_raw));
 
 tol5 = 1e-10;
@@ -198,9 +198,9 @@ report(pass5, sprintf('|y(T) + b - y0| / |y0| = %.2e (tol %.0e)', cycle_err, tol
 %% ---- Test 6: integrator mode (lam = 0) ----
 fprintf('Test 6: integrator mode (lam = 0) ... ');
 
-% 6a: egh_modal at lam = 0 and |lam| far below the series switch
+% 6a: computeModalIntegrals at lam = 0 and |lam| far below the series switch
 t6 = 10 * yr;
-[e6, g6, h6] = egh_modal([0; 1e-30; -1e-30i], t6);
+[e6, g6, h6] = computeModalIntegrals([0; 1e-30; -1e-30i], t6);
 err6a = max([abs(e6 - 1); abs(g6 - t6)/t6; abs(h6 - t6^2/2)/(t6^2/2)]);
 
 % 6b: IVP with an exact integrator appended, dy/dt = c0 for the extra
@@ -208,7 +208,7 @@ err6a = max([abs(e6 - 1); abs(g6 - t6)/t6; abs(h6 - t6^2/2)/(t6^2/2)]);
 % must equal the solution without it
 c0 = mean(abs(c));  y00 = mean(abs(y0_per));
 A6 = blkdiag(A_neg, 0);
-[Y6, U6] = analyticSolveIVP(A6, [c; c0], [y0_per; y00], tvec);
+[Y6, U6] = solveAnalyticIvp(A6, [c; c0], [y0_per; y00], tvec);
 y_int = y00 + c0 * tvec;
 u_int = y00 * tvec + c0 * tvec.^2 / 2;
 err6b = max([abs(Y6(end,:) - y_int) ./ abs(y_int), abs(U6(end,:) - u_int) ./ abs(u_int)]);
@@ -217,7 +217,7 @@ err6b_rest = max([vecnorm(Y6(1:n,:) - Y) ./ vecnorm(Y), vecnorm(U6(1:n,:) - U) .
 % 6c: periodic with the integrator: the periodic state is not
 % determined, so the solver raises I2EC:neutralModes
 try
-    computePeriodicInitialConditionBalanced(A6, [c; c0], [b; -c0*Trecur], Trecur);
+    computePeriodicInitialCondition(A6, [c; c0], [b; -c0*Trecur], Trecur);
     err6c = Inf;
 catch err
     err6c = double(~strcmp(err.identifier, 'I2EC:neutralModes'));
@@ -251,11 +251,11 @@ t7 = [1e6, 1e8, 1e9, 1e10];     % |lam t| from 1e-7 (series) to 10
 [~, ~, A7_neg] = negateGrowingModes(A7);
 err7a = norm(A7_neg - A7_ref) / norm(A7_ref);
 % the solvers no longer negate: pass the negated operator
-[Y7, U7] = analyticSolveIVP(A7_neg, c7, y7, t7);
+[Y7, U7] = solveAnalyticIvp(A7_neg, c7, y7, t7);
 [Y7r, U7r] = expm_ivp(A7_ref, c7, y7, t7);
 err7b = max([vecnorm(Y7 - Y7r) ./ vecnorm(Y7r), vecnorm(U7 - U7r) ./ vecnorm(U7r)]);
 T7 = 1e10;
-y07 = computePeriodicInitialConditionBalanced(A7_neg, c7, b7, T7);
+y07 = computePeriodicInitialCondition(A7_neg, c7, b7, T7);
 eM7 = expm([A7_ref c7; zeros(1, 6)] * T7);
 err7c = norm((eye(5) - eM7(1:5, 1:5)) * y07 - (eM7(1:5, 6) + b7)) / norm(eM7(1:5, 6) + b7);
 
@@ -273,13 +273,13 @@ fprintf('Test 8: steady state ... ');
 % state with b = 0 is y_pl.  This holds because c is built with the
 % negated operator.
 c8 = c - c_lock;                 % = -A_neg * y_pl
-[Y8, U8] = analyticSolveIVP(A_neg, c8, y_pl, tvec);
+[Y8, U8] = solveAnalyticIvp(A_neg, c8, y_pl, tvec);
 err8a = max([vecnorm(Y8 - y_pl) / norm(y_pl), vecnorm(U8 - y_pl * tvec) ./ (norm(y_pl) * tvec)]);
-y08 = computePeriodicInitialConditionBalanced(A_neg, c8, zeros(n, 1), Trecur);
+y08 = computePeriodicInitialCondition(A_neg, c8, zeros(n, 1), Trecur);
 err8b = norm(y08 - y_pl) / norm(y_pl);
 
 % for information: forcing built with the raw operator instead
-Y8raw = analyticSolveIVP(A, -A * y_pl, y_pl, tvec(end));
+Y8raw = solveAnalyticIvp(A, -A * y_pl, y_pl, tvec(end));
 drift_raw = norm(Y8raw(imant) - y_pl(imant)) / norm(y_pl(imant));
 
 tol8 = 1e-8;
@@ -298,14 +298,14 @@ lu(real(lu) > 0) = -lu(real(lu) > 0);
 z0u = Vu \ y0_per;  ctu = Vu \ c;  zbu = Vu \ b;
 Yu = zeros(n, numel(tvec));  Uu = Yu;
 for j = 1:numel(tvec)
-    [ej, gj, hj] = egh_modal(lu, tvec(j));
+    [ej, gj, hj] = computeModalIntegrals(lu, tvec(j));
     Yu(:,j) = real(Vu * (ej .* z0u + gj .* ctu));
     Uu(:,j) = real(Vu * (gj .* z0u + hj .* ctu));
 end
-[~, gT] = egh_modal(lu, Trecur);
+[~, gT] = computeModalIntegrals(lu, Trecur);
 y0u = real(Vu * ((gT .* ctu + zbu) ./ (-lu .* gT)));
-[Yb, Ub] = analyticSolveIVP(A, c, y0_per, tvec);
-y0b = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+[Yb, Ub] = solveAnalyticIvp(A, c, y0_per, tvec);
+y0b = computePeriodicInitialCondition(A, c, b, Trecur);
 err9 = max([vecnorm(Yb - Yu) ./ vecnorm(Yu), vecnorm(Ub - Uu) ./ vecnorm(Uu), ...
             norm(y0b - y0u) / norm(y0u)]);
 
@@ -357,7 +357,7 @@ if pass, npass = npass + 1; else, nfail = nfail + 1; end
 end
 
 function [e, g, h] = egh_thresh(lam, t, thresh)
-% egh_modal with a configurable series switch (for test 4 only)
+% computeModalIntegrals with a configurable series switch (for test 4 only)
 x = lam * t; e = exp(x); g = zeros(size(lam)); h = g;
 s = abs(x) < thresh;
 xs = x(s); gs = zeros(size(xs)); hs = gs; fk = 1;

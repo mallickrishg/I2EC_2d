@@ -41,15 +41,15 @@ Y0(~locked) = ypre(1:Nc);
 Y0(rcv.N+1:2:end) = ypre(Nc+1:Nc+M) ./ shz.alpha;
 Y0(rcv.N+2:2:end) = ypre(Nc+M+1:end) ./ shz.alpha;
 
-[t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+[t, Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), ...
     Y0, rcv, shz, cyc.stress_change, cyc.Trecur);
-[Vn, e22n, e23n] = extract_v_edot_from_statevector(Y, rcv, shz);
+[Vn, e22n, e23n] = extractRatesFromOdeState(Y, rcv, shz);
 ```
 
-{mat:func}`viscoeq_sequence_simulation` integrates
-{mat:func}`ode_viscoelastic` with `ode45`, applying the earthquake in
+{mat:func}`integrateImposedCycles` integrates
+{mat:func}`odeViscoelastic` with `ode45`, applying the earthquake in
 `cyc.stress_change` at $t = 0$, and
-{mat:func}`extract_v_edot_from_statevector` turns the state back into slip
+{mat:func}`extractRatesFromOdeState` turns the state back into slip
 and strain rates.
 
 ## 3. Compare

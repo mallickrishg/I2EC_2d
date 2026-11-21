@@ -1,11 +1,11 @@
-function rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault)
-% CREATE_MEGATHRUST  Create a planar megathrust and load it as patches.
+function rcv = createMegathrust(earthModel,x0,z0,dip,Fault_width,Nfault)
+% CREATEMEGATHRUST  Create a planar megathrust and load it as patches.
 %
-%   rcv = create_megathrust(earthModel, x0, z0, dip, Fault_width, Nfault)
+%   rcv = createMegathrust(earthModel, x0, z0, dip, Fault_width, Nfault)
 %
-%   Writes a one-segment fault file megathrust2d.seg in the current folder
-%   (overwriting any file of that name) and reads it back with
-%   geometry.receiver. The segment starts at (x0, z0), dips at dip and is
+%   Writes a one-segment fault file to a temporary file, reads it back
+%   with geometry.receiver and deletes it (nothing is written to the
+%   current folder). The segment starts at (x0, z0), dips at dip and is
 %   split into Nfault patches of equal width.
 %
 % INPUTS
@@ -29,8 +29,9 @@ function rcv = create_megathrust(earthModel,x0,z0,dip,Fault_width,Nfault)
 % AUTHORS
 %   Rishav Mallick, 2023
 
-% megathrust fault file
-patchfname = 'megathrust2d.seg';
+% one-segment fault file, in a temporary location
+patchfname = [tempname '.seg'];
+removeFile = onCleanup(@() deleteIfPresent(patchfname));
 
 % width of patch segments
 w = Fault_width/Nfault;
@@ -44,4 +45,10 @@ fclose(fileID);
 
 rcv = geometry.receiver(patchfname,earthModel);
 
+end
+
+function deleteIfPresent(f)
+if isfile(f)
+    delete(f);
+end
 end
