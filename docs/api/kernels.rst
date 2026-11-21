@@ -27,8 +27,6 @@ Boundary-element stress, traction and displacement kernels. The half-space kerne
 
 .. mat:autofunction:: computeShzDisplacementKernelsBem
 
-.. mat:autofunction:: computeSiteVelocitiesBem
-
 .. mat:autofunction:: computeStressPlaneStrainTriangleShearZone
 
 .. mat:autofunction:: computeDisplacementPlaneStrainTriangleShearZone

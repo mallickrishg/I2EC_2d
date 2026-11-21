@@ -50,8 +50,7 @@ function y0 = computePeriodicInitialConditionBalanced(A, c, b, T)
 %     started from y0 returns to y0 - b after one period).
 %
 % SEE ALSO
-%   eigBalanced, egh_modal, analyticSolveIVP, negateGrowingModes,
-%   computePeriodicInitialCondition
+%   eigBalanced, egh_modal, analyticSolveIVP, negateGrowingModes
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026

@@ -2,10 +2,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
     %SOLVERSTEST  Linear (Newtonian) semi-analytical solvers and their helpers.
     %
     % egh_modal, negateGrowingModes, analyticSolveIVP,
-    % computePeriodicInitialConditionBalanced, plus the older
-    % computePeriodicInitialCondition / reconditionODEoperator pair,
-    % assembleStressKernel, extractComponentsSolutionVector and
-    % computeKLmodesMesh.
+    % computePeriodicInitialConditionBalanced, assembleStressKernel and
+    % extractComponentsSolutionVector.
     %
     % The matrix exponential of the augmented system [A c; 0 0] is the
     % reference solution throughout.  tests/test_negate_exact_solver.m
@@ -153,20 +151,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyEqual(yT + tc.b, y0, 'RelTol', 1e-9, 'AbsTol', 1e-12);
         end
 
-        function balancedAndLegacyPeriodicSolversAgree(tc)
-            % for a stable, well-conditioned operator the old expm/SVD
-            % solver and the modal solver must give the same state
-            y1 = computePeriodicInitialConditionBalanced(tc.A, tc.c, tc.b, tc.T);
-            [~, y0] = evalc('computePeriodicInitialCondition(tc.A, tc.c, tc.b, tc.T)');
-            tc.verifyEqual(y0, y1, 'RelTol', 1e-8, 'AbsTol', 1e-12);
-        end
-
-        function reconditionedOperatorIsStable(tc)
-            Ar = reconditionODEoperator(tc.Aunst);
-            tc.verifyTrue(isreal(Ar));
-            tc.verifyLessThan(max(real(eig(Ar))), 0);
-        end
-
         %% ---------------- bookkeeping ----------------
         function assembledKernelHasExpectedBlocks(tc)
             ex = loadExampleModel(true);
@@ -189,48 +173,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyEqual(V2, V);
             tc.verifyEqual(a, e22);
             tc.verifyEqual(b, e23);
-        end
-
-        %% ---------------- computeKLmodesMesh (unused) ----------------
-        function klModesAreOrthonormalAndSorted(tc)
-            mesh.xc = [linspace(0, 1, 30)' sin(linspace(0, 3, 30))'];
-            [V, Vx, Vy, lam] = computeKLmodesMesh(mesh, 0.3);
-            tc.verifyEqual(V'*V, eye(size(V,2)), 'AbsTol', 1e-10);
-            tc.verifyTrue(issorted(lam, 'descend'));
-            tc.verifySize(Vx, size(V)); tc.verifySize(Vy, size(V));
-        end
-
-        function klModeDerivativesMatchNystromExtension(tc)
-            % Vx(:,k) is the x-derivative of v_k(x) = (1/lam_k) sum_j k(x,x_j) v_k(x_j)
-            mesh.xc = [linspace(0, 1, 25)' 0.5*cos(linspace(0, 2, 25))'];
-            L = 0.4; m = 4;
-            [V, Vx, ~, lam] = computeKLmodesMesh(mesh, L, m);
-            h = 1e-6;
-            for k = 1:m
-                ext = @(p) exp(-((p(1) - mesh.xc(:,1)).^2 + (p(2) - mesh.xc(:,2)).^2) / L^2)' * V(:,k) / lam(k);
-                i = 12;
-                d = (ext(mesh.xc(i,:) + [h 0]) - ext(mesh.xc(i,:) - [h 0])) / (2*h);
-                tc.verifyEqual(Vx(i,k), d, 'RelTol', 1e-5, 'AbsTol', 1e-8);
-            end
-        end
-    end
-
-    methods (Test, TestTags = {'KnownIssue'})
-        function reconditionReplacesGrowingModesByMinusEps(tc)
-            % help text: eigenvalues with Re >= 0 are replaced by -eps;
-            % the code uses -0.1 s^-1 (a 10-second relaxation time in a
-            % model with year-to-millennium time scales)
-            Ar = reconditionODEoperator(tc.Aunst);
-            lam = eig(Ar);
-            % every original rate is slower than 1/(3 yr); a replaced mode
-            % at -eps is slower still.  None should relax in seconds.
-            tc.verifyEqual(sum(real(lam) < -1e-6), 0, ...
-                sprintf('min Re(lambda) = %.3g s^-1; documented value is -eps', min(real(lam))));
-        end
-
-        function legacyPeriodicSolverIsQuiet(tc)
-            out = evalc('computePeriodicInitialCondition(tc.A, tc.c, tc.b, tc.T);');
-            tc.verifyEmpty(strtrim(out), 'prints the condition number on every call');
         end
     end
 

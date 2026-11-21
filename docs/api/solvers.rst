@@ -15,13 +15,7 @@ Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
 
 .. mat:autofunction:: computePeriodicInitialConditionBalanced
 
-.. mat:autofunction:: computePeriodicInitialCondition
-
-.. mat:autofunction:: reconditionODEoperator
-
 .. mat:autofunction:: assembleStressKernel
 
 .. mat:autofunction:: extractComponentsSolutionVector
-
-.. mat:autofunction:: computeKLmodesMesh
 
