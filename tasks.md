@@ -15,39 +15,28 @@ addpath tests; runTests('all')   % + kernel rebuild and MAIN scripts
 
 Tests tagged `KnownIssue` check the *correct* behaviour of the bugs listed in §0. They fail today. When one starts passing, remove its tag.
 
-## Still open (2026-11-20, checked against `main` after PRs #12 and #13)
+## Still open (2026-11-21, checked against `main` after PR #31)
 
-Everything else in this file is done. Details are in the sections named.
+Everything not listed here is done; details are in the sections named.
 
-**Next up**
-- [x] ~~Example 3 (mesh convergence): build the Hmax 10 kernel cache by running `examples/example3_meshConvergence`, then add example 3's figures to the docs.~~ *Done: the cache certifies after the nearly-aligned-edge fix (4ed5e8d), and the figures are on `docs/examples/example3.md` (e34907c). The caches are now `kernels/meshconvergence/evl_shearzone_h*.h5`.*
-- [x] ~~§0a: certify the coupled fault-mantle operator, not only `LL`.~~ *Closed (2026-11-21), no code change: the example's coupled operator certifies with margin, and collocated `KK`/`LK` are kept (see §0a).*
-- [ ] §0a, optional: rename `evl_orig` (it is no longer an "original, unmodified" kernel).
+**Code**
+- [ ] §1: a direct test of the deviatoric `LL` index construction in `computeAllStressKernelsBem` (its comment still says the indices need checking; Betti reciprocity and certification pass, which is indirect evidence).
+- [ ] §6: a regeneration script, or a mesh-size/hash check, for `examples/kernels/evl_orig.h5` and `devl.h5`.
+- [ ] §7: one `setup.m` that adds the I2EC folders to the path, called by the examples and the tests.
+- [ ] §8: run `runTests` in CI, and run `docs/_ext/check_help.py` in the docs workflow.
 
-- [x] ~~§11: analytic mantle stress kernel.~~ *Done and merged into main (PR #14, docs in #15): default in `geometry.computeShzStressKernels`, kernel caches regenerated, the FD routine deleted.* The receiver-independent BEM part is computed once (`computeShzBoundaryCorrection`): full example kernel build ~20-30 s.
+**Optional**
+- [ ] §0a: rename `evl_orig` (it is no longer an "original, unmodified" kernel).
+- [ ] §3: shorten `filenameGenerator.m` to `sprintf('%06d', num)`.
+- [ ] §11: the stress generator reads the displacement file by line number; regenerate after any edit to `computeDisplacementPlaneStrainTriangleShearZone`.
+
+**Future**
+- [ ] §0: a particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
 
 **Exploratory**
-- §10 (periodic power-law cycles without spin-up) lives only on branch `nonlin-spinup-solve`, in its own worktree `../I2EC_2d-nonlin-spinup-solve`. That branch is reserved for one agent: do not check it out, commit to it, merge or rebase it, or do §10 work on any other branch.
+- §10 (periodic power-law cycles without spin-up) lives only on branch `nonlin-spinup-solve`, in its own worktree. That branch is reserved for one agent: do not check it out, commit to it, merge or rebase it, or do §10 work on any other branch.
 
-**Known issues in legacy code (§0)**
-- [x] ~~`reconditionODEoperator.m` uses -0.1 s⁻¹, not the documented -eps; `computePeriodicInitialCondition.m` prints on every call.~~ *Both deleted (2026-11-21, §3).*
-- [x] ~~`create_megathrust.m` writes `megathrust2d.seg` into the current folder.~~ *Fixed (2026-11-21): renamed `createMegathrust`, writes to a temporary file. No `KnownIssue` tests remain.*
-- [ ] Future: particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
-
-**Clean-up backlog**
-- [x] ~~§1: one corner-flow implementation; one helper for the translate/rescale block.~~ *Done: `compute_cornerflow_velocityfield` deleted; both callers go through `cornerFlowVelocity`.*
-- [x] ~~§2: write down the rule for `+geometry/` vs `functions/`.~~ *In the naming rules (§4): half-space kernels in `+geometry/`, boundary-corrected `…Bem` versions in `functions/`.*
-- [x] ~~§3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`.~~ *Deleted (2026-11-21). `filenameGenerator` kept (used by experiment scripts).*
-- [x] ~~§4: naming convention and renames.~~ *Done (2026-11-21): rules and old → new table in §4.* Left: credit `bluewhitered`, `cline`, `drchrnd` in `docs/contributors.md`.
-- [ ] §6: a regeneration script or hash check for `examples/kernels/*.h5`.
-- [ ] §7: one `setup.m`.
-- [x] ~~Move the example geometry from `inputs/` to `examples/inputs/`, next to the driver scripts that use it.~~ *Done (2026-11-21); `createShearZoneMesh` now writes there by default.*
-- [x] ~~Move the cached example kernels from `kernels/` to `examples/kernels/` (including the git-ignored `meshconvergence/` caches).~~ *Done (2026-11-21).*
-- [x] ~~Move `meshing/createShearZoneMesh.m` into `functions/` (a folder for one function); `meshing/` is gone.~~ *Done (2026-11-21).*
-- [x] ~~Both safeguards raise errors instead of fixing quietly (2026-11-21).~~ *`certifyMantleKernel` no longer clips eigenvalues in (0, tol] to zero: a kernel with any eigenvalue >= 0 fails (`certifyMantleKernel:zeroEnergyModes` below the 1e-3 threshold, `notNegative` above). `computePeriodicInitialConditionBalanced` no longer skips modes with |lambda| < 1e-16 1/s (an absolute cutoff in 1/s, not machine precision). That cutoff was silently wrong for strong mantles: with the example 2 fault and a uniform mantle of Maxwell time 1e4 / 1e5 / 1e6 T it zeroed 16 / 131 / all slow modes, and the periodic mantle state was 58% / 83% / 100% off (against a direct solve, y0 = -(A G) \ (G c + b) with G from an augmented expm). Without any cutoff the modal solve agrees with that direct solve to 1e-8 / 3e-7 / 1e-6 in the mantle. A cutoff relative to max|lambda| would be wrong too (those modes are 5e-12 to 5e-14 of max|lambda|, set by the fault). Now modes with |Re(lambda)|*T <= 1e-12 (relax by less than 1e-12 per cycle; independent of units) raise `I2EC:neutralModes`; at Maxwell time 1e6 T the slowest mode has |lambda|*T = 3e-9. Weak mantles (1e-5 T) are unaffected either way. No example or cached kernel is affected (nothing was ever clipped on them). Tests: `KernelsTest/certificationRejectsZeroEnergyModes`, `SolversTest/periodicSolverRejectsNeutralModes`, `periodicSolverAcceptsWidelySeparatedTimescales`; `test_negate_exact_solver` test 6c now expects the error.*
-- [x] ~~The semi-analytical solvers eigendecompose the operator without balancing (2026-11-21).~~ *`eigBalanced` now calls `eig(A, 'nobalance')` (balancing is an option). A = K./eta has eigenvectors conditioned by the geometry (cond(V) ~ 7e5 for any mantle Maxwell time); balancing raised cond(V) to 2e10 for a strong mantle and lost three digits. Periodic mantle state against a direct solve, example 2 fault: 5e-11 to 2e-9 for t_M/T = 1e-5 to 1e9 (balanced: 4e-12 at example 2, but up to 1e-6 at 1e6); `I2EC:neutralModes` at 1e10. A symmetrising scaling was tried and also loses digits for strong mantles. `test_negate_exact_solver` tolerances 1e-10 → 1e-8 (now ~2e-9 to 5e-9). Docs table updated. Test: `SolversTest/eigBalancedOptionalBalancingGivesSameModes`. The name `eigBalanced` is now misleading; see the naming scheme (§4).*
-- [ ] §8: CI for `runTests`; a help-block check in the docs workflow.
-- [x] ~~§9: one help-block format; README dependency list.~~ *Done: every help block has an H1 line and INPUTS/OUTPUTS; the README no longer has a dependency list (rewritten in #13).*
+**Done since 2026-11-20** (details in the sections): example 3 figures and caches; HDF5 kernel files; analytic triangle stress (§11, #14/#15); coupled fault-mantle check, closed with no code change (§0a); both safeguards raise errors instead of fixing quietly, and the solvers eigendecompose without balancing (§0a); legacy bugs and unused functions deleted (§0, §3); one corner-flow implementation (§1); naming rules, renames and third-party credits (§2, §4, #30/#31); example inputs, kernels and the mesher moved under `examples/` and `functions/`; help-block format (§9).
 
 ---
 
@@ -72,9 +61,9 @@ Each item names the failing test (`Class/test`).
 - [x] ~~`computeStressFault_bem.m` errors with "Undefined function `computeFullTractionKernels`". *Deleted, with its docs entry and its test.* Test: `LegacyCodeTest/stressFaultBemRuns`.~~
 - [x] ~~`getStrainratesLongterm_old.m` declares `getStrainratesLongterm`. *Deleted.* Test: `LegacyCodeTest/functionNamesMatchFileNames`.~~
 - [x] ~~Four file names exist in both `functions/` and `+geometry/`. *Fixed: the `functions/` copies are deleted.* Test: `LegacyCodeTest/noDuplicateFileNames`.~~
-- [ ] `reconditionODEoperator.m`: the help text says growing eigenvalues are replaced by `-eps`, but the code uses `-0.1` s⁻¹, a 10-second relaxation. `computePeriodicInitialCondition.m` prints the condition number on every call. Tests: `SolversTest/reconditionReplacesGrowingModesByMinusEps`, `SolversTest/legacyPeriodicSolverIsQuiet`.
+- [x] ~~`reconditionODEoperator.m`: the help text says growing eigenvalues are replaced by `-eps`, but the code uses `-0.1` s⁻¹, a 10-second relaxation. `computePeriodicInitialCondition.m` prints the condition number on every call. Tests: `SolversTest/reconditionReplacesGrowingModesByMinusEps`, `SolversTest/legacyPeriodicSolverIsQuiet`.~~ *Deleted (2026-11-21, §3).*
 - [x] ~~`pcolor_logvals.m` draws nothing. *Deleted, with its docs entry and its test.* Test: `UtilitiesTest/pcolorLogValsDrawsSomething`.~~
-- [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder. Test: `UtilitiesTest/createMegathrustLeavesWorkingFolderClean`.
+- [x] ~~`create_megathrust.m` writes `megathrust2d.seg` into the current folder. Test: `UtilitiesTest/createMegathrustLeavesWorkingFolderClean`.~~ *Fixed (2026-11-21): renamed `createMegathrust`, writes to a temporary file.*
 
 ### Discretisation: growing modes of the mantle kernel
 
@@ -220,6 +209,9 @@ The zeroed modes are neutral, so in the spun-up cycle they hold cell-scale noise
     - **Decision (2026-11-21): keep standard BEM kernels; no reciprocity-based coupling and no coupled check in the code.** `KK` and `LK` stay collocated at patch centres, `KL` and `LL` cell-averaged (3-point) with `LL` certified. The coupled operator only loses definiteness when mantle cells sit within a small fraction of a cell size of the fault along much of its length (d ≤ 0.1 km here, with 5 km cells); a mesh with d < cell size is poor experiment design, since the kernels are singular functions (already stated in the docs). Guidance: keep mantle cells at least about one cell size from the fault. Optional: add that sentence next to the singular-kernel caveat in the docs. The scripts stay in `investigations/coupled_certification/` as the record.
 
 
+- [x] ~~Both safeguards raise errors instead of fixing quietly (2026-11-21).~~ *`certifyMantleKernel` no longer clips eigenvalues in (0, tol] to zero: a kernel with any eigenvalue >= 0 fails (`certifyMantleKernel:zeroEnergyModes` below the 1e-3 threshold, `notNegative` above). `computePeriodicInitialConditionBalanced` no longer skips modes with |lambda| < 1e-16 1/s (an absolute cutoff in 1/s, not machine precision). That cutoff was silently wrong for strong mantles: with the example 2 fault and a uniform mantle of Maxwell time 1e4 / 1e5 / 1e6 T it zeroed 16 / 131 / all slow modes, and the periodic mantle state was 58% / 83% / 100% off (against a direct solve, y0 = -(A G) \ (G c + b) with G from an augmented expm). Without any cutoff the modal solve agrees with that direct solve to 1e-8 / 3e-7 / 1e-6 in the mantle. A cutoff relative to max|lambda| would be wrong too (those modes are 5e-12 to 5e-14 of max|lambda|, set by the fault). Now modes with |Re(lambda)|*T <= 1e-12 (relax by less than 1e-12 per cycle; independent of units) raise `I2EC:neutralModes`; at Maxwell time 1e6 T the slowest mode has |lambda|*T = 3e-9. Weak mantles (1e-5 T) are unaffected either way. No example or cached kernel is affected (nothing was ever clipped on them). Tests: `KernelsTest/certificationRejectsZeroEnergyModes`, `SolversTest/periodicSolverRejectsNeutralModes`, `periodicSolverAcceptsWidelySeparatedTimescales`; `test_negate_exact_solver` test 6c now expects the error.*
+- [x] ~~The semi-analytical solvers eigendecompose the operator without balancing (2026-11-21).~~ *`eigBalanced` now calls `eig(A, 'nobalance')` (balancing is an option). A = K./eta has eigenvectors conditioned by the geometry (cond(V) ~ 7e5 for any mantle Maxwell time); balancing raised cond(V) to 2e10 for a strong mantle and lost three digits. Periodic mantle state against a direct solve, example 2 fault: 5e-11 to 2e-9 for t_M/T = 1e-5 to 1e9 (balanced: 4e-12 at example 2, but up to 1e-6 at 1e6); `I2EC:neutralModes` at 1e10. A symmetrising scaling was tried and also loses digits for strong mantles. `test_negate_exact_solver` tolerances 1e-10 → 1e-8 (now ~2e-9 to 5e-9). Docs table updated. Test: `SolversTest/eigBalancedOptionalBalancingGivesSameModes`. The name `eigBalanced` is now misleading; see the naming scheme (§4).*
+
 ## 1. Broken or likely incorrect code (fix or delete first)
 
 - [x] ~~**`functions/computeStressFault_bem.m` is broken.** *Deleted, with its docs entry and `LegacyCodeTest/stressFaultBemRuns`.* It called `computeFullTractionKernels`, which doesn't exist anywhere in the repo. Nothing called this function, but the docs listed it (`docs/api/kernels.rst`).~~
@@ -244,15 +236,15 @@ Several files exist in both places. Package code calls the `geometry.` versions,
 - [x] ~~Delete the `functions/` copies of the four files above.~~
 - [x] ~~Delete the unused `+geometry/` versions: `computedisplacementGFs`, `computetractionkernels` and `EdgeStress` (only `computetractionkernels` used it). *Deleted, with their equivalence tests in `LegacyCodeTest`. Checked first: no caller in the repo, the local `expt*`/`experiments` folders or the git history since 2023, and the current kernels reproduce them to round-off for the example's megathrust, box and hinge, the small test model, and 14 synthetic faults (dips 5–90°, surface-breaking and buried). The current kernels also cover opening, which these did not.*~~
 - [x] ~~Remove the docs mentions of the `functions/` copies (the note in `docs/api/kernels.rst`; they had no API entries of their own).~~
-- [ ] Decide on one rule for what goes where. For example: low-level Green's functions and geometry classes go in `+geometry/`, and the `*Bem` assembly, solvers and plotting go in `functions/`. Write the rule down in the README or docs.
+- [x] ~~Decide on one rule for what goes where. For example: low-level Green's functions and geometry classes go in `+geometry/`, and the `*Bem` assembly, solvers and plotting go in `functions/`. Write the rule down in the README or docs.~~ *Done: in the naming rules (§4).*
 
 ## 3. Unused functions in `functions/`
 
 No caller in the repo. Each one needs a keep-or-delete decision.
 
-- [ ] `computeKLmodesMesh.m`: KL/eigenmode basis, looks experimental. Also, the help text calls it `compute_eigmodes_mesh` (out-of-date name).
-- [ ] `computePeriodicInitialCondition.m` (with `reconditionODEoperator.m`, which only it uses): replaced by `computePeriodicInitialConditionBalanced.m` and `negateGrowingModes.m`. → Delete both, or keep one as a documented fallback.
-- [ ] `computeSiteVelocitiesBem.m`: nothing calls it, and it carries a block of commented-out `devl`-based code.
+- [x] ~~`computeKLmodesMesh.m`: KL/eigenmode basis, looks experimental. Also, the help text calls it `compute_eigmodes_mesh` (out-of-date name).~~ *Deleted (2026-11-21).*
+- [x] ~~`computePeriodicInitialCondition.m` (with `reconditionODEoperator.m`, which only it uses): replaced by `computePeriodicInitialConditionBalanced.m` and `negateGrowingModes.m`. → Delete both, or keep one as a documented fallback.~~ *Both deleted (2026-11-21); `computePeriodicInitialConditionBalanced` was renamed `computePeriodicInitialCondition`.*
+- [x] ~~`computeSiteVelocitiesBem.m`: nothing calls it, and it carries a block of commented-out `devl`-based code.~~ *Deleted (2026-11-21).*
 - [x] ~~`computeStressPlaneStrainTriangleShearZone.m` (**2,238 lines**, Barbot 2018 analytic stress): the code actually uses `computeStressPlaneStrainTriangleShearZoneFiniteDifference.m` instead. The tests show it gives **wrong stresses** (§0), so it cannot serve as a reference. → Delete it. This is the largest single file in the repo. *Deleted.*~~
 - [x] ~~`computeInterseismicSteadystate.m`: its only caller was the notebook, now deleted (the remaining callers are in the git-ignored `experiments/`). Interseismic steady state with a pinned fault and a Laplacian-smoothed mantle; the semi-analytical driver does not use it. → Delete, or keep and add it to a driver script.~~ *Deleted, with `SolversTest/interseismicSteadyStateRuns` and its docs entries. With the certified kernels the locked steady state is well posed (the 1061 x 1061 block has condition number 3e5, all eigenvalues negative; the Tikhonov weight changed the result by at most 0.1% from 0.01 to 10), and it is the steady point of the semi-analytical system, `y = -A \ c`, so no separate solver is needed.*
 - [x] ~~`filenameGenerator.m`: no callers in the tracked code.~~ *Kept on purpose:* it gives each run its own numbered folder (`000001/results.mat`, `000002/…`), which suits batch jobs of many forward models (strain rates, stresses, surface observations) whose outputs should be stored systematically. `experiments/EXPT1_run.m` uses it this way.
@@ -304,7 +296,7 @@ Error identifiers follow their functions (`certifyShzKernel:notNegative`, `certi
 
 ## 6. Cached kernels and data
 
-- [ ] `examples/kernels/evl_orig.h5` (~8.7 MB) and `examples/kernels/devl.h5` (~6.2 MB) are loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `inputs/` mesh or kernel code beyond their sizes. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
+- [ ] `examples/kernels/evl_orig.h5` (~8.7 MB) and `examples/kernels/devl.h5` (~6.2 MB) are loaded by `examples/exampleModel.m` (for examples 1, 2 and 4) and `tests/test_negate_exact_solver.m`, and nothing checks that they still match the current `examples/inputs/` mesh or kernel code beyond their sizes. → Add a regeneration script, plus a check on mesh size or a hash. Or regenerate them when they're missing and stop tracking them (Git LFS or a release asset).
 - [x] ~~Store kernels in a format usable outside MATLAB.~~ *Done (2026-11-20): `saveKernels`/`loadKernels` write and read HDF5 (format 'I2EC kernels', version 1). Each kernel block is a compressed dataset with description and units attributes; the certificate, the build options (`evl.options`, now recorded by `computeAllStressKernelsBem`) and optionally the fault and mantle geometry are stored too. Row-major readers (h5py/NumPy) see the MATLAB shape and index order. `kernels/evl_orig.mat` and `devl.mat` were converted to `.h5` (identical on reading back) and removed; example 3 caches `.h5` and converts an existing `.mat` cache once. Layout: `docs/inputs.md`. Tests: `KernelsTest/kernelFilesRoundTrip`, `kernelFilesShowTheMatlabShapeToRowMajorReaders`, `loadKernelsRejectsOtherFiles`.*
 - [x] ~~`MAIN_analyticsolve_singleeqcycle.m` keeps the `computeAll*KernelsBem` calls as comments and loads the `.mat` files instead. → Replace this with an explicit `if exist(...) load else compute` switch.~~ *Done: `examples/exampleModel.m` loads the cached kernels when they exist and match the mesh sizes, and computes them otherwise.*
 
@@ -317,7 +309,7 @@ Error identifiers follow their functions (`certifyShzKernel:notNegative`, `certi
 
 - [x] ~~Test suite in `tests/` (`matlab.unittest`, runner `tests/runTests.m`, guide `tests/README.md`): 84 fast tests (Green's functions, geometry, BEM kernels, corner flow, solvers, ODE path, utilities, legacy code), plus a slow tier that rebuilds the example kernels and runs the MAIN scripts.~~
 - [ ] Run `runTests` in CI with `matlab-actions/setup-matlab` + `run-command`. The runner exits non-zero only on unexpected failures, so `KnownIssue` tests don't block CI. Needs a MATLAB licence in CI (free for public repos via MathWorks' GitHub actions); Parallel Computing Toolbox is optional (`parfor` runs serially without it).
-- [ ] Remove each `KnownIssue` tag as its bug in §0 is fixed.
+- [x] ~~Remove each `KnownIssue` tag as its bug in §0 is fixed.~~ *Done: no `KnownIssue` tests remain.*
 - [ ] The docs workflow (`.github/workflows/docs.yml`) only builds Sphinx (`docs/build.sh`). `docs/_ext/check_help.py` exists and exits 1 on a failed check, but only runs by hand. → Run it in CI so every documented function exists and has a help block.
 
 ## 9. Documentation clean-up (after the deletions above)
