@@ -32,8 +32,14 @@ Everything not listed here is done; details are in the sections named.
 **Future**
 - [ ] §0: a particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
 
-**Exploratory**
-- §10 (periodic power-law cycles without spin-up) lives only on branch `nonlin-spinup-solve`, in its own worktree. That branch is reserved for one agent: do not check it out, commit to it, merge or rebase it, or do §10 work on any other branch.
+**Features (in priority order, 2026-11-21)**
+
+Each feature gets its own branch from `main`, its own worktree outside Dropbox, and one agent. Its plan and checklist live in `docs/dev/<feature>.md` on that branch; this list keeps only one line per feature. Features never merge into each other: each starts from (or merges) `main` once the features before it have landed. Do not check out, commit to, merge or rebase another feature's branch.
+
+1. - [ ] **Burgers/Andrade transient rheology** as an option in both the semi-analytical solver (extra transient-strain state per cell; Andrade as a Prony series of Kelvin elements) and the numerical solver. *In progress:* session `burgers-andrade-rheology`, notes in `docs/dev/transient-rheology.md`.
+2. - [ ] **Gravity as a restoring force (buoyancy)**, for Maxwell and Burgers/Andrade. Buoyancy depends on displacement, so the state gains accumulated displacement and the linear periodic solve still applies. It must act on departures from the long-term topography. *Starts after 1 is merged.*
+3. - [ ] **Adjoint operator/ODE for inverse problems** (e.g. estimating η(x) from surface velocities), including the adjoint of the periodicity condition. It covers every rheology built by then, plus gravity. *Starts after 2 is merged.*
+4. - [ ] **Nonlinear (power-law) spin-up without brute force** (§10): Newton shooting on the post-earthquake state. Lowest priority, *paused*. Lives only on branch `nonlin-spinup-solve` (plan committed, `main` merged in), which is reserved for one agent.
 
 **Done since 2026-11-20** (details in the sections): deviatoric `LL`/`LK` construction verified (§1); example 3 figures and caches; HDF5 kernel files; analytic triangle stress (§11, #14/#15); coupled fault-mantle check, closed with no code change (§0a); both safeguards raise errors instead of fixing quietly, and the solvers eigendecompose without balancing (§0a); legacy bugs and unused functions deleted (§0, §3); one corner-flow implementation (§1); naming rules, renames and third-party credits (§2, §4, #30/#31); example inputs, kernels and the mesher moved under `examples/` and `functions/`; help-block format (§9).
 
