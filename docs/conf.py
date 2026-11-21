@@ -65,7 +65,7 @@ suppress_warnings = ["myst.header"]
 # -- General -------------------------------------------------------------------
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_ext", "figures", "README.md", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "_ext", "figures", "dev", "README.md", "Thumbs.db", ".DS_Store"]
 
 # -- HTML ----------------------------------------------------------------------
 html_theme = "furo"

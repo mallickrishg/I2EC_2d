@@ -79,6 +79,23 @@ $$
 
 With $n = 1$ the mantle is Newtonian and $\alpha = 1/\eta$.
 
+**Transient creep (Burgers, Andrade).** Each cell may also have Kelvin
+elements, a spring $\mu_K$ and a dashpot $\eta_K$ in parallel, in series with
+the power-law (Maxwell) dashpot:
+
+$$
+\sigma_{ij} = \mu_{K,k}\, \epsilon^{K}_{ij,k} + \eta_{K,k}\, \dot\epsilon^{K}_{ij,k},
+\qquad
+\dot\epsilon_{ij} = \alpha\,\tau^{\,n-1}\sigma_{ij} + \sum_k \dot\epsilon^{K}_{ij,k}.
+$$
+
+One element per cell is a Burgers body. Andrade creep, $\epsilon(t) = \beta
+\sigma t^{1/3}$ under constant stress, is approximated by a Prony series:
+Kelvin elements with log-spaced relaxation times whose compliances are fitted
+to $t^{1/3}$ (about 1% with one term per decade). The kernels see only the
+total strain rate, so the long-term flow is that of the Maxwell element, and
+over a periodic cycle the Kelvin strain rates average to zero.
+
 **Fault.** The creeping fault follows one of two laws:
 
 | Law | Equation | Used by |
@@ -93,7 +110,11 @@ $v^{\infty} T$, and its stress change is applied as an instantaneous step.
 :::{admonition} In the code
 :class: in-code
 
-the mantle takes `shz.alpha` and `shz.n`. The fault takes
+the mantle takes `shz.alpha` and `shz.n`, and Kelvin elements in
+`shz.etaK` (MPa s; `Inf` for none) and `shz.muK` (MPa), $M \times p$ each
+(default $M \times 0$: Maxwell). {mat:func}`computeAndradePronySeries`
+returns them for Andrade creep; {doc}`examples/example5` compares the three
+rheologies. The fault takes
 `rcv.faultLaw` (`'ratestrengthening'` or `'linear'`, read by
 {mat:func}`isLinearFaultLaw`) and `rcv.Asigma`, which holds $(a-b)\sigma$ (MPa)
 or $\eta'$, a viscosity per unit length (MPa s/m). Locked patches are
@@ -104,7 +125,7 @@ or $\eta'$, a viscosity per unit length (MPa s/m). Locked patches are
 
 | | Numerical | Semi-analytical |
 | --- | --- | --- |
-| Rheology | any (power law, friction) | linear: $n = 1$, linear viscous fault |
+| Rheology | any (power law, friction; Burgers, Andrade) | linear: $n = 1$ (Maxwell, Burgers, Andrade), linear viscous fault |
 | Method | time integration with `ode45` | eigendecomposition, exact in time |
 | Periodic cycle | spin-up over many cycles | solved directly |
 | Example | {doc}`examples/example1` | {doc}`examples/example2` |
@@ -125,6 +146,9 @@ cycle from the long-term state spins the model up until it is periodic.
 {mat:func}`integrateImposedCycles` integrates one sequence of events and
 {mat:func}`odeViscoelastic` is the right-hand side. Spin-up convergence is
 not checked: compare the start and end of the last cycle, as example 1 does.
+Kelvin elements add their spring stresses $\mu_K\epsilon^K$ to the state;
+short relaxation times make the system stiff, so both drivers take an
+optional solver such as `@ode15s`.
 :::
 
 ### Semi-analytical solution
@@ -159,7 +183,11 @@ kernels guarantee this ([mantle kernels](#mantle-kernels)).
 :class: in-code
 
 {mat:func}`assembleStressKernel` builds $K$ without the
-locked patches; {mat:func}`computePeriodicInitialCondition` gives the
+locked patches, and {mat:func}`assembleLinearSystem` builds $A$, $c$ and $b$.
+With Kelvin elements it appends their strain rates to $y$: each row is
+divided by the viscosity of its own element, $K$ acts on the total rates, and
+Kelvin rows decay at $\mu_K/\eta_K$, so $A$, $c$ and $b$ go unchanged into
+the periodic solver; {mat:func}`computePeriodicInitialCondition` gives the
 periodic state and {mat:func}`solveAnalyticIvp` evaluates it at any time.
 $A$ is eigendecomposed without balancing ({mat:func}`eigOperator`): its
 eigenvectors are conditioned by the geometry, not by the viscosities, and

@@ -13,6 +13,9 @@ function cyc = newtonianCycle(rcv, shz, evl, Vpl, yr)
 %       with the slip deficit of a cycle (500 yr x Vpl) on the locked zone
 %     - long-term loading: plate rate on the fault, corner-flow strain
 %       rates in the mantle (computeLongTermStrainRates)
+%   Kelvin elements already set on shz (shz.etaK, shz.muK: Burgers or
+%   Andrade transient creep, see example 5) are kept, so the same function
+%   solves the transient cycle; strain rates are then totals.
 %
 % INPUTS
 %   rcv, shz  geometry.receiver (megathrust) and geometry.shearZoneReceiver
@@ -29,6 +32,7 @@ function cyc = newtonianCycle(rcv, shz, evl, Vpl, yr)
 %        .A, .c    operator and forcing of dy/dt = A*y + c, with
 %                  y = [v on creeping patches; e22dot; e23dot]
 %        .b        coseismic jump in y
+%        .sys      the linear system (assembleLinearSystem)
 %        .y0       periodic state just after the earthquake
 %        .eta      viscosity vector of y (MPa s/m for the fault, MPa s)
 %        .solve    @(tvec) struct of V [N x nt] (0 on locked patches),
@@ -41,7 +45,7 @@ function cyc = newtonianCycle(rcv, shz, evl, Vpl, yr)
 %
 % SEE ALSO
 %   exampleModel, computePeriodicInitialCondition,
-%   solveAnalyticIvp, assembleStressKernel
+%   solveAnalyticIvp, assembleLinearSystem
 
 cyc.Trecur = 500*yr;
 
@@ -67,24 +71,24 @@ cyc.stress_change = struct('Nevents', 1, 'Timing', 0, ...
     'dsigma22', evl.KL(:,:,1)*cyc.slip, 'dsigma23', evl.KL(:,:,2)*cyc.slip);
 
 % linear system dy/dt = A*y + c, y = [v(creeping); e22dot; e23dot]
-cyc.eta = [rcv.Asigma(~locked); 1./shz.alpha; 1./shz.alpha];
-% the certified kernels give an operator with no growing modes, so it is
+% (assembleLinearSystem also takes Kelvin elements, shz.etaK/shz.muK, for
+% Burgers or Andrade mantles; with none it builds the Maxwell system).
+% The certified kernels give an operator with no growing modes, so it is
 % used as it is (with centroid kernels, negate first and build c with the
 % negated operator: [~, ~, A] = negateGrowingModes(A))
-cyc.A = assembleStressKernel(evl, locked) ./ cyc.eta;
-vlock = Vpl .* locked;
-c_locking = -[evl.KK(~locked,:)*vlock; evl.KL(:,:,1)*vlock; evl.KL(:,:,2)*vlock] ./ cyc.eta;
-cyc.c = c_locking - cyc.A*[rcv.Vpl(~locked); shz.e22pl; shz.e23pl];
-sc = cyc.stress_change;
-cyc.b = [sc.dtau(~locked); sc.dsigma22; sc.dsigma23] ./ cyc.eta;
+cyc.sys = assembleLinearSystem(evl, rcv, shz, locked, cyc.stress_change);
+cyc.eta = cyc.sys.eta;
+cyc.A = cyc.sys.A;
+cyc.c = cyc.sys.c;
+cyc.b = cyc.sys.b;
 
 % periodic cycle: y(T) + b = y(0)
 cyc.y0 = computePeriodicInitialCondition(cyc.A, cyc.c, cyc.b, cyc.Trecur);
-cyc.solve = @(tvec) evaluate(cyc, locked, rcv.N, shz.N, tvec);
+cyc.solve = @(tvec) evaluate(cyc, tvec);
 end
 
-function out = evaluate(cyc, locked, N, M, tvec)
+function out = evaluate(cyc, tvec)
 [Y, U] = solveAnalyticIvp(cyc.A, cyc.c, cyc.y0, tvec);
-[out.V, out.e22dot, out.e23dot] = extractRatesFromLinearState(Y, locked, N, M);
-[out.slip, out.e22, out.e23] = extractRatesFromLinearState(U, locked, N, M);
+[out.V, out.e22dot, out.e23dot] = extractRatesFromLinearState(Y, cyc.sys);
+[out.slip, out.e22, out.e23] = extractRatesFromLinearState(U, cyc.sys);
 end

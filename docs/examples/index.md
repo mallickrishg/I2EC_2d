@@ -18,6 +18,7 @@ modes (see [Kernel options](../inputs.md#kernel-options) and
 | {doc}`example2` | Newtonian mantle ($n = 1$), linear viscous fault | semi-analytical | 1–2 min |
 | {doc}`example3` | as example 2, on three mantle meshes | semi-analytical | about 1 min (2 min the first time) |
 | {doc}`example4` | as example 2 | both, compared | 1–2 min |
+| {doc}`example5` | Maxwell, Burgers and Andrade mantles | semi-analytical | about 2 min |
 
 The figures in these pages are made by `docs/figures/make_examples.m`, which
 runs the scripts and saves what they draw.
@@ -30,6 +31,7 @@ example1
 example2
 example3
 example4
+example5
 ```
 
 ## The model

@@ -17,5 +17,11 @@ Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
 
 .. mat:autofunction:: assembleStressKernel
 
+.. mat:autofunction:: assembleLinearSystem
+
+.. mat:autofunction:: extractKelvinElements
+
+.. mat:autofunction:: computeAndradePronySeries
+
 .. mat:autofunction:: extractRatesFromLinearState
 
