@@ -89,12 +89,13 @@ change over the last cycle: strain rate median 2.2e-07, max 3.4e-05; slip rate m
 
 ## 5. Plot the results
 
-**Slip rate** on the megathrust, as `pcolor(t/Trecur, rcv.xc(:,1)/1e3, V'/Vpl)`.
-Below the locked zone, afterslip starts at up to 100 times the plate rate and
-decays through the cycle.
+**Slip rate** at three creeping patches, `V(:,ip)/Vpl` against `t/Trecur`.
+Afterslip starts at up to 100 times the plate rate and decays below it within
+the first tenth of the cycle; the shallowest patch, next to the locked zone,
+ends slowest.
 
 ```{figure} ../_static/examples/example1_numericalPowerLaw_1.png
-:alt: Slip rate on the megathrust over the last cycle
+:alt: Slip rate at three creeping patches over the last cycle
 :width: 80%
 ```
 

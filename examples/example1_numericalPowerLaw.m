@@ -76,18 +76,20 @@ dV = abs(V(end,~locked) - V(1,~locked)) ./ V(1,~locked);
 fprintf('change over the last cycle: strain rate median %.1e, max %.1e; slip rate max %.1e (relative, per cell/patch)\n', ...
     median(dE), max(dE), max(dV));
 
-%% fault slip rate through the cycle
+%% fault slip rate through the cycle, at three creeping patches
 st = exampleStyle();
-Vplot = V'/Vpl;  Vplot(locked,:) = NaN;          % locked zone: blank
-st.figure(1, 760, 420)
-pcolor(t/Trecur, rcv.xc(:,1)/1e3, Vplot), shading interp, hold on
-text(1e-2, mean(rcv.xc(locked,1))/1e3, 'locked zone (no slip)', 'Color', st.ink2, ...
-    'HorizontalAlignment', 'center', 'FontSize', 11)
-xlabel('time since the earthquake, t/T'), ylabel('distance from the trench (km)')
-cb = colorbar; cb.Label.String = 'slip rate / plate rate';
-clim(10.^[-1 2]), colormap(st.orange)
-set(gca, 'ColorScale', 'log', 'XScale', 'log', 'YDir', 'reverse')
-xlim([1e-4 1]), title('Slip rate on the megathrust')
+[~, ip] = min(abs(rcv.xc(:,2) + [32 40 48]*1e3));      % patches at 32, 40, 48 km depth
+st.figure(1, 760, 420), hold on
+for k = 1:numel(ip)
+    plot(t/Trecur, V(:,ip(k))/Vpl, 'Color', st.series(k,:), 'LineWidth', 2, ...
+        'DisplayName', sprintf('%.0f km depth', -rcv.xc(ip(k),2)/1e3))
+end
+yline(1, ':', 'plate rate', 'Color', st.ink2, 'HandleVisibility', 'off', 'FontSize', 10, ...
+    'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'bottom')
+set(gca, 'XScale', 'log', 'YScale', 'log'), grid on
+xlim([1e-4 1]), xlabel('time since the earthquake, t/T'), ylabel('slip rate / plate rate')
+title('Slip rate on the creeping megathrust')
+legend('Location', 'northeast', 'Box', 'off')
 st.axes()
 
 %% mantle strain rate snapshots
