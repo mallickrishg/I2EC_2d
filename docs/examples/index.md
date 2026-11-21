@@ -9,7 +9,7 @@ run examples/example1_numericalPowerLaw
 
 and adds the I2EC folders to the path itself. All of them use the default
 stress kernels: averaged over each mantle cell and certified free of growing
-modes (see [Kernel options](../quickstart.md#kernel-options) and
+modes (see [Kernel options](../inputs.md#kernel-options) and
 {ref}`mantle-kernels`), loaded from `examples/kernels/evl_orig.h5`.
 
 | Example | Rheology | Solver | Run time |
