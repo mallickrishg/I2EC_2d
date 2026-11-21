@@ -50,7 +50,8 @@ All four use the same geometry and cached kernels; see {doc}`examples/index`.
    ({doc}`inputs`, [kernel options](inputs.md#kernel-options)).
 3. **Rheology and solve:** set the fault and mantle properties and call a
    solver, following {doc}`examples/example1` (any rheology) or
-   {doc}`examples/example2` (linear, fastest).
+   {doc}`examples/example2` (linear, fastest). Check that your mantle
+   Maxwell time is in the range the solver handles ({ref}`valid-range`).
 
 {doc}`theory` explains the equations behind each step.
 

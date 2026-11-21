@@ -203,9 +203,9 @@ modes (43 on the example mesh), however exactly the stress is computed.
 
 I2EC therefore **averages the stress over each cell**, a Galerkin
 discretisation that keeps the right symmetry and sign, and **certifies** the
-result: the mantle–mantle kernel is checked to have no growing mode. A
-certified kernel is stable for any viscosity and any power-law exponent, in
-both solvers.
+result: the mantle–mantle kernel is checked to have no growing mode and no
+zero-energy (neutral) mode. A certified kernel is stable for any viscosity and
+any power-law exponent, in both solvers.
 
 :::{admonition} In the code
 :class: in-code
@@ -231,8 +231,59 @@ interpreted.
 - **Kinematic hinge.** A vertical "hinge" fault (`examples/inputs/hinge2d.seg`)
   stands in for plate bending in the surface predictions only.
 
+(valid-range)=
+## Valid range of Maxwell times
+
+How faithful a simulation is depends on the ratio of the mantle Maxwell time
+$t_M = \eta/\mu$ to the recurrence time $T$, and on the fault, which sets the
+fastest timescale. The two solvers have different limits.
+
+**Semi-analytical solver.** Its accuracy is set by how far the slowest mode
+relaxes in one cycle, $|\lambda_\text{min}|\,T$. Weak mantles have no limit;
+strong mantles lose about one digit per factor of 10 in $t_M/T$. On the
+example 2 model with a uniform mantle:
+
+| $t_M/T$ | $10^{-5}$ | $0.02$ (example 2) | $10^{2}$ | $10^{4}$ | $10^{5}$ | $10^{6}$ |
+| --- | --- | --- | --- | --- | --- | --- |
+| slowest $\lvert\lambda\rvert\,T$ | $3\times10^{2}$ | $0.14$ | $3\times10^{-5}$ | $3\times10^{-7}$ | $3\times10^{-8}$ | $3\times10^{-9}$ |
+| relative error, mantle state | $10^{-10}$ | $4\times10^{-12}$ | $2\times10^{-10}$ | $10^{-8}$ | $3\times10^{-7}$ | $10^{-6}$ |
+
+By extrapolation the mantle state keeps about three digits up to
+$t_M/T \approx 10^{9}$. In the strong-mantle limit the mantle simply follows
+its long-term strain rate, and the solver reproduces that.
+
+**Numerical integration.** Accuracy is set by the `ode45` tolerances, but each
+cycle only brings the solution closer to the periodic state by the factor
+$e^{-|\lambda_\text{min}|\,T}$. Reaching $10^{-6}$ takes about
+$14/(|\lambda_\text{min}|\,T)$ cycles: a few for $t_M/T \lesssim 10^{-3}$, about
+100 for example 2, about 5000 for $t_M/T = 1$ and about $5\times10^{5}$ for
+$t_M/T = 10^{2}$. For linear rheology beyond $t_M/T \sim 0.1$, use the
+semi-analytical solver. For power-law rheology the effective Maxwell time
+changes through the cycle, so check convergence directly, as example 1 does.
+
+Both limits shift with the fault: a stiffer or weaker fault changes the
+fastest timescale and so the numbers above.
+
+:::{admonition} In the code
+:class: in-code
+
+the table compares {mat:func}`computePeriodicInitialConditionBalanced` with an
+independent direct solve of the periodic condition (example 2 fault, locked
+above 30 km, $T = 500$ yr). Modes that relax by less than $10^{-12}$ per cycle
+($|\mathrm{Re}\,\lambda|\,T \le 10^{-12}$) raise `I2EC:neutralModes`, since
+their periodic state is not determined. Before 2026-11-21 the solver instead
+set modes with $|\lambda| < 10^{-16}$ s$^{-1}$ to zero, which for
+$t_M/T \gtrsim 10^{4}$ (with this fault) dropped real mantle modes and left the
+periodic mantle state 58 % to 100 % wrong: recompute strong-mantle results made
+with earlier versions. `ode45` is explicit, so its steps per cycle also grow
+with the fastest rate, $\max|\lambda|\,T$; with this fault the fault sets it
+down to $t_M/T \approx 10^{-5}$.
+:::
+
 ## Practical guidance
 
+- Check that the Maxwell time of your model is in the range the solver
+  handles ({ref}`valid-range`).
 - Use meshes fine enough that the features you interpret span several cells;
   {doc}`examples/example3` shows the effect of mesh size.
 - Recompute the kernels after any geometry change; the files in
