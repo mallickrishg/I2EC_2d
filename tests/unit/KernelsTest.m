@@ -92,6 +92,44 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             tc.verifyEqual(median(reciprocityRatio(L12, L21.', far)), 1, 'AbsTol', 5e-2);
         end
 
+        function deviatoricKernelsMatchDirectStress(tc)
+            % The deviatoric LL and LK are combinations of the 3 x 3 kernels
+            % (stress component x source strain) with ezz = -exx imposed.
+            % Check them against the stress of single strained cells,
+            % computed from what each component means.
+            m = tc.Sm; shz = m.shz; G = m.em.G; nu = m.em.nu;
+            strains = [1 0 -1; 0 1 0];                  % deviatoric e22 (ezz = -exx), e23
+            cells = [1 7 13 24];
+            % 1. index order of the half-space kernel, against the point routine
+            H = geometry.computeShzStressKernels(shz, shz);
+            for j = cells
+                A = shz.A(j,:).*[1 -1]; B = shz.B(j,:).*[1 -1]; C = shz.C(j,:).*[1 -1];
+                for c = 1:2
+                    e = strains(c,:);
+                    [s22, s23, s33] = computeStressPlaneStrainTriangleShearZone( ...
+                        shz.xc(:,1), -shz.xc(:,2), A, B, C, e(1), e(2), e(3), G, nu);
+                    sig = squeeze(sum(H(:,j,:,:) .* reshape(e, 1, 1, 1, 3), 4));   % [M x 3]: sxx, sxz, szz
+                    tc.verifyEqual(sig, [s22 s23 s33], 'AbsTol', 1e-10*max(abs([s22; s23; s33])), ...
+                        sprintf('half-space kernel, cell %d, strain %d', j, c));
+                end
+            end
+            % 2. the BEM kernels as built by computeAllStressKernelsBem (centroid)
+            [~, LLb] = evalc('computeShzStressKernelsBem(shz, shz, m.bnd)');
+            [~, LKb] = evalc('computeShzStressKernelsBem(shz, m.rcv, m.bnd)');
+            for j = cells
+                for c = 1:2
+                    e = reshape(strains(c,:), 1, 1, 1, 3);
+                    sig = squeeze(sum(LLb(:,j,:,:) .* e, 4));                         % sxx, sxz, szz
+                    dev = [(sig(:,1) - sig(:,3))/2, sig(:,2)];
+                    tc.verifyEqual(squeeze(tc.Evl.LL(:,j,:,c)), dev, 'AbsTol', 1e-10*max(abs(dev(:))), ...
+                        sprintf('LL, cell %d, strain %d', j, c));
+                    tau = squeeze(sum(LKb(:,j,1,:) .* e, 4));                         % shear traction
+                    tc.verifyEqual(tc.Evl.LK(:,j,c), tau, 'AbsTol', 1e-10*max(abs(tau)), ...
+                        sprintf('LK, cell %d, strain %d', j, c));
+                end
+            end
+        end
+
         function kernelModifyRemovesGrowingModes(tc)
             [~, evm] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''cellaverage'', 1, ''kernelcertify'', false, ''kernelmodify'', 1)');
             L = [evm.LL(:,:,1,1) evm.LL(:,:,1,2); evm.LL(:,:,2,1) evm.LL(:,:,2,2)];
