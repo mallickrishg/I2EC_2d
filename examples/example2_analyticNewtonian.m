@@ -5,7 +5,7 @@
 % uniform viscosity 1e19 Pa s. An earthquake every 500 years releases the
 % slip deficit of the locked zone. The cycle is linear, so its periodic
 % state is solved for directly (no spin-up) and evaluated exactly at any
-% time (computePeriodicInitialConditionBalanced, analyticSolveIVP).
+% time (computePeriodicInitialCondition, solveAnalyticIvp).
 %
 % The model is set up by newtonianCycle, which examples 3 and 4 share.
 % Run from any folder:  run examples/example2_analyticNewtonian
@@ -36,11 +36,11 @@ st = exampleStyle();
 st.figure(1, 1000, 470)
 tl = tiledlayout(2, 2, 'TileSpacing', 'tight', 'Padding', 'compact');
 nexttile
-plotshz2d(shz, edot_lt), hold on, plotpatch2d(rcv)
+plotShz2d(shz, edot_lt), hold on, plotPatches2d(rcv)
 title('long-term')
 for i = 1:numel(tfrac)
     nexttile
-    plotshz2d(shz, edot(:,i)), hold on, plotpatch2d(rcv)
+    plotShz2d(shz, edot(:,i)), hold on, plotPatches2d(rcv)
     title(sprintf('%.0f yr after the earthquake (t/T = %.2f)', tfrac(i)*cyc.Trecur/yr, tfrac(i)))
 end
 set(findobj(gcf, 'Type', 'axes'), 'ColorScale', 'log', 'CLim', 10.^[-15 -12])

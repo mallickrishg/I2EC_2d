@@ -6,7 +6,7 @@ function h = cline(x, y, z, cdata)
 %   h = cline(x, y, z, cdata)
 %
 %   Draws a 2D or 3D line whose colour varies along it, by drawing a patch
-%   with no face colour and interpolated edge colours. Used by plotpatch2d
+%   with no face colour and interpolated edge colours. Used by plotPatches2d
 %   to colour fault patches by value.
 %
 % INPUTS
@@ -35,7 +35,7 @@ function h = cline(x, y, z, cdata)
 %   cline(sqrt(t).*sin(t), sqrt(t).*cos(t), [], rand(size(t))); view(3) % Example 4
 %
 % SEE ALSO
-%   patch, plotpatch2d
+%   patch, plotPatches2d
 %
 % AUTHORS
 %   S. Hölz, TU-Berlin, seppel_mit_ppATweb.de

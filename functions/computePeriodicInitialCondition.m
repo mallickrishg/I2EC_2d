@@ -1,86 +1,98 @@
 function y0 = computePeriodicInitialCondition(A, c, b, T)
-% COMPUTEPERIODICINITIALCONDITION  Periodic initial state via expm (legacy).
+% COMPUTEPERIODICINITIALCONDITION  Steady periodic initial state.
 %
 %   y0 = computePeriodicInitialCondition(A, c, b, T)
 %
 %   Solves the periodic offset condition y(0) = y(T) + b for the linear
-%   ODE dy/dt = A*y + c on 0 <= t <= T. Phi = expm(A*T) and
-%   eta = integral_0^T expm(A*(T-s))*c ds come from one matrix exponential
-%   of the augmented matrix [A c; 0 0], and
-%       (I - Phi)*y0 = eta + b
-%   is then solved directly. Superseded by
-%   computePeriodicInitialConditionBalanced, which the drivers use.
+%   ODE dy/dt = A*y + c on 0 <= t <= T: the initial state of an
+%   earthquake cycle of period T whose coseismic jump in the state is b,
+%   found without spinning up. Equivalently
+%       (I - Phi)*y0 = eta + b,   Phi = expm(A*T),
+%       eta = integral_0^T expm(A*(T-s))*c ds.
+%   In modal coordinates (A = V*diag(lam)/V, zc = V\c, zb = V\b) each mode
+%   is solved on its own:
+%       z0 = (g(T).*zc + zb) ./ (1 - exp(lam*T)),
+%   with g(T) from computeModalIntegrals and 1 - exp(lam*T) evaluated as -lam.*g(T).
 %
 % INPUTS
 %   A       [n x n] ODE operator matrix (1/s)
 %   c       [n x 1] constant forcing vector
-%   b       [n x 1] periodic offset vector
-%   T       scalar period (s)
+%   b       [n x 1] periodic offset: coseismic jump in the state (1/s)
+%   T       scalar period, positive (s)
 %
 % OUTPUTS
-%   y0      [n x 1] initial state with y(0) = y(T) + b, or an approximate
-%           solution when I - Phi is ill-conditioned
+%   y0      [n x 1] initial state that satisfies y(0) = y(T) + b
 %
 % NOTES
-%   - Prints the condition number of I - Phi. If it is below 1e15, y0 is
-%     found by a direct (backslash) solve.
-%   - Otherwise A is replaced by reconditionODEoperator(A), which sets
-%     every eigenvalue with Re(lam) >= 0 to -0.1 1/s; Phi and eta are
-%     recomputed and y0 comes from an SVD pseudo-inverse with the
-%     singular values floored at max(1e-12, eps*max(s)). A warning is
-%     issued.
-%   - Stability: unlike negateGrowingModes, this fallback replaces
-%     non-decaying modes by a fixed decay rate of 0.1 1/s and drops their
-%     imaginary parts, so it is not consistent with analyticSolveIVP.
-%
-% EXAMPLE
-%   y0 = computePeriodicInitialCondition(A, c, b, T);
+%   - Stability: as in solveAnalyticIvp, the operator must have no
+%     growing modes, or the function raises an error ('I2EC:growingModes').
+%     The default (cell-averaged, certified) kernels guarantee this; for
+%     centroid kernels negate explicitly first (negateGrowingModes) and
+%     build c with the negated operator. Then |exp(lam*T)| < 1 for every
+%     mode with Re(lam) ~= 0, so the cycle contracts and y0 is the state
+%     that a spin-up converges to.
+%   - Neutral modes are an error too ('I2EC:neutralModes'): modes that
+%     relax by less than 1e-12 of themselves over a cycle, |Re(lam)|*T <=
+%     1e-12. Such a mode neither decays nor grows (an integrator, lam = 0,
+%     or an undamped oscillation), so the periodic state is not
+%     determined: it exists only if the forcing has no component along
+%     the mode, and is then not unique. A spin-up would need more than
+%     1e12 cycles. The test is on lam*T, not on lam relative to
+%     max|lam|: a strong mantle with a weak fault has modes 1e-14 of
+%     max|lam| that are still slow, real modes (Maxwell time 1e6 T:
+%     min |lam|*T = 3e-9), and the modal solution is accurate for them
+%     (agrees with a direct solve to 1e-6 in the mantle). The test is
+%     also independent of the time unit.
+%   - Evaluating 1 - exp(lam*T) as -lam.*g(T) avoids cancellation for
+%     small |lam*T|, where g(T) comes from a series.
+%   - Warns if cond(V) > 1e14 (ill-conditioned eigenvectors).
+%   - The periodic state is consistent with solveAnalyticIvp (an IVP
+%     started from y0 returns to y0 - b after one period).
 %
 % SEE ALSO
-%   computePeriodicInitialConditionBalanced, reconditionODEoperator, expm,
-%   svd
+%   eigOperator, computeModalIntegrals, solveAnalyticIvp, negateGrowingModes
 %
 % AUTHORS
-%   Rishav Mallick, 2025
+%   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026
 
-n = size(A,1);
 
-% ---- Step 1: Compute Φ and η via block exponential (always well-defined)
-M = zeros(n+1, n+1);
-M(1:n,1:n) = A;
-M(1:n,end) = c;
-
-E = expm(M * T);
-Phi = E(1:n,1:n);
-eta = E(1:n,end);
-
-rhs = eta + b;
-I_minus_Phi = eye(n) - Phi;
-
-% ---- Step 2: Try direct solve when reasonably conditioned
-cond_est = cond(I_minus_Phi);
-disp(['Condition number = ' num2str(cond_est)])
-if cond_est < 1e15   % moderate threshold
-    y0 = I_minus_Phi \ rhs;
-    return
+% ---- Eigendecomposition; growing modes are an error ----
+[V, lambda, nGrowing] = eigOperator(A);
+if nGrowing > 0
+    error('I2EC:growingModes', ['computePeriodicInitialCondition: the operator has %d growing modes (largest ' ...
+        'Re(lambda) = %.3g 1/s). Use the default kernels of computeAllStressKernelsBem ' ...
+        '(cell-averaged, certified), or negate them explicitly with ' ...
+        '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
+        nGrowing, max(real(lambda)));
 end
 
-% ---- Full rank but ill-conditioned → use reconditioning & pseudo-inverse
-M = zeros(n+1, n+1);
-Arecon = reconditionODEoperator(A);
-M(1:n,1:n) = Arecon;
-M(1:n,end) = c;
-E = expm(M * T);
-Phi = E(1:n,1:n);
-eta = E(1:n,end);
-rhs = eta + b;
+tolNeutral = 1e-12;
+neutral = abs(real(lambda)) * T <= tolNeutral;
+if any(neutral)
+    error('I2EC:neutralModes', ['computePeriodicInitialCondition: the operator has %d modes that ' ...
+        'neither decay nor grow over a cycle (|Re(lambda)|*T <= %.0e, smallest |lambda| = %.3g 1/s), ' ...
+        'so the periodic state is not determined. Check the kernel (computeAllStressKernelsBem ' ...
+        'certifies it) and that every degree of freedom is restored by the operator.'], ...
+        nnz(neutral), tolNeutral, min(abs(lambda)));
+end
 
-I_minus_Phi = eye(n) - Phi;
-% use SVD for pseudo-inverse
-[U,S,V] = svd(I_minus_Phi);
-svals = diag(S);
-tol = max(1e-12, eps * max(svals));
-y0 = V * (diag(1./max(svals, tol)) * (U' * rhs));
-warning('I - Phi nearly singular: solved using reconditioning & pseudo-inverse.');
+if cond(V) > 1e14
+    warning('The eigenvectors of the operator are ill-conditioned (cond(V) > 1e14).');
+end
+
+% ---- Modal coordinates ----
+zc = V \ c;
+zb = V \ b;
+
+% ---- Periodic condition: z0 = (g(T)*zc + zb) / (1 - exp(lam*T)) ----
+%  1 - exp(lam*T) = -lam * g(T) follows from g(T) = (exp(lam*T) - 1)/lam;
+%  g(T) is accurate for all lam*T (series below |lam*T| = 1e-2, expm1
+%  above), so the denominator is too.
+[~, gT] = computeModalIntegrals(lambda, T);
+
+one_minus_eT = -lambda .* gT;
+z0 = (gT .* zc + zb) ./ one_minus_eT;
+
+y0 = real(V * z0);
 
 end

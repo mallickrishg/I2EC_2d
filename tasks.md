@@ -30,15 +30,15 @@ Everything else in this file is done. Details are in the sections named.
 - §10 (periodic power-law cycles without spin-up) lives only on branch `nonlin-spinup-solve`, in its own worktree `../I2EC_2d-nonlin-spinup-solve`. That branch is reserved for one agent: do not check it out, commit to it, merge or rebase it, or do §10 work on any other branch.
 
 **Known issues in legacy code (§0)**
-- [ ] `reconditionODEoperator.m` uses -0.1 s⁻¹, not the documented -eps; `computePeriodicInitialCondition.m` prints on every call. Both go if §3 deletes them.
-- [ ] `create_megathrust.m` writes `megathrust2d.seg` into the current folder.
+- [x] ~~`reconditionODEoperator.m` uses -0.1 s⁻¹, not the documented -eps; `computePeriodicInitialCondition.m` prints on every call.~~ *Both deleted (2026-11-21, §3).*
+- [x] ~~`create_megathrust.m` writes `megathrust2d.seg` into the current folder.~~ *Fixed (2026-11-21): renamed `createMegathrust`, writes to a temporary file. No `KnownIssue` tests remain.*
 - [ ] Future: particular solution for a prescribed boundary motion (`bcx`/`bcz ≠ 0`).
 
 **Clean-up backlog**
 - [x] ~~§1: one corner-flow implementation; one helper for the translate/rescale block.~~ *Done: `compute_cornerflow_velocityfield` deleted; both callers go through `cornerFlowVelocity`.*
-- [ ] §2: write down the rule for `+geometry/` vs `functions/`.
-- [ ] §3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`; optional `filenameGenerator` tidy-up.
-- [ ] §4: naming convention, snake_case renames, `+geometry` class names, credits for `bluewhitered`, `cline`, `drchrnd`.
+- [x] ~~§2: write down the rule for `+geometry/` vs `functions/`.~~ *In the naming rules (§4): half-space kernels in `+geometry/`, boundary-corrected `…Bem` versions in `functions/`.*
+- [x] ~~§3: decide on `computeKLmodesMesh`, `computePeriodicInitialCondition` + `reconditionODEoperator`, `computeSiteVelocitiesBem`.~~ *Deleted (2026-11-21). `filenameGenerator` kept (used by experiment scripts).*
+- [x] ~~§4: naming convention and renames.~~ *Done (2026-11-21): rules and old → new table in §4.* Left: credit `bluewhitered`, `cline`, `drchrnd` in `docs/contributors.md`.
 - [ ] §6: a regeneration script or hash check for `examples/kernels/*.h5`.
 - [ ] §7: one `setup.m`.
 - [x] ~~Move the example geometry from `inputs/` to `examples/inputs/`, next to the driver scripts that use it.~~ *Done (2026-11-21); `createShearZoneMesh` now writes there by default.*
@@ -253,25 +253,41 @@ No caller in the repo. Each one needs a keep-or-delete decision.
 
 ## 4. File and function naming
 
-The repo mixes several naming styles:
+**Rules (adopted 2026-11-21).**
+1. Functions: lowerCamelCase, starting with a verb: `compute…`, `assemble…`, `solve…`, `run…`, `integrate…`, `extract…`, `plot…`, `load…`/`save…`, `create…`, `certify…`, `is…`. No snake_case, no `get…`.
+2. Acronyms are one capitalised word (`Bem`, `Shz`, `Ivp`, `Ode`), except long-established ones (`LD…`, `KK`/`KL`/`LK`/`LL`).
+3. Half-space kernels live in `+geometry/` with no suffix; the boundary-corrected versions live in `functions/` with the suffix `Bem` (e.g. `geometry.computeFaultTractionKernels` vs `computeFaultTractionKernelsBem`).
+4. Domain words: `Fault` (megathrust patches), `Shz` (mantle cells, as the `shz` variable), `Boundary` (model edge).
+5. Classes keep their lowercase names (`geometry.receiver`, `shearZoneReceiver`, `earthModel`, `fpatch`, `shzpatch`, `LDhs`): every script uses them, and on a case-insensitive file system `receiver.m` and `Receiver.m` cannot coexist, so there is no way to keep the old name working. A documented exception.
+6. Third-party files keep their names: `LDdispHS`, `LDstressHS`, `cline`, `bluewhitered`, `drchrnd`. `filenameGenerator` is kept as is (used by experiment scripts).
+7. Scripts: `exampleN_whatItShows`, `plot…`.
 
-- **camelCase**: `computeLongTermVelocity`, `analyticSolveIVP`, `negateGrowingModes`
-- **snake_case**: `extract_v_edot_from_statevector`, `create_megathrust`, `viscoeq_sequence_simulation`, `ode_viscoelastic`, `egh_modal`
-- **all lowercase**: `bluewhitered`, `drchrnd`, `cline`, `plotpatch2d`, `plotshz2d`, `fpatch`, `shzpatch`, `flt2flt`, `receiver`
-- **UPPERCASE script prefixes**: `MAIN_`, `PLOT_`, `CREATE_`, `TEST_`, plus a lowercase `tests/test_*.m`
+**Renamed (2026-11-21).** Every caller, test, example and docs page was updated; scripts outside the repository (e.g. the git-ignored `experiments/`) were not.
 
-Tasks:
+| Old | New |
+| --- | --- |
+| `computePeriodicInitialConditionBalanced` | `computePeriodicInitialCondition` |
+| `eigBalanced` | `eigOperator` |
+| `analyticSolveIVP` | `solveAnalyticIvp` |
+| `egh_modal` | `computeModalIntegrals` |
+| `ode_viscoelastic` | `odeViscoelastic` |
+| `viscoeq_sequence_simulation` | `integrateImposedCycles` |
+| `extract_v_edot_from_statevector` | `extractRatesFromOdeState` |
+| `extractComponentsSolutionVector` | `extractRatesFromLinearState` |
+| `getStrainratesLongterm` | `computeLongTermStrainRates` |
+| `computeCornerflowVelocityfield` | `computeCornerFlowVelocity` |
+| `cornerFlowVelocity` | `computeRegionCornerFlow` |
+| `plotpatch2d` | `plotPatches2d` |
+| `plotshz2d` | `plotShz2d` |
+| `certifyMantleKernel` | `certifyShzKernel` |
+| `geometry.flt2flt` | `geometry.splitSegment` |
+| `create_megathrust` | `createMegathrust` |
 
-- [ ] Pick a convention and write it in the README or docs. Suggestion: lowerCamelCase for functions, UpperCamelCase for classes (`Receiver`, `ShearZoneReceiver`, `EarthModel`), and `run*` / `plot*` or a `scripts/` or `examples/` folder for entry-point scripts.
-- [ ] Rename the snake_case project functions after the dead code is gone, so you don't rename files that are about to be deleted. Do it in one commit per group, and update every caller and `docs/api/*.rst`. Candidates:
-  - `extract_v_edot_from_statevector` → `extractVEdotFromStateVector`
-  - `viscoeq_sequence_simulation` → `simulateViscoEqSequence`
-  - `ode_viscoelastic` → `odeViscoelastic`
-  - `create_megathrust` → `createMegathrust`
-  - `egh_modal` → `eghModal` (or a more descriptive name)
-- [ ] Decide whether to rename the `+geometry` classes (`receiver`, `shearZoneReceiver`, `earthModel`, `fpatch`, `shzpatch`). Renaming them changes the public API for anyone with existing scripts.
-- [ ] Leave third-party files under their original names: `bluewhitered`, `cline`, `drchrnd`, `LDdispHS`, `LDstressHS`. Credit their source under "Third-party components" in `docs/contributors.md` (it already credits CutAndDisplace for `LDdispHS`/`LDstressHS`, Barbot 2018 and the PDE Toolbox; `bluewhitered`, `cline` and `drchrnd` are still missing).
-- [x] ~~Bring the example and entry-point scripts in line with each other (`MAIN_analyticsolve_singleeqcycle.m`, `MAIN_i2ec_singleeqcycle.m`, `PLOT_longtermVelocity.m`). Consider moving them into `examples/`.~~ *Done (2026-11-20): replaced by `examples/` (example1_numericalPowerLaw, example2_analyticNewtonian, example3_meshConvergence, example4_analyticVsNumerical, plotLongtermVelocity), which share `exampleModel` and `newtonianCycle`, run from any folder and are run by `ExampleScriptsTest`.*
+**Deleted (§3):** `computePeriodicInitialCondition` (the legacy expm/SVD version), `reconditionODEoperator`, `computeKLmodesMesh`, `computeSiteVelocitiesBem`.
+
+Error identifiers follow their functions (`certifyShzKernel:notNegative`, `certifyShzKernel:zeroEnergyModes`, `computeRegionCornerFlow:region`).
+
+- [ ] Credit `bluewhitered`, `cline` and `drchrnd` under "Third-party components" in `docs/contributors.md`.
 
 ## 5. `meshing/` folder
 

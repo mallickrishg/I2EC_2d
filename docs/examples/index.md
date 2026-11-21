@@ -38,7 +38,7 @@ All examples share one geometry and loading: a megathrust dipping at 14°,
 locked from the surface to 30 km depth and creeping below, a triangulated
 oceanic mantle and mantle wedge (521 cells), and an earthquake every 500 years
 that releases the slip deficit of the locked zone. The mantle is loaded by the
-corner-flow strain rates of {mat:func}`getStrainratesLongterm`, and the fault
+corner-flow strain rates of {mat:func}`computeLongTermStrainRates`, and the fault
 by the plate rate.
 
 Two helper functions in `examples/` set this up:
@@ -51,10 +51,10 @@ Two helper functions in `examples/` set this up:
 - `newtonianCycle` sets the rheology of examples 2–4 (uniform viscosity
   $10^{19}$ Pa s, linear viscous fault with $\eta = 5\times10^{17}$ Pa s over
   the fault width, `rcv.faultLaw = 'linear'`) and solves the periodic cycle
-  with {mat:func}`computePeriodicInitialConditionBalanced`. It returns the
+  with {mat:func}`computePeriodicInitialCondition`. It returns the
   operator $A$, the forcing $c$, the periodic state, and a function
   `cyc.solve(tvec)` that evaluates slip rate, strain rates and their integrals
-  at any times after the earthquake with {mat:func}`analyticSolveIVP`.
+  at any times after the earthquake with {mat:func}`solveAnalyticIvp`.
 
 ## Long-term velocity
 

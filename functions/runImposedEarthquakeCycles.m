@@ -4,10 +4,10 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %   [t, V, e22dot, e23dot] = runImposedEarthquakeCycles(rcv, shz, evl, ...
 %                                         stress_change, nreps, Trecur)
 %
-%   Integrates the coupled fault and mantle equations (ode_viscoelastic)
+%   Integrates the coupled fault and mantle equations (odeViscoelastic)
 %   through nreps repeats of a cycle of length Trecur, with the coseismic
 %   stress changes in stress_change imposed at their event times
-%   (viscoeq_sequence_simulation). Each cycle starts from the final state
+%   (integrateImposedCycles). Each cycle starts from the final state
 %   of the previous one; the first starts from the long-term state
 %   (v = rcv.Vpl and the mantle stresses that give the long-term strain
 %   rates). The last cycle is returned. This is the numerical path for
@@ -32,7 +32,7 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %   evl            struct of stress kernels (.KK, .KL, .LK, .LL) from
 %                  computeAllStressKernelsBem
 %   stress_change  struct of imposed events (any number K >= 1, see
-%                  viscoeq_sequence_simulation)
+%                  integrateImposedCycles)
 %                  .Nevents         number of events per cycle
 %                  .Timing          [1 x Nevents] event times from the
 %                                   start of the cycle (s)
@@ -59,8 +59,8 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %     with no spin-up.
 %
 % SEE ALSO
-%   viscoeq_sequence_simulation, ode_viscoelastic,
-%   extract_v_edot_from_statevector, computeAllStressKernelsBem
+%   integrateImposedCycles, odeViscoelastic,
+%   extractRatesFromOdeState, computeAllStressKernelsBem
 %
 % AUTHORS
 %   Rishav Mallick (Caltech Seismolab), 2023
@@ -85,10 +85,10 @@ Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
 
 
 % nreps-1 spin-up cycles, then the returned one
-[t,Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+[t,Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), ...
     Y0,rcv,shz,stress_change,Trecur,nreps);
 
 % extract important quantities from state vector
-[V,e22dot,e23dot] = extract_v_edot_from_statevector(Y,rcv,shz);
+[V,e22dot,e23dot] = extractRatesFromOdeState(Y,rcv,shz);
 
 end

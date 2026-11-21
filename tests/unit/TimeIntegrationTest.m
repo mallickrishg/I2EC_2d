@@ -1,11 +1,11 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.unittest.TestCase
     %TIMEINTEGRATIONTEST  Numerical earthquake-cycle path (examples/example1, example4):
-    % ode_viscoelastic, viscoeq_sequence_simulation,
-    % runImposedEarthquakeCycles, extract_v_edot_from_statevector.
+    % odeViscoelastic, integrateImposedCycles,
+    % runImposedEarthquakeCycles, extractRatesFromOdeState.
     %
     % Key check: with the whole fault locked and Newtonian mantle the
     % numerical path is linear, so ode45 must reproduce the semi-analytical
-    % solver (analyticSolveIVP) through a coseismic step.  This ties the
+    % solver (solveAnalyticIvp) through a coseismic step.  This ties the
     % two solution routes of the code together.
 
     properties
@@ -44,7 +44,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             Y(1:rcv.N) = log(V);
             Y(rcv.N+1:2:end) = s22;
             Y(rcv.N+2:2:end) = s23;
-            [V2, e22, e23] = extract_v_edot_from_statevector(Y, rcv, shz);
+            [V2, e22, e23] = extractRatesFromOdeState(Y, rcv, shz);
             tc.verifyEqual(V2, V, 'RelTol', 1e-12);
             tc.verifyEqual(e22, shz.alpha' .* s22, 'RelTol', 1e-12);
             tc.verifyEqual(e23, shz.alpha' .* s23, 'RelTol', 1e-12);
@@ -54,7 +54,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             % plate-rate slip and long-term strain rate: nothing changes
             rcv = tc.M.rcv; shz = tc.M.shz;
             Y = [log(rcv.Vpl); reshape([shz.e22pl shz.e23pl]' ./ shz.alpha', [], 1)];
-            Yp = ode_viscoelastic(0, Y, rcv, shz, tc.Evl);
+            Yp = odeViscoelastic(0, Y, rcv, shz, tc.Evl);
             % stress-rate terms are ~1e-11 MPa/s each; cancellation leaves round-off
             tc.verifyEqual(Yp, zeros(size(Y)), 'AbsTol', 1e-20);
         end
@@ -76,7 +76,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             sc = struct('Nevents', 2, 'Timing', [5 40]*tc.yr, ...
                 'dtau', zeros(rcv.N,2), 'dsigma22', zeros(shz.N,2), 'dsigma23', zeros(shz.N,2));
             Y0 = [log(rcv.Vpl); reshape([shz.e22pl shz.e23pl]' ./ shz.alpha', [], 1)];
-            [t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,tc.Evl), Y0, rcv, shz, sc, Trecur);
+            [t, Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,tc.Evl), Y0, rcv, shz, sc, Trecur);
             tc.verifyEqual(t(1), 0);
             tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
             tc.verifyTrue(all(diff(t) >= 0), 'time is non-decreasing');
@@ -87,9 +87,9 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             % nreps = 3 returns the cycle that starts from the end state of
             % nreps = 2: same ode45 calls in the same order, so bitwise equal
             [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
-            [~, ~, Y2] = evalc('viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur, 2)');
-            [~, t3, Y3] = evalc('viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur, 3)');
-            [t1, Y1] = viscoeq_sequence_simulation(f, Y2(end,:)', rcv, shz, sc, Trecur);
+            [~, ~, Y2] = evalc('integrateImposedCycles(f, Y0, rcv, shz, sc, Trecur, 2)');
+            [~, t3, Y3] = evalc('integrateImposedCycles(f, Y0, rcv, shz, sc, Trecur, 3)');
+            [t1, Y1] = integrateImposedCycles(f, Y2(end,:)', rcv, shz, sc, Trecur);
             tc.verifyEqual(t3, t1);
             tc.verifyEqual(Y3, Y1);
             tc.verifyNotEqual(Y2(end,:), Y0', 'the events do change the state');
@@ -100,7 +100,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             % before and after the step), and the jump in log(v) and in the
             % mantle stress is exactly that event's stress change
             [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
-            [t, Y] = viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur);
+            [t, Y] = integrateImposedCycles(f, Y0, rcv, shz, sc, Trecur);
             iV = 1:rcv.N; i22 = rcv.N+1:2:size(Y,2); i23 = rcv.N+2:2:size(Y,2);
             for k = 1:sc.Nevents
                 i = find(t == sc.Timing(k));
@@ -116,12 +116,12 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
 
         function badEventTimesAreRejected(tc)
             [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
-            run = @(T) viscoeq_sequence_simulation(f, Y0, rcv, shz, ...
+            run = @(T) integrateImposedCycles(f, Y0, rcv, shz, ...
                 setfield(sc, 'Timing', T), Trecur); %#ok<SFLD>
-            tc.verifyError(@() run(sc.Timing([2 1 3 4 5])), 'viscoeq_sequence_simulation:timing');
-            tc.verifyError(@() run([-1 sc.Timing(2:end)]), 'viscoeq_sequence_simulation:timing');
-            tc.verifyError(@() run([sc.Timing(1:end-1) Trecur]), 'viscoeq_sequence_simulation:timing');
-            tc.verifyError(@() run(sc.Timing(1:4)), 'viscoeq_sequence_simulation:events');
+            tc.verifyError(@() run(sc.Timing([2 1 3 4 5])), 'integrateImposedCycles:timing');
+            tc.verifyError(@() run([-1 sc.Timing(2:end)]), 'integrateImposedCycles:timing');
+            tc.verifyError(@() run([sc.Timing(1:end-1) Trecur]), 'integrateImposedCycles:timing');
+            tc.verifyError(@() run(sc.Timing(1:4)), 'integrateImposedCycles:events');
         end
 
         function lockedNewtonianCycleMatchesAnalyticSolver(tc)
@@ -144,13 +144,13 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
                 'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
             e0 = epl;
             Y0 = [log(rcv.Vpl); reshape([e0(1:Ns) e0(Ns+1:end)]' ./ shz.alpha', [], 1)];
-            [t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), Y0, rcv, shz, sc, Trecur);
-            [~, e22, e23] = extract_v_edot_from_statevector(Y(end,:), rcv, shz);
+            [t, Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), Y0, rcv, shz, sc, Trecur);
+            [~, e22, e23] = extractRatesFromOdeState(Y(end,:), rcv, shz);
 
             % analytic: evolve to t1, add coseismic jump, evolve to Trecur
-            e1 = analyticSolveIVP(A, c, e0, t1);
+            e1 = solveAnalyticIvp(A, c, e0, t1);
             e1 = e1 + alpha .* (KL*slip);
-            eT = analyticSolveIVP(A, c, e1, Trecur - t1);
+            eT = solveAnalyticIvp(A, c, e1, Trecur - t1);
             tc.verifyEqual(t(end), Trecur, 'RelTol', 1e-12);
             tc.verifyEqual([e22'; e23'], eT, 'RelTol', 1e-5, 'AbsTol', 1e-6*max(abs(eT)));
         end
@@ -158,7 +158,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
         function spunUpLockedNewtonianCycleMatchesAnalyticPeriodicCycle(tc)
             % Numerical path with spin-up (runImposedEarthquakeCycles,
             % ode45) against the semi-analytical periodic cycle
-            % (computePeriodicInitialConditionBalanced + analyticSolveIVP),
+            % (computePeriodicInitialCondition + solveAnalyticIvp),
             % on the centroid kernel. It has growing modes, so both paths
             % are given the same operator: LL with its growing modes
             % negated (negateGrowingModes), passed to ode45 as evl.LL.
@@ -213,7 +213,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             % plus the stress step, at t = 0, and appears only once
             [rcv, shz, sc, Y0, f, Trecur] = tc.multiEventSetup();
             sc.Timing(1) = 0;
-            [t, Y] = viscoeq_sequence_simulation(f, Y0, rcv, shz, sc, Trecur);
+            [t, Y] = integrateImposedCycles(f, Y0, rcv, shz, sc, Trecur);
             tc.verifyEqual(t(1), 0);
             tc.verifyNotEqual(t(2), 0, 'no pre-event copy at t = 0');
             iV = 1:rcv.N;
@@ -247,7 +247,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             sc = struct('Nevents', 1, 'Timing', 0, 'dtau', evl.KK*slip, ...
                 'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
             b = [sc.dtau(~locked); sc.dsigma22; sc.dsigma23] ./ visc;
-            y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+            y0 = computePeriodicInitialCondition(A, c, b, Trecur);
 
             % numerical state just before the event: [v; s22, s23 interleaved]
             ypre = y0 - b;
@@ -255,11 +255,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             Y0(~locked) = ypre(1:Nc);
             Y0(rcv.N+1:2:end) = ypre(Nc+1:Nc+Ns) ./ shz.alpha;
             Y0(rcv.N+2:2:end) = ypre(Nc+Ns+1:end) ./ shz.alpha;
-            [t, Y] = viscoeq_sequence_simulation(@(t,y) ode_viscoelastic(t,y,rcv,shz,evl), ...
+            [t, Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), ...
                 Y0, rcv, shz, sc, Trecur);
-            [V, e22, e23] = extract_v_edot_from_statevector(Y, rcv, shz);
+            [V, e22, e23] = extractRatesFromOdeState(Y, rcv, shz);
 
-            Ean = analyticSolveIVP(A, c, y0, t');
+            Ean = solveAnalyticIvp(A, c, y0, t');
             Vscale = max(abs(Ean(1:Nc,:)), [], 'all');
             Escale = max(abs(Ean(Nc+1:end,:)), [], 'all');
             tc.verifyEqual(V(:,~locked)', Ean(1:Nc,:), 'AbsTol', 1e-6*Vscale, 'fault slip rate');
@@ -275,7 +275,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             rcv = tc.M.rcv; shz = tc.M.shz;
             rcv.faultLaw = 'plastic';
             Y = zeros(rcv.N + 2*shz.N, 1);
-            tc.verifyError(@() ode_viscoelastic(0, Y, rcv, shz, tc.Evl), 'isLinearFaultLaw:unknown');
+            tc.verifyError(@() odeViscoelastic(0, Y, rcv, shz, tc.Evl), 'isLinearFaultLaw:unknown');
         end
     end
 
@@ -299,7 +299,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             b = alpha .* (KL*slip);
 
             % analytic periodic cycle: y0 just after the event, y(T) + b = y0
-            y0 = computePeriodicInitialConditionBalanced(A, c, b, Trecur);
+            y0 = computePeriodicInitialCondition(A, c, b, Trecur);
 
             % enough cycles for the start-up transient to fall below 1e-8
             rho = max(abs(exp(eig(A)*Trecur)));
@@ -311,7 +311,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
             % analytic state at each output time: time since the last event
             post = [false; diff(t) == 0];                 % post-event copy of t1
             tau = t - t1 + Trecur*(t < t1 | (t == t1 & ~post));
-            Ean = analyticSolveIVP(A, c, y0, tau');
+            Ean = solveAnalyticIvp(A, c, y0, tau');
             scale = max(abs(Ean(:)));
             tc.verifyEqual(Enum, Ean, 'AbsTol', 1e-6*scale, ...
                 sprintf('spun-up cycle (%d cycles, rho = %.3f) vs analytic periodic cycle', nreps, rho));
@@ -337,7 +337,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TimeIntegrationTest < matlab.u
                 'dtau', 0.3*rand(rcv.N, 5), ...
                 'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
             Y0 = [log(rcv.Vpl); reshape([shz.e22pl shz.e23pl]' ./ shz.alpha', [], 1)];
-            f = @(t, y) ode_viscoelastic(t, y, rcv, shz, evl);
+            f = @(t, y) odeViscoelastic(t, y, rcv, shz, evl);
         end
     end
 end

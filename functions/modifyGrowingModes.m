@@ -42,7 +42,7 @@ function evl = modifyGrowingModes(evl, mode)
 %   evl = modifyGrowingModes(evl, 2);              % damped, for ode45
 %
 % SEE ALSO
-%   computeAllStressKernelsBem, negateGrowingModes, ode_viscoelastic
+%   computeAllStressKernelsBem, negateGrowingModes, odeViscoelastic
 
 if ~(isscalar(mode) && ismember(mode, [0 1 2]))
     error('modifyGrowingModes:mode', ...

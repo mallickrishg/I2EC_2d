@@ -5,23 +5,17 @@ Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
 
 .. mat:module:: functions
 
-.. mat:autofunction:: analyticSolveIVP
+.. mat:autofunction:: solveAnalyticIvp
 
 .. mat:autofunction:: negateGrowingModes
 
-.. mat:autofunction:: eigBalanced
+.. mat:autofunction:: eigOperator
 
-.. mat:autofunction:: egh_modal
-
-.. mat:autofunction:: computePeriodicInitialConditionBalanced
+.. mat:autofunction:: computeModalIntegrals
 
 .. mat:autofunction:: computePeriodicInitialCondition
 
-.. mat:autofunction:: reconditionODEoperator
-
 .. mat:autofunction:: assembleStressKernel
 
-.. mat:autofunction:: extractComponentsSolutionVector
-
-.. mat:autofunction:: computeKLmodesMesh
+.. mat:autofunction:: extractRatesFromLinearState
 

@@ -26,7 +26,7 @@ Lines starting with `#` are comments. Each data line has ten columns:
 | `qW` | Geometric growth factor of patch width with distance (1 = uniform). |
 | `bcx`, `bcz` | Boundary-condition velocities in *x* and *z* (for the model boundary; scaled by the plate rate in the driver scripts). |
 
-{mat:func}`geometry.flt2flt <flt2flt>` splits each segment into patches. For
+{mat:func}`geometry.splitSegment <splitSegment>` splits each segment into patches. For
 example, `examples/inputs/boundary2d.seg`:
 
 ```text
@@ -37,7 +37,7 @@ example, `examples/inputs/boundary2d.seg`:
 ```
 
 To build a planar megathrust in MATLAB instead of a file, see
-{mat:func}`create_megathrust`.
+{mat:func}`createMegathrust`.
 
 ## Mantle mesh (`.dat` files)
 
@@ -113,7 +113,7 @@ Layout (format `I2EC kernels`, version 1):
 | --- | --- |
 | `/KK`, `/KL`, `/LK`, `/LL` | stress kernel blocks (from {mat:func}`computeAllStressKernelsBem`) |
 | `/KO`, `/LO` | displacement kernel blocks (from {mat:func}`computeAllDisplacementKernelsBem`) |
-| `/certificate/...` | the check by {mat:func}`certifyMantleKernel`, if the kernel was certified |
+| `/certificate/...` | the check by {mat:func}`certifyShzKernel`, if the kernel was certified |
 | `/options/...` | `cellaverage`, `kernelcertify`, `kernelmodify` used to build it |
 | `/geometry/fault/xc`, `W`, `dip` | fault patch centres (m), widths (m), dips (degrees) |
 | `/geometry/mantle/vertices`, `triangles`, `centroids`, `area` | mantle mesh; triangle indices are 1-based |

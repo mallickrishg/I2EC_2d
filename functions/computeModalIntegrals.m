@@ -1,14 +1,14 @@
-function [e, g, h] = egh_modal(lam, t)
-% EGH_MODAL  Exact modal integrals for the linear ODE dy/dt = A*y + c.
+function [e, g, h] = computeModalIntegrals(lam, t)
+% COMPUTEMODALINTEGRALS  Exact modal integrals for the linear ODE dy/dt = A*y + c.
 %
-%   [e, g, h] = egh_modal(lam, t)
+%   [e, g, h] = computeModalIntegrals(lam, t)
 %
 %   For each eigenvalue lam and a scalar time t, returns
 %       e = exp(lam*t)
 %       g = integral_0^t exp(lam*s) ds = (exp(lam*t) - 1)/lam
 %       h = integral_0^t g(s) ds       = ((exp(lam*t) - 1)/lam - t)/lam
 %   These evolve one mode of dy/dt = A*y + c and its time integral
-%   exactly (see analyticSolveIVP).
+%   exactly (see solveAnalyticIvp).
 %
 % INPUTS
 %   lam     [n x 1] eigenvalues, possibly complex (1/s)
@@ -27,7 +27,7 @@ function [e, g, h] = egh_modal(lam, t)
 %     eps/|x|), hence the series below the switch.
 %
 % SEE ALSO
-%   analyticSolveIVP, computePeriodicInitialConditionBalanced,
+%   solveAnalyticIvp, computePeriodicInitialCondition,
 %   negateGrowingModes
 %
 % AUTHORS

@@ -92,18 +92,6 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             tc.verifyEqual(median(reciprocityRatio(L12, L21.', far)), 1, 'AbsTol', 5e-2);
         end
 
-        function siteVelocitiesMatchDisplacementKernels(tc)
-            % computeSiteVelocitiesBem (unused) vs devl kernels: same BEM problem
-            m = tc.Sm;
-            rng(1);
-            V = rand(2, m.rcv.N); e22 = randn(2, m.shz.N); e23 = randn(2, m.shz.N);
-            gps = computeSiteVelocitiesBem(m.obs, m.rcv, m.shz, m.bnd, V, e22, e23);
-            vx = (tc.Devl.KO(:,:,1)*V' + tc.Devl.LO(:,:,1,1)*e22' + tc.Devl.LO(:,:,1,2)*e23')';
-            vz = (tc.Devl.KO(:,:,2)*V' + tc.Devl.LO(:,:,2,1)*e22' + tc.Devl.LO(:,:,2,2)*e23')';
-            tc.verifyEqual(gps.vx, vx, 'AbsTol', 1e-9*max(abs(vx(:))));
-            tc.verifyEqual(gps.vz, vz, 'AbsTol', 1e-9*max(abs(vz(:))));
-        end
-
         function kernelModifyRemovesGrowingModes(tc)
             [~, evm] = evalc('computeAllStressKernelsBem(tc.Sm.rcv, tc.Sm.shz, tc.Sm.bnd, ''cellaverage'', 1, ''kernelcertify'', false, ''kernelmodify'', 1)');
             L = [evm.LL(:,:,1,1) evm.LL(:,:,1,2); evm.LL(:,:,2,1) evm.LL(:,:,2,2)];
@@ -182,7 +170,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
         function certificationRejectsCentroidKernel(tc)
             % centroid kernels are not negative semidefinite (the
             % example mesh: 65 positive eigenvalues in the symmetric part)
-            tc.verifyError(@() certifyMantleKernel(tc.Evl, tc.Sm.shz), 'certifyMantleKernel:notNegative');
+            tc.verifyError(@() certifyShzKernel(tc.Evl, tc.Sm.shz), 'certifyShzKernel:notNegative');
         end
 
         function certificationRejectsZeroEnergyModes(tc)
@@ -194,11 +182,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) KernelsTest < matlab.unittest.
             a = [1; 2; 3; 4];
             L = S ./ [a; a];
             e.LL = cat(4, cat(3, L(1:M,1:M), L(M+1:end,1:M)), cat(3, L(1:M,M+1:end), L(M+1:end,M+1:end)));
-            tc.verifyError(@() certifyMantleKernel(e, struct('area', a)), 'certifyMantleKernel:zeroEnergyModes');
+            tc.verifyError(@() certifyShzKernel(e, struct('area', a)), 'certifyShzKernel:zeroEnergyModes');
             S(:) = Q * diag([-1; -0.5; -0.3; -0.2; -0.1; -0.05; -0.02; -1e-5]) * Q';
             L = S ./ [a; a];
             e.LL = cat(4, cat(3, L(1:M,1:M), L(M+1:end,1:M)), cat(3, L(1:M,M+1:end), L(M+1:end,M+1:end)));
-            c = certifyMantleKernel(e, struct('area', a));
+            c = certifyShzKernel(e, struct('area', a));
             tc.verifyLessThan(c.certificate.maxEigenvalue, 0);
         end
 

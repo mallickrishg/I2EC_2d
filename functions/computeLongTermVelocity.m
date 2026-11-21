@@ -7,7 +7,7 @@ function [Vx, Vz]=computeLongTermVelocity(X,Z,Vpl,Tplate,dip,shz,boundary,ocean_
 %   Assigns the long-term (geological) velocity to each point by region:
 %   the incoming plate moves at Vpl, the overriding plate is fixed, the
 %   slab moves down-dip at Vpl, and the oceanic mantle and mantle wedge
-%   follow Newtonian corner flow (cornerFlowVelocity, n = 1) scaled
+%   follow Newtonian corner flow (computeRegionCornerFlow, n = 1) scaled
 %   by Vpl. Points in no region get zero velocity.
 %
 % INPUTS
@@ -35,12 +35,12 @@ function [Vx, Vz]=computeLongTermVelocity(X,Z,Vpl,Tplate,dip,shz,boundary,ocean_
 %     slab of thickness Tplate, oceanic mantle and mantle wedge. Where they
 %     overlap, the region assigned last wins (oceanic, then wedge mantle).
 %   - The translations move each region into the corner-flow frame
-%     (cornerFlowVelocity, which also subtracts 1 m from the z shift to
-%     keep points off the corner), as in getStrainratesLongterm.
-%   - dip is in degrees here (getStrainratesLongterm takes radians).
+%     (computeRegionCornerFlow, which also subtracts 1 m from the z shift to
+%     keep points off the corner), as in computeLongTermStrainRates.
+%   - dip is in degrees here (computeLongTermStrainRates takes radians).
 %
 % SEE ALSO
-%   cornerFlowVelocity, getStrainratesLongterm, inpolygon
+%   computeRegionCornerFlow, computeLongTermStrainRates, inpolygon
 %
 % AUTHORS
 %   Sharadha Sathiakumar (EOS), 2023
@@ -86,8 +86,8 @@ Vx(inreg3) = Vpl*cosd(dip);
 Vz(inreg3) = -Vpl*sind(dip);
 
 % oceanic mantle and mantle wedge: Newtonian corner flow
-[Vx(inreg4), Vz(inreg4)] = cornerFlowVelocity(dip*pi/180, X(inreg4), Z(inreg4), 'ocean', ocean_translate_params, 1);
-[Vx(inreg5), Vz(inreg5)] = cornerFlowVelocity(dip*pi/180, X(inreg5), Z(inreg5), 'wedge', continental_translate_params, 1);
+[Vx(inreg4), Vz(inreg4)] = computeRegionCornerFlow(dip*pi/180, X(inreg4), Z(inreg4), 'ocean', ocean_translate_params, 1);
+[Vx(inreg5), Vz(inreg5)] = computeRegionCornerFlow(dip*pi/180, X(inreg5), Z(inreg5), 'wedge', continental_translate_params, 1);
 Vx(inreg4 | inreg5) = Vpl*Vx(inreg4 | inreg5);
 Vz(inreg4 | inreg5) = Vpl*Vz(inreg4 | inreg5);
 

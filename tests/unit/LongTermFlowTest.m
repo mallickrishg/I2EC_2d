@@ -1,6 +1,6 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unittest.TestCase
-    %LONGTERMFLOWTEST  Corner-flow loading: computeCornerflowVelocityfield,
-    % cornerFlowVelocity, getStrainratesLongterm, computeLongTermVelocity.
+    %LONGTERMFLOWTEST  Corner-flow loading: computeCornerFlowVelocity,
+    % computeRegionCornerFlow, computeLongTermStrainRates, computeLongTermVelocity.
     %
     % Corner flow is checked against its own boundary conditions
     % (arc: v = 0 at the surface, v = slab velocity on the slab; ocean:
@@ -67,18 +67,18 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         end
 
         function powerLawCornerFlowIsQuiet(tc)
-            clear computeCornerflowVelocityfield   % empty the coefficient cache
-            out = evalc('computeCornerflowVelocityfield(tc.Dip, 1, -0.1, 3);');
+            clear computeCornerFlowVelocity   % empty the coefficient cache
+            out = evalc('computeCornerFlowVelocity(tc.Dip, 1, -0.1, 3);');
             tc.verifyEmpty(strtrim(out), 'console output');
         end
 
         function powerLawCoefficientsAreSolvedOncePerDip(tc)
-            % getStrainratesLongterm evaluates one triangle per call
-            clear computeCornerflowVelocityfield
-            computeCornerflowVelocityfield(tc.Dip, 1, -0.1, 3);
+            % computeLongTermStrainRates evaluates one triangle per call
+            clear computeCornerFlowVelocity
+            computeCornerFlowVelocity(tc.Dip, 1, -0.1, 3);
             t = tic;
             for k = 1:200
-                computeCornerflowVelocityfield(tc.Dip, rand, -rand, 3);
+                computeCornerFlowVelocity(tc.Dip, rand, -rand, 3);
             end
             tc.verifyLessThan(toc(t), 1, '200 calls at the same dip');
         end
@@ -98,29 +98,29 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         end
 
         function regionVelocityIsShiftedCornerFlow(tc, n)
-            % cornerFlowVelocity: the region's column of the corner flow at
+            % computeRegionCornerFlow: the region's column of the corner flow at
             % (x + dx, z + dz - 1)
             [X, Z] = tc.wedgeGrid();
             s = [-0.3 0.2];
-            [vx, vz] = computeCornerflowVelocityfield(tc.Dip, X + s(1), Z + s(2) - 1, n);
-            [wx, wz] = cornerFlowVelocity(tc.Dip, X, Z, 'wedge', s, n);
-            [ox, oz] = cornerFlowVelocity(tc.Dip, X, Z, 'ocean', s, n);
+            [vx, vz] = computeCornerFlowVelocity(tc.Dip, X + s(1), Z + s(2) - 1, n);
+            [wx, wz] = computeRegionCornerFlow(tc.Dip, X, Z, 'wedge', s, n);
+            [ox, oz] = computeRegionCornerFlow(tc.Dip, X, Z, 'ocean', s, n);
             tc.verifyEqual([wx wz], [vx(:,1) vz(:,1)]);
             tc.verifyEqual([ox oz], [vx(:,2) vz(:,2)]);
         end
 
         function unknownRegionIsRejected(tc)
-            tc.verifyError(@() cornerFlowVelocity(tc.Dip, 1, -1, 'slab', [0 0]), ...
-                'cornerFlowVelocity:region');
+            tc.verifyError(@() computeRegionCornerFlow(tc.Dip, 1, -1, 'slab', [0 0]), ...
+                'computeRegionCornerFlow:region');
         end
 
         function invalidExponentIsRejected(tc)
-            tc.verifyError(@() computeCornerflowVelocityfield(tc.Dip, 1, -1, 2), ?MException);
+            tc.verifyError(@() computeCornerFlowVelocity(tc.Dip, 1, -1, 2), ?MException);
         end
 
         function longTermStrainRatesAreFiniteAndDeviatoric(tc)
             shz = tc.Ex.shz;
-            [e22, e23] = getStrainratesLongterm(shz, tc.Ex.rcv.dip(1)*pi/180, [0 20e3], [-140e3 35e3], 1);
+            [e22, e23] = computeLongTermStrainRates(shz, tc.Ex.rcv.dip(1)*pi/180, [0 20e3], [-140e3 35e3], 1);
             tc.verifySize(e22, [shz.N 1]);
             tc.verifySize(e23, [shz.N 1]);
             tc.verifyTrue(all(isfinite([e22; e23])));
@@ -130,17 +130,17 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         function longTermStrainRatesMatchVelocityGradient(tc, n)
             % the planar fit over the triangle vertices must reproduce the
             % finite-difference gradient of the same corner-flow field at
-            % the centroid (same translations as getStrainratesLongterm)
+            % the centroid (same translations as computeLongTermStrainRates)
             shz = tc.Ex.shz; dip = tc.Ex.rcv.dip(1)*pi/180;
             oc = [0 20e3 - 1]; co = [-140e3 35e3 - 1];
-            [e22, e23] = getStrainratesLongterm(shz, dip, [0 20e3], [-140e3 35e3], n);
+            [e22, e23] = computeLongTermStrainRates(shz, dip, [0 20e3], [-140e3 35e3], n);
             cont = shz.xc(:,2) + shz.xc(:,1)*tan(dip) >= 0;
             h = 1;   % m
             E22 = zeros(shz.N,1); E23 = E22;
             for i = 1:shz.N
                 if cont(i), t = co; col = 1; else, t = oc; col = 2; end
                 x = shz.xc(i,1) + t(1); z = shz.xc(i,2) + t(2);
-                [a, b] = computeCornerflowVelocityfield(dip, [x+h; x-h; x; x], [z; z; z+h; z-h], n);
+                [a, b] = computeCornerFlowVelocity(dip, [x+h; x-h; x; x], [z; z; z+h; z-h], n);
                 ux = (a(1,col) - a(2,col))/(2*h); uz = (a(3,col) - a(4,col))/(2*h);
                 vx = (b(1,col) - b(2,col))/(2*h); vz = (b(3,col) - b(4,col))/(2*h);
                 E22(i) = 0.5*(ux - vz); E23(i) = 0.5*(uz + vx);
@@ -151,13 +151,13 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
 
         function longTermVelocityUsesSameCornerFlowAsStrainRates(tc)
             % computeLongTermVelocity (polygon regions) vs the corner flow
-            % behind getStrainratesLongterm, in the oceanic mantle
+            % behind computeLongTermStrainRates, in the oceanic mantle
             rcv = tc.Ex.rcv; shz = tc.Ex.shz; bnd = tc.Ex.bnd;
             dipdeg = rcv.dip(1);
             X = [150e3; 250e3; 300e3; 100e3];
             Z = [-150e3; -200e3; -300e3; -250e3];   % below the slab
             [Vx, Vz] = computeLongTermVelocity(X, Z, 1, 20e3, dipdeg, shz, bnd, [0 20e3], [-140e3 35e3]);
-            [a, b] = computeCornerflowVelocityfield(dipdeg*pi/180, X + 0, Z + 20e3 - 1, 1);
+            [a, b] = computeCornerFlowVelocity(dipdeg*pi/180, X + 0, Z + 20e3 - 1, 1);
             tc.verifyEqual(Vx, a(:,2), 'AbsTol', 1e-10);
             tc.verifyEqual(Vz, b(:,2), 'AbsTol', 1e-10);
         end
@@ -165,8 +165,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         function strainRatesWithoutExponentDefaultToNewtonian(tc)
             % n is optional and defaults to 1 (older scripts call with 4 arguments)
             shz = tc.Ex.shz; dip = tc.Ex.rcv.dip(1)*pi/180;
-            [e22, e23] = getStrainratesLongterm(shz, dip, [0 20e3], [-140e3 35e3]);
-            [r22, r23] = getStrainratesLongterm(shz, dip, [0 20e3], [-140e3 35e3], 1);
+            [e22, e23] = computeLongTermStrainRates(shz, dip, [0 20e3], [-140e3 35e3]);
+            [r22, r23] = computeLongTermStrainRates(shz, dip, [0 20e3], [-140e3 35e3], 1);
             tc.verifyEqual([e22 e23], [r22 r23]);
         end
     end
@@ -175,22 +175,22 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) LongTermFlowTest < matlab.unit
         function checkBoundaryConditions(tc, n, tol, d)
             if nargin < 4, d = tc.Dip; end
             r = tc.R; U = [cos(d) -sin(d)];
-            [vx, vz] = computeCornerflowVelocityfield(d, r, 0*r, n);                         % arc surface
+            [vx, vz] = computeCornerFlowVelocity(d, r, 0*r, n);                         % arc surface
             tc.verifyLessThan(max(abs([vx(:,1); vz(:,1)])), tol, 'arc: v = 0 at surface');
-            [vx, vz] = computeCornerflowVelocityfield(d, r*cos(d), -r*sin(d), n);            % arc slab
+            [vx, vz] = computeCornerFlowVelocity(d, r*cos(d), -r*sin(d), n);            % arc slab
             tc.verifyLessThan(max(abs([vx(:,1)-U(1); vz(:,1)-U(2)])), tol, 'arc: slab velocity');
-            [vx, vz] = computeCornerflowVelocityfield(d, -r, 0*r - 1e-12, n);                % incoming plate
+            [vx, vz] = computeCornerFlowVelocity(d, -r, 0*r - 1e-12, n);                % incoming plate
             tc.verifyLessThan(max(abs([vx(:,2)-1; vz(:,2)])), tol, 'ocean: plate velocity');
-            [vx, vz] = computeCornerflowVelocityfield(d, r*cos(d), -r*sin(d) - 1e-12, n);    % ocean slab
+            [vx, vz] = computeCornerFlowVelocity(d, r*cos(d), -r*sin(d) - 1e-12, n);    % ocean slab
             tc.verifyLessThan(max(abs([vx(:,2)-U(1); vz(:,2)-U(2)])), tol, 'ocean: slab velocity');
         end
 
         function [vx, vz] = quietCornerFlow(tc, x, z, n)
-            [vx, vz] = computeCornerflowVelocityfield(tc.Dip, x, z, n);
+            [vx, vz] = computeCornerFlowVelocity(tc.Dip, x, z, n);
         end
 
         function [vx, vz] = cornerFlowColumn(~, d, x, z, n, col)
-            [Vx, Vz] = computeCornerflowVelocityfield(d, x, z, n);
+            [Vx, Vz] = computeCornerFlowVelocity(d, x, z, n);
             vx = Vx(:, col); vz = Vz(:, col);
         end
 

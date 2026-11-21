@@ -25,13 +25,13 @@ continental_translate_params = [-140e3, 35e3];
 %% plot: velocity arrows over the model, mantle mesh shaded
 st = exampleStyle();
 st.figure(1, 1000, 560)
-plotshz2d(shz, ones(shz.N, 1)), hold on
+plotShz2d(shz, ones(shz.N, 1)), hold on
 set(findobj(gca, 'Type', 'patch'), 'FaceColor', st.blue(40,:))
-plotpatch2d(boundary)
-plotpatch2d(rcv)
+plotPatches2d(boundary)
+plotPatches2d(rcv)
 quiver(X/1e3, Y/1e3, Vx, Vz, 0.9, 'Color', st.ink, 'LineWidth', 0.75, 'MaxHeadSize', 0.25)
 xlabel('distance from the trench (km)'), ylabel('depth (km)')
 title('Long-term velocity (plate rate, corner flow)')
 st.map()
 set(findobj(gca, 'Type', 'line'), 'Color', st.ink2, 'LineWidth', 1)   % boundary
-plotpatch2d(rcv), set(findobj(gca, 'Type', 'line', '-not', 'Color', st.ink2), 'Color', st.ink, 'LineWidth', 2.5)
+plotPatches2d(rcv), set(findobj(gca, 'Type', 'line', '-not', 'Color', st.ink2), 'Color', st.ink, 'LineWidth', 2.5)

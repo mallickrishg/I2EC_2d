@@ -1,7 +1,7 @@
-function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,continental_translate_params,n)
-% GETSTRAINRATESLONGTERM  Compute long-term mantle strain rates (corner flow).
+function [e22_dev, e23] = computeLongTermStrainRates(shz,dip,ocean_translate_params,continental_translate_params,n)
+% COMPUTELONGTERMSTRAINRATES  Compute long-term mantle strain rates (corner flow).
 %
-%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ...
+%   [e22_dev, e23] = computeLongTermStrainRates(shz, dip, ...
 %       ocean_translate_params, continental_translate_params, n)
 %
 %   Evaluates the analytical corner-flow velocity field (unit plate speed)
@@ -40,7 +40,7 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %     in the oceanic mantle otherwise.
 %   - The corner-flow solutions are singular at their origin (the corner).
 %     The two translations move each region into the corner-flow frame
-%     (cornerFlowVelocity, which also subtracts 1 m from the z shift to
+%     (computeRegionCornerFlow, which also subtracts 1 m from the z shift to
 %     keep points off the corner). Tune them to the mesh.
 %   - The planar fit assumes the velocity varies little across a cell, so
 %     it is accurate for cells that are small compared with their distance
@@ -52,11 +52,11 @@ function [e22_dev, e23] = getStrainratesLongterm(shz,dip,ocean_translate_params,
 %   dip = 45*pi/180;
 %   ocean_trans = [0, 20e3];        % oceanic lithosphere ~20 km thick
 %   cont_trans = [-140e3, 35e3];    % offset from trench, ~35 km thick
-%   [e22_dev, e23] = getStrainratesLongterm(shz, dip, ocean_trans, ...
+%   [e22_dev, e23] = computeLongTermStrainRates(shz, dip, ocean_trans, ...
 %                                           cont_trans, 1);
 %
 % SEE ALSO
-%   cornerFlowVelocity, computeCornerflowVelocityfield,
+%   computeRegionCornerFlow, computeCornerFlowVelocity,
 %   computeLongTermVelocity
 %
 % AUTHORS
@@ -66,7 +66,7 @@ if nargin < 5
     n = 1;
 end
 
-% the corner-flow frame of each region (cornerFlowVelocity applies the
+% the corner-flow frame of each region (computeRegionCornerFlow applies the
 % translations, which have to be adjusted to how the mesh is made)
 e22_dev = zeros(shz.N,1);
 e23 = zeros(shz.N,1);
@@ -78,9 +78,9 @@ for i = 1:shz.N
     Cx = [shz.A(i,1),shz.B(i,1),shz.C(i,1),shz.xc(i,1)]';
     Cz = [shz.A(i,2),shz.B(i,2),shz.C(i,2),shz.xc(i,2)]';
     if wedge(i)
-        [Vx, Vz] = cornerFlowVelocity(dip, Cx, Cz, 'wedge', continental_translate_params, n);
+        [Vx, Vz] = computeRegionCornerFlow(dip, Cx, Cz, 'wedge', continental_translate_params, n);
     else
-        [Vx, Vz] = cornerFlowVelocity(dip, Cx, Cz, 'ocean', ocean_translate_params, n);
+        [Vx, Vz] = computeRegionCornerFlow(dip, Cx, Cz, 'ocean', ocean_translate_params, n);
     end
 
     % Build the system (in model coordinates: the frame is a translation,

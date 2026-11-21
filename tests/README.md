@@ -50,8 +50,8 @@ tests/
     GeometryTest.m            +geometry classes, mesh discretisation, half-space kernels
     KernelsTest.m             BEM stress/displacement kernels, Betti reciprocity, cached kernels
     LongTermFlowTest.m        corner flow (n = 1, 3), long-term strain rates and velocity
-    SolversTest.m             egh_modal, negate + modal solvers, periodic state, helpers
-    TimeIntegrationTest.m     ode_viscoelastic / ode45 path vs the semi-analytical solver
+    SolversTest.m             computeModalIntegrals, negate + modal solvers, periodic state, helpers
+    TimeIntegrationTest.m     odeViscoelastic / ode45 path vs the semi-analytical solver
     UtilitiesTest.m           plotting and small helpers
     LegacyCodeTest.m          duplicate copies, dead and broken files, name checks
   system/
@@ -69,7 +69,7 @@ Most tests check physical identities that hold whatever the sign convention, so 
 - **Hooke consistency**: stress kernels equal Hooke's law applied to the gradient of the displacement kernels.
 - **Betti reciprocity**: weighted by patch length and triangle area, the KK, KL/LK and LL kernel blocks are symmetric. A sign or component-ordering error in any block breaks this.
 - **Corner flow**: velocities satisfy their boundary conditions and are divergence-free.
-- **Two solution routes agree**: with a locked fault and a Newtonian mantle the ODE path (`ode45`) is linear and must match `analyticSolveIVP`, through a coseismic step.
+- **Two solution routes agree**: with a locked fault and a Newtonian mantle the ODE path (`ode45`) is linear and must match `solveAnalyticIvp`, through a coseismic step.
 - **References**: the semi-analytical solvers are checked against `expm` of the augmented system.
 
 Fast tests use a 10-patch / 24-triangle synthetic model (`helpers/makeSmallModel.m`), so the full BEM pipeline runs in about a second. Tests on the example mesh use `examples/inputs/` and the cached `examples/kernels/*.h5`.

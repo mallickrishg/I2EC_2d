@@ -1,13 +1,13 @@
-function [V,e22dot,e23dot] = extractComponentsSolutionVector(sol,locked,N,M)
-% EXTRACTCOMPONENTSSOLUTIONVECTOR  Split linear-solver states into parts.
+function [V,e22dot,e23dot] = extractRatesFromLinearState(sol,locked,N,M)
+% EXTRACTRATESFROMLINEARSTATE  Split linear-solver states into parts.
 %
-%   [V, e22dot, e23dot] = extractComponentsSolutionVector(sol, locked, N, M)
+%   [V, e22dot, e23dot] = extractRatesFromLinearState(sol, locked, N, M)
 %
 %   Splits states of the semi-analytical solver, ordered as
 %   [creeping-patch slip rates; e22 rates; e23 rates], into fault slip
 %   rate (zero on locked patches) and the two deviatoric strain-rate
 %   components. It works the same way on time-integrated states (slip and
-%   strain), e.g. the second output of analyticSolveIVP.
+%   strain), e.g. the second output of solveAnalyticIvp.
 %
 % INPUTS
 %   sol     [n x Nt] states, one time per column, n = Nc + 2M
@@ -22,10 +22,10 @@ function [V,e22dot,e23dot] = extractComponentsSolutionVector(sol,locked,N,M)
 %
 % EXAMPLE
 %   [V, e22dot, e23dot] = ...
-%       extractComponentsSolutionVector(sol, locked, rcv.N, shz.N);
+%       extractRatesFromLinearState(sol, locked, rcv.N, shz.N);
 %
 % SEE ALSO
-%   analyticSolveIVP, assembleStressKernel
+%   solveAnalyticIvp, assembleStressKernel
 %
 % AUTHORS
 %   Rishav Mallick, 2025

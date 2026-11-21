@@ -8,7 +8,7 @@ function stresskernel = assembleStressKernel(evl,locked)
 %   to [shear stressing rate on creeping patches; s22 rate; s23 rate].
 %   Locked patches are removed from rows and columns. Dividing the rows by
 %   the viscosities gives the operator A of dy/dt = A*y + c used by
-%   analyticSolveIVP:
+%   solveAnalyticIvp:
 %       A = diag(1./viscosityvector)*stresskernel
 %
 % INPUTS
@@ -32,7 +32,7 @@ function stresskernel = assembleStressKernel(evl,locked)
 %     nothing. With centroid kernels it negates their growing modes.
 %
 % SEE ALSO
-%   computeAllStressKernelsBem, negateGrowingModes, analyticSolveIVP
+%   computeAllStressKernelsBem, negateGrowingModes, solveAnalyticIvp
 %
 % AUTHORS
 %   Rishav Mallick, 2025

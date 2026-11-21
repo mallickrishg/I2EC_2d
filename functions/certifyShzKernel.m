@@ -1,8 +1,8 @@
-function evl = certifyMantleKernel(evl, shz, varargin)
-% CERTIFYMANTLEKERNEL  Make the mantle-mantle kernel provably free of growing modes.
+function evl = certifyShzKernel(evl, shz, varargin)
+% CERTIFYSHZKERNEL  Make the mantle-mantle kernel provably free of growing modes.
 %
-%   evl = certifyMantleKernel(evl, shz)
-%   evl = certifyMantleKernel(evl, shz, 'Tolerance', tol)
+%   evl = certifyShzKernel(evl, shz)
+%   evl = certifyShzKernel(evl, shz, 'Tolerance', tol)
 %
 %   For a cell-averaged (Galerkin) kernel, the area-weighted deviatoric
 %   mantle-mantle kernel S = diag([a; a]) * [LL11 LL12; LL21 LL22] is,
@@ -46,7 +46,7 @@ function evl = certifyMantleKernel(evl, shz, varargin)
 %     positive eigenvalues in the symmetric part); this is intended.
 %   - Meshes that admit zero-energy modes (compatible piecewise-constant
 %     strains that cause no stress, e.g. criss-cross meshes) fail with
-%     'certifyMantleKernel:zeroEnergyModes': quadrature moves those zero
+%     'certifyShzKernel:zeroEnergyModes': quadrature moves those zero
 %     eigenvalues slightly off zero, and such modes neither decay nor
 %     grow, so the periodic cycle is not determined. Use another mesh.
 %   - Only LL is changed. The fault blocks (KK, KL, LK) are not certified.
@@ -71,7 +71,7 @@ lambda = eig(S);
 scale = max(abs(lambda));
 maxEig = max(lambda) / scale;
 if maxEig > tol
-    error('certifyMantleKernel:notNegative', ...
+    error('certifyShzKernel:notNegative', ...
         ['The area-weighted mantle-mantle kernel is not negative semidefinite: ' ...
          '%d eigenvalues of its symmetric part are positive, the largest %.2e of the ' ...
          'spectrum (tolerance %.0e). Use cell-averaged kernels (''cellaverage'', 3).'], ...
@@ -79,7 +79,7 @@ if maxEig > tol
 end
 
 if maxEig >= 0
-    error('certifyMantleKernel:zeroEnergyModes', ...
+    error('certifyShzKernel:zeroEnergyModes', ...
         ['The area-weighted mantle-mantle kernel has %d eigenvalues of its symmetric part at or ' ...
          'just above zero (largest %.2e of the spectrum, below the indefinite threshold %.0e): ' ...
          'zero-energy modes of the mesh (e.g. a criss-cross mesh), moved off zero by quadrature. ' ...

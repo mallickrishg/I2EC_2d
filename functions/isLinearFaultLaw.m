@@ -15,7 +15,7 @@ function tf = isLinearFaultLaw(rcv)
 %   tf      logical scalar
 %
 % SEE ALSO
-%   ode_viscoelastic, extract_v_edot_from_statevector,
+%   odeViscoelastic, extractRatesFromOdeState,
 %   runImposedEarthquakeCycles
 
 if ~isprop(rcv, 'faultLaw')

@@ -1,7 +1,7 @@
-function [Yp] = ode_viscoelastic(~,Y,rcv,shz,evl)
-% ODE_VISCOELASTIC  Right-hand side of the coupled fault-mantle ODEs.
+function [Yp] = odeViscoelastic(~,Y,rcv,shz,evl)
+% ODEVISCOELASTIC  Right-hand side of the coupled fault-mantle ODEs.
 %
-%   Yp = ode_viscoelastic(t, Y, rcv, shz, evl)
+%   Yp = odeViscoelastic(t, Y, rcv, shz, evl)
 %
 %   Returns dY/dt for the state Y = [fault state on each patch; s22 and
 %   s23 on each mantle cell, interleaved]. The mantle follows a power law,
@@ -35,7 +35,7 @@ function [Yp] = ode_viscoelastic(~,Y,rcv,shz,evl)
 %     calculation; their fault-state entries still evolve but are not
 %     used.
 %   - With the linear law and n = 1 the system is linear and is the same
-%     ODE as the semi-analytical solvers (analyticSolveIVP) solve. The
+%     ODE as the semi-analytical solvers (solveAnalyticIvp) solve. The
 %     slip rate may then become negative (back-slip), which log(v) could
 %     not represent.
 %   - Stability: the function integrates whatever kernels it is given.
@@ -44,8 +44,8 @@ function [Yp] = ode_viscoelastic(~,Y,rcv,shz,evl)
 %     exponent. Centroid kernels need 'kernelmodify' 1 or 2.
 %
 % SEE ALSO
-%   runImposedEarthquakeCycles, viscoeq_sequence_simulation,
-%   extract_v_edot_from_statevector
+%   runImposedEarthquakeCycles, integrateImposedCycles,
+%   extractRatesFromOdeState
 %
 % AUTHORS
 %   Rishav Mallick, 2023

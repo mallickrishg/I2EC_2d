@@ -1,7 +1,7 @@
-function [flt]=flt2flt(xo,W,dip,wo,alphaw)
-% FLT2FLT  Split a straight segment into patches of growing width.
+function [flt]=splitSegment(xo,W,dip,wo,alphaw)
+% SPLITSEGMENT  Split a straight segment into patches of growing width.
 %
-%   flt = geometry.flt2flt(xo, W, dip, wo, alphaw)
+%   flt = geometry.splitSegment(xo, W, dip, wo, alphaw)
 %
 %   Divides a segment of down-dip length W, starting at xo, into patches
 %   whose widths grow geometrically, wo*alphaw^k for k = 0, 1, 2, and so

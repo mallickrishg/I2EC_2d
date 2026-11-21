@@ -105,7 +105,7 @@ classdef receiver < geometry.fpatch
             %   rcv = geometry.receiver('examples/inputs/megathrust2d.seg', earthModel);
             %
             % SEE ALSO
-            %   geometry.fpatch, geometry.flt2flt
+            %   geometry.fpatch, geometry.splitSegment
             %
             % AUTHORS
             %   Rishav Mallick, 2023

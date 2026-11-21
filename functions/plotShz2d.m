@@ -1,8 +1,8 @@
-function plotshz2d(shz,toplot)
+function plotShz2d(shz,toplot)
 % PLOTSHZ2D  Plot shear-zone triangles, filled by value or as outlines.
 %
-%   plotshz2d(shz)
-%   plotshz2d(shz, toplot)
+%   plotShz2d(shz)
+%   plotShz2d(shz, toplot)
 %
 %   With a value per triangle, draws the mesh as filled patches coloured by
 %   that value. With one input, draws each triangle outline in red (and
@@ -19,7 +19,7 @@ function plotshz2d(shz,toplot)
 %   none (draws into the current axes)
 %
 % SEE ALSO
-%   plotpatch2d, patch
+%   plotPatches2d, patch
 %
 % AUTHORS
 %   Rishav Mallick, 2023
