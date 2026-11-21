@@ -161,8 +161,9 @@ kernels guarantee this ([mantle kernels](#mantle-kernels)).
 {mat:func}`assembleStressKernel` builds $K$ without the
 locked patches; {mat:func}`computePeriodicInitialConditionBalanced` gives the
 periodic state and {mat:func}`analyticSolveIVP` evaluates it at any time.
-$A$ is badly scaled, so it is balanced before the eigendecomposition
-({mat:func}`eigBalanced`), and {mat:func}`egh_modal` switches to a Taylor
+$A$ is eigendecomposed without balancing ({mat:func}`eigBalanced`): its
+eigenvectors are conditioned by the geometry, not by the viscosities, and
+balancing would work against that. {mat:func}`egh_modal` switches to a Taylor
 series for small $|\lambda t|$, where the closed forms lose digits.
 :::
 
@@ -238,19 +239,19 @@ How faithful a simulation is depends on the ratio of the mantle Maxwell time
 $t_M = \eta/\mu$ to the recurrence time $T$, and on the fault, which sets the
 fastest timescale. The two solvers have different limits.
 
-**Semi-analytical solver.** Its accuracy is set by how far the slowest mode
-relaxes in one cycle, $|\lambda_\text{min}|\,T$. Weak mantles have no limit;
-strong mantles lose about one digit per factor of 10 in $t_M/T$. On the
+**Semi-analytical solver.** It is accurate from very weak to very strong
+mantles. The limit is reached only when the slowest mode relaxes by less than
+$10^{-12}$ in one cycle ($|\lambda_\text{min}|\,T \le 10^{-12}$), when its
+periodic state is no longer determined and the solver raises an error. On the
 example 2 model with a uniform mantle:
 
-| $t_M/T$ | $10^{-5}$ | $0.02$ (example 2) | $10^{2}$ | $10^{4}$ | $10^{5}$ | $10^{6}$ |
-| --- | --- | --- | --- | --- | --- | --- |
-| slowest $\lvert\lambda\rvert\,T$ | $3\times10^{2}$ | $0.14$ | $3\times10^{-5}$ | $3\times10^{-7}$ | $3\times10^{-8}$ | $3\times10^{-9}$ |
-| relative error, mantle state | $10^{-10}$ | $4\times10^{-12}$ | $2\times10^{-10}$ | $10^{-8}$ | $3\times10^{-7}$ | $10^{-6}$ |
+| $t_M/T$ | $10^{-5}$ | $0.02$ (example 2) | $10^{2}$ | $10^{4}$ | $10^{6}$ | $10^{8}$ | $10^{9}$ | $10^{10}$ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| slowest $\lvert\lambda\rvert\,T$ | $3\times10^{2}$ | $0.14$ | $3\times10^{-5}$ | $3\times10^{-7}$ | $3\times10^{-9}$ | $3\times10^{-11}$ | $3\times10^{-12}$ | $3\times10^{-13}$ |
+| relative difference, mantle state | $5\times10^{-11}$ | $2\times10^{-9}$ | $5\times10^{-10}$ | $7\times10^{-10}$ | $8\times10^{-10}$ | $10^{-9}$ | $6\times10^{-10}$ | error |
 
-By extrapolation the mantle state keeps about three digits up to
-$t_M/T \approx 10^{9}$. In the strong-mantle limit the mantle simply follows
-its long-term strain rate, and the solver reproduces that.
+In the strong-mantle limit the mantle simply follows its long-term strain
+rate, and the solver reproduces that.
 
 **Numerical integration.** Accuracy is set by the `ode45` tolerances, but each
 cycle only brings the solution closer to the periodic state by the factor
@@ -269,7 +270,11 @@ fastest timescale and so the numbers above.
 
 the table compares {mat:func}`computePeriodicInitialConditionBalanced` with an
 independent direct solve of the periodic condition (example 2 fault, locked
-above 30 km, $T = 500$ yr). Modes that relax by less than $10^{-12}$ per cycle
+above 30 km, $T = 500$ yr). The direct solve becomes ill-conditioned itself
+(condition number $5\times10^{15}$ at $t_M/T = 10^{6}$), so beyond that the
+agreement is a consistency check rather than an error bound. Until 2026-11-21
+the operator was balanced before the eigendecomposition; that lost digits for
+strong mantles ($10^{-8}$ at $t_M/T = 10^{4}$, $10^{-6}$ at $10^{6}$). Modes that relax by less than $10^{-12}$ per cycle
 ($|\mathrm{Re}\,\lambda|\,T \le 10^{-12}$) raise `I2EC:neutralModes`, since
 their periodic state is not determined. Before 2026-11-21 the solver instead
 set modes with $|\lambda| < 10^{-16}$ s$^{-1}$ to zero, which for

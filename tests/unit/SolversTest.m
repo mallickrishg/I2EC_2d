@@ -109,6 +109,16 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyLessThan(norm(yT + bs - y0) / norm(y0), 1e-6);
         end
 
+        function eigBalancedOptionalBalancingGivesSameModes(tc)
+            % unbalanced by default; balancing is an option with the same
+            % eigenvalues and eigenvectors of A
+            [V0, l0] = eigBalanced(tc.A);
+            [V1, l1] = eigBalanced(tc.A, [], true);
+            tc.verifyEqual(sort(l1, 'ComparisonMethod', 'real'), sort(l0, 'ComparisonMethod', 'real'), 'RelTol', 1e-10);
+            tc.verifyEqual(real(V0*diag(l0)/V0), tc.A, 'AbsTol', 1e-10*norm(tc.A));
+            tc.verifyEqual(real(V1*diag(l1)/V1), tc.A, 'AbsTol', 1e-10*norm(tc.A));
+        end
+
         function eigBalancedMatchesEig(tc)
             [V, lam, ng] = eigBalanced(tc.A);
             tc.verifyEqual(sort(lam, 'ComparisonMethod', 'real'), sort(eig(tc.A), 'ComparisonMethod', 'real'), 'RelTol', 1e-8);

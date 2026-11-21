@@ -4,9 +4,8 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %   [V, lambda] = negateGrowingModes(A)
 %   [V, lambda, A_neg] = negateGrowingModes(A)
 %
-%   Balances A (MATLAB balance), computes the eigendecomposition of the
-%   balanced matrix and replaces every eigenvalue with Re(lam) > 0 by
-%   -lam. The eigenvectors are kept, so
+%   Computes the eigendecomposition of A (eigBalanced) and replaces
+%   every eigenvalue with Re(lam) > 0 by -lam. The eigenvectors are kept, so
 %       A_neg = V*diag(lambda)/V
 %   has the same modes as A, with the growing ones turned into decaying
 %   ones.
@@ -23,7 +22,7 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 %   A       [n x n] real ODE operator matrix (1/s)
 %
 % OUTPUTS
-%   V       [n x n] eigenvectors of A (V = T*Vb, with T from balance)
+%   V       [n x n] eigenvectors of A (from eigBalanced)
 %   lambda  [n x 1] eigenvalues of A, with Re(lam) > 0 negated (1/s)
 %   A_neg   [n x n] real negated operator V*diag(lambda)/V; computed only
 %           when requested
@@ -52,7 +51,7 @@ function [V, lambda, A_neg] = negateGrowingModes(A)
 % AUTHORS
 %   Sharadha Sathiakumar (EOS), 2026
 
-% ---- Balanced eigendecomposition (A = V*diag(lambda)/V) ----
+% ---- Eigendecomposition (A = V*diag(lambda)/V) ----
 [V, lambda] = eigBalanced(A);
 
 % ---- Negate growing eigenvalues ----
