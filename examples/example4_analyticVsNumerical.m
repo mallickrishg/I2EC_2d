@@ -60,31 +60,33 @@ ic = arrayfun(@(k) find(inShzCell(shz, pts(k,:)), 1), 1:size(pts,1));
 tt = t/cyc.Trecur;
 keep = tt > 0;
 
-figure(1),clf
-tiledlayout(1, 2, 'TileSpacing', 'compact')
+st = exampleStyle();
+st.figure(1, 1000, 420)
+tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 nexttile, hold on
 for k = 1:numel(ip)
-    h = plot(tt(keep), Va(keep,ip(k))/Vpl, '-', 'LineWidth', 3);
-    plot(tt(keep), Vn(keep,ip(k))/Vpl, 'k--', 'LineWidth', 1.5, 'HandleVisibility', 'off')
-    h.DisplayName = sprintf('z = %.0f km', rcv.xc(ip(k),2)/1e3);
+    plot(tt(keep), Va(keep,ip(k))/Vpl, '-', 'Color', st.series(k,:), 'LineWidth', 3, ...
+        'DisplayName', sprintf('%.0f km depth', -rcv.xc(ip(k),2)/1e3));
+    plot(tt(keep), Vn(keep,ip(k))/Vpl, '--', 'Color', st.ink, 'LineWidth', 1, 'HandleVisibility', 'off')
 end
-set(gca, 'XScale', 'log', 'YScale', 'log'), grid on, box on
-xlim([1e-6 1]), xlabel('t/T'), ylabel('v/v_{pl}'), title('Fault slip rate')
-legend('Location', 'best')
+plot(nan, nan, '--', 'Color', st.ink, 'LineWidth', 1, 'DisplayName', 'numerical (ode45)')
+set(gca, 'XScale', 'log', 'YScale', 'log'), grid on
+xlim([1e-6 1]), xlabel('time since the earthquake, t/T'), ylabel('slip rate / plate rate')
+title('Fault slip rate')
+legend('Location', 'southwest', 'Box', 'off')
 nexttile, hold on
 ea = sqrt(e22a.^2 + e23a.^2); en = sqrt(e22n.^2 + e23n.^2);
 for k = 1:numel(ic)
-    h = plot(tt(keep), ea(keep,ic(k)), '-', 'LineWidth', 3);
-    plot(tt(keep), en(keep,ic(k)), 'k--', 'LineWidth', 1.5, 'HandleVisibility', 'off')
-    h.DisplayName = sprintf('(%.0f, %.0f) km', pts(k,1)/1e3, pts(k,2)/1e3);
+    plot(tt(keep), ea(keep,ic(k)), '-', 'Color', st.series(k,:), 'LineWidth', 3, ...
+        'DisplayName', sprintf('x = %.0f km, %.0f km depth', pts(k,1)/1e3, -pts(k,2)/1e3));
+    plot(tt(keep), en(keep,ic(k)), '--', 'Color', st.ink, 'LineWidth', 1, 'HandleVisibility', 'off')
 end
-set(gca, 'XScale', 'log', 'YScale', 'log'), grid on, box on
-xlim([1e-6 1]), xlabel('t/T'), ylabel('strain rate (1/s)'), title('Mantle strain rate')
-legend('Location', 'best')
-set(findobj(gcf, 'Type', 'axes'), 'FontSize', 12, 'LineWidth', 1)
-annotation('textbox', [0.1 0.92 0.8 0.06], 'String', ...
-    'coloured: semi-analytical,  dashed: numerical (ode45)', ...
-    'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'FontSize', 12)
+plot(nan, nan, '--', 'Color', st.ink, 'LineWidth', 1, 'DisplayName', 'numerical (ode45)')
+set(gca, 'XScale', 'log', 'YScale', 'log'), grid on
+xlim([1e-6 1]), xlabel('time since the earthquake, t/T'), ylabel('strain rate (1/s)')
+title('Mantle strain rate')
+legend('Location', 'southwest', 'Box', 'off')
+st.axes()
 
 function in = inShzCell(shz, p)
 % true for the triangle(s) of shz that contain point p
