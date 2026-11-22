@@ -21,7 +21,7 @@ function fit = computeAndradePronySeries(beta, tmin, tmax, varargin)
 %   (steady-state) dashpot.
 %
 % INPUTS
-%   beta    [M x 1] or scalar Andrade coefficient (1/(MPa s^(1/3))), in the
+%   beta    scalar or [M x 1] Andrade coefficient (1/(MPa s^(1/3))), in the
 %           strain-rate convention of shz.alpha (edot = alpha*sigma);
 %           beta = 0 gives no Kelvin elements in that cell
 %   tmin    shortest time to fit (s), e.g. 1e-3 yr
