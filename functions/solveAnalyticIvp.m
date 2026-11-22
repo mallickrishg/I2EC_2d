@@ -43,6 +43,15 @@ function [Y, U] = solveAnalyticIvp(A, c, y0, tvec)
 %     layered). The exact modal integrals agree with the matrix
 %     exponential to round-off.
 %   - Y and U are the real parts of the modal sums.
+%   - Which eigendecomposition (changed 2026-11-22). The operator is
+%     eigendecomposed with and without balancing; the one whose modal
+%     propagation of y0 to max(tvec) is closer (componentwise) to the
+%     matrix exponential is used. On the example 2 operator, unbalanced
+%     modes lose digits for weak and moderate mantles (evolution error
+%     1e-9 at t_M/T = 0.1, against 1e-13 balanced) and balanced modes for
+%     strong ones (fault 2e-9 at t_M/T = 1e9, against 1e-13 unbalanced);
+%     the check picks the accurate one in both regimes. Cost: a second
+%     eigendecomposition and one expm of size n+1.
 %
 % SEE ALSO
 %   eigOperator, computeModalIntegrals, computePeriodicInitialCondition,
@@ -61,6 +70,25 @@ if nGrowing > 0
         '(cell-averaged, certified), or negate them explicitly with ' ...
         '[~, ~, A] = negateGrowingModes(A) and build the forcing with that A.'], ...
         nGrowing, max(real(lambda)));
+end
+
+% ---- Unbalanced or balanced modes: keep the more accurate ----
+% Neither eigendecomposition is accurate for every operator: without
+% balancing the mantle loses digits for weak and moderate mantles (1e-9),
+% with balancing for strong mantles (Maxwell time >> T). Propagate y0 to
+% the last time with each and keep the one closer to the matrix
+% exponential (one expm of size n+1).
+tp = max(tvec);
+if tp > 0
+    [Vb, lambdab] = eigOperator(A, [], true);
+    X = expm([A, c; zeros(1, n+1)] * tp);
+    yref = X(1:n, 1:n)*y0 + X(1:n, end);
+    scale = abs(yref) + 1e-12*max(abs(yref)) + realmin;
+    errU = propagationError(V, lambda, y0, c, tp, yref, scale);
+    errB = propagationError(Vb, lambdab, y0, c, tp, yref, scale);
+    if errB < errU
+        V = Vb; lambda = lambdab;
+    end
 end
 
 % ---- Modal coordinates ----
@@ -82,4 +110,11 @@ end
 Y = real(V * Z);
 U = real(V * UZ);
 
+end
+
+function err = propagationError(V, lambda, y0, c, t, yref, scale)
+% componentwise relative error of the modal y(t) against yref
+[e, g] = computeModalIntegrals(lambda, t);
+y = real(V * (e .* (V \ y0) + g .* (V \ c)));
+err = norm((y - yref) ./ scale) / sqrt(numel(y));
 end

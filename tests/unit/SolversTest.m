@@ -107,6 +107,33 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
             tc.verifyLessThan(norm(yT + bs - y0) / norm(y0), 1e-6);
         end
 
+        function exampleOperatorIsAccurateForWeakAndStrongMantles(tc)
+            % The example 2 operator with a moderate (t_M/T = 0.1) and a
+            % strong (1e7) mantle. Fault and mantle rates differ by ~1e7 in
+            % size, so each eigendecomposition alone loses digits in one of
+            % the two regimes (unbalanced: mantle 1e-9 at 0.1; balanced:
+            % fault 2e-9 for strong mantles). The periodic state is solved
+            % directly and the evolution keeps the more accurate modes.
+            ex = loadExampleModel(true);
+            yr = 3.15e7; T = 500*yr;
+            for ratio = [0.1 1e7]
+                [A, c, b, Nc] = SolversTest.exampleSystem(ex, ratio*T*30e3, T);
+                n = size(A, 1); f = 1:Nc; mt = Nc+1:n;
+                y0 = computePeriodicInitialCondition(A, c, b, T);
+                % one cycle from y0 returns to y0 - b
+                yT = solveAnalyticIvp(A, c, y0, T);
+                tc.verifyLessThan(norm(yT(f) + b(f) - y0(f)) / norm(y0(f)), 1e-10, sprintf('fault, t_M/T = %g', ratio));
+                tc.verifyLessThan(norm(yT(mt) + b(mt) - y0(mt)) / norm(y0(mt)), 1e-10, sprintf('mantle, t_M/T = %g', ratio));
+                % evolution against the matrix exponential
+                t = 1e-2*T;
+                X = expm([A c; zeros(1, n+1)] * t);
+                yref = X(1:n, 1:n)*y0 + X(1:n, end);
+                y = solveAnalyticIvp(A, c, y0, t);
+                tc.verifyLessThan(norm(y(f) - yref(f)) / norm(yref(f)), 1e-11, sprintf('evolution, fault, t_M/T = %g', ratio));
+                tc.verifyLessThan(norm(y(mt) - yref(mt)) / norm(yref(mt)), 1e-11, sprintf('evolution, mantle, t_M/T = %g', ratio));
+            end
+        end
+
         function eigOperatorOptionalBalancingGivesSameModes(tc)
             % unbalanced by default; balancing is an option with the same
             % eigenvalues and eigenvectors of A
@@ -177,6 +204,23 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
     end
 
     methods (Static)
+        function [A, c, b, Nc] = exampleSystem(ex, eta, T)
+            % example 2's linear system with a uniform mantle viscosity eta (MPa s)
+            rcv = ex.rcv; shz = ex.shz; evl = ex.evl; Vpl = 1e-9;
+            rcv.faultLaw = 'linear';
+            rcv.Asigma = 1e-6*(5e17/sum(rcv.W)) .* ones(rcv.N, 1);
+            locked = abs(rcv.xc(:,2)) < 30e3;
+            rcv.pinnedPosition = locked; rcv.Vpl = Vpl .* ones(rcv.N, 1);
+            shz.n = ones(shz.N, 1); shz.alpha = (1/eta) .* ones(shz.N, 1);
+            [e22, e23] = computeLongTermStrainRates(shz, rcv.dip(1)*pi/180, [0, 20e3], [-140e3, 35e3], 1);
+            shz.e22pl = e22 .* Vpl; shz.e23pl = -e23 .* Vpl;
+            slip = T*Vpl .* locked;
+            sc = struct('Nevents', 1, 'Timing', 0, 'dtau', evl.KK*slip, ...
+                'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
+            sys = assembleLinearSystem(evl, rcv, shz, locked, sc);
+            A = sys.A; c = sys.c; b = sys.b; Nc = sys.Nc;
+        end
+
         function [Y, U] = expmIVP(A, c, y0, tvec)
             % reference: y and its time integral from expm of the augmented system
             n = numel(y0);

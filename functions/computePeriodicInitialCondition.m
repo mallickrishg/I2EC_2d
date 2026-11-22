@@ -9,10 +9,12 @@ function y0 = computePeriodicInitialCondition(A, c, b, T)
 %   found without spinning up. Equivalently
 %       (I - Phi)*y0 = eta + b,   Phi = expm(A*T),
 %       eta = integral_0^T expm(A*(T-s))*c ds.
-%   In modal coordinates (A = V*diag(lam)/V, zc = V\c, zb = V\b) each mode
-%   is solved on its own:
-%       z0 = (g(T).*zc + zb) ./ (1 - exp(lam*T)),
-%   with g(T) from computeModalIntegrals and 1 - exp(lam*T) evaluated as -lam.*g(T).
+%   Since Phi - I = A*G with G = integral_0^T expm(A*s) ds (so eta = G*c),
+%   it is solved directly as
+%       y0 = -(A*G) \ (G*c + b),
+%   with G from one matrix exponential of the augmented matrix
+%   [A I; 0 0]*T. The operator is still eigendecomposed (eigOperator), but
+%   only to check for growing and neutral modes.
 %
 % INPUTS
 %   A       [n x n] ODE operator matrix (1/s)
@@ -40,17 +42,24 @@ function y0 = computePeriodicInitialCondition(A, c, b, T)
 %     1e12 cycles. The test is on lam*T, not on lam relative to
 %     max|lam|: a strong mantle with a weak fault has modes 1e-14 of
 %     max|lam| that are still slow, real modes (Maxwell time 1e6 T:
-%     min |lam|*T = 3e-9), and the modal solution is accurate for them
-%     (agrees with a direct solve to 1e-6 in the mantle). The test is
-%     also independent of the time unit.
-%   - Evaluating 1 - exp(lam*T) as -lam.*g(T) avoids cancellation for
-%     small |lam*T|, where g(T) comes from a series.
-%   - Warns if cond(V) > 1e14 (ill-conditioned eigenvectors).
+%     min |lam|*T = 3e-9), for which the periodic state is still well
+%     defined. The test is also independent of the time unit.
+%   - Accuracy (changed 2026-11-22; was modal). The direct solve is
+%     accurate for weak and strong mantles alike. On the example 2 operator
+%     with mantle Maxwell times t_M/T = 1e-5 to 1e9 it agrees with the
+%     balanced modal solve to 1e-11 or better where that one is accurate
+%     (t_M/T <= 10) and with the unbalanced modal solve to ~1e-9 where
+%     that one is (strong mantles); each modal variant alone lost up to
+%     three digits (unbalanced: 1e-9 at t_M/T = 0.1, example 2: 3e-9) or
+%     more (balanced: 8e-3 at 1e9). Forming I - Phi instead, with G*c
+%     from an (n+1) exponential, loses digits for strong mantles.
+%   - Cost: an expm of size 2n, about twice the eigendecomposition
+%     (0.7 s against 0.3 s for n = 1061).
 %   - The periodic state is consistent with solveAnalyticIvp (an IVP
 %     started from y0 returns to y0 - b after one period).
 %
 % SEE ALSO
-%   eigOperator, computeModalIntegrals, solveAnalyticIvp, negateGrowingModes
+%   eigOperator, solveAnalyticIvp, negateGrowingModes, expm
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2026; modified by Sharadha Sathiakumar (EOS), 2026
@@ -76,23 +85,15 @@ if any(neutral)
         nnz(neutral), tolNeutral, min(abs(lambda)));
 end
 
-if cond(V) > 1e14
-    warning('The eigenvectors of the operator are ill-conditioned (cond(V) > 1e14).');
-end
-
-% ---- Modal coordinates ----
-zc = V \ c;
-zb = V \ b;
-
-% ---- Periodic condition: z0 = (g(T)*zc + zb) / (1 - exp(lam*T)) ----
-%  1 - exp(lam*T) = -lam * g(T) follows from g(T) = (exp(lam*T) - 1)/lam;
-%  g(T) is accurate for all lam*T (series below |lam*T| = 1e-2, expm1
-%  above), so the denominator is too.
-[~, gT] = computeModalIntegrals(lambda, T);
-
-one_minus_eT = -lambda .* gT;
-z0 = (gT .* zc + zb) ./ one_minus_eT;
-
-y0 = real(V * z0);
+% ---- Periodic condition, solved directly ----
+%  y(T) = Phi*y0 + G*c with Phi = expm(A*T), G = int_0^T expm(A*s) ds, and
+%  y0 = y(T) + b give (I - Phi)*y0 = G*c + b. Since Phi - I = A*G exactly,
+%      y0 = -(A*G) \ (G*c + b),
+%  which avoids forming I - Phi (cancellation for slow modes). G comes from
+%  one matrix exponential of the augmented 2n x 2n matrix [A I; 0 0]*T.
+n = size(A, 1);
+X = expm([A, eye(n); zeros(n, 2*n)] * T);
+G = X(1:n, n+1:end);
+y0 = -(A*G) \ (G*c + b);
 
 end

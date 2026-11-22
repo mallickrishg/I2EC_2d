@@ -59,7 +59,17 @@ pos = real(lambda) > 0;
 lambda(pos) = -lambda(pos);
 
 if nargout > 2
-    A_neg = real(V * diag(lambda) / V);
+    % change only the negated modes: A_neg = A - 2*V(:,pos)*diag(lam0(pos))*W(pos,:)
+    % (lam0: eigenvalues before negation; lambda(pos) = -lam0(pos) here)
+    % with W = inv(V); with no growing mode A_neg is A itself, not a
+    % reconstruction V*diag(lam)/V (which carries the eigendecomposition's
+    % round-off, ~1e-9 in the mantle rows of the example operator)
+    if any(pos)
+        Winv = V \ eye(size(A));
+        A_neg = A + real(V(:,pos) * diag(lambda(pos)) * Winv(pos,:)) * 2;
+    else
+        A_neg = A;
+    end
 end
 
 end

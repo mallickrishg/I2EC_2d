@@ -24,11 +24,11 @@ function test_negate_exact_solver
 %   8. Steady state: with long-term loading only, y_pl stays y_pl
 %   9. Balancing: same results as a balanced eigendecomposition
 %
-% Tolerances: the solvers eigendecompose the operator without balancing
-% (eigOperator, since 2026-11-21), which keeps strong-mantle cases at
-% ~1e-9 but gives ~2e-9 to 5e-9 here (balanced: ~1e-13; it lost three
-% digits for strong mantles instead). Tests 1, 6, 8 and 9 therefore
-% allow 1e-8.
+% Tolerances: since 2026-11-22 the periodic state is solved directly and
+% solveAnalyticIvp keeps the more accurate of the balanced and unbalanced
+% eigendecompositions, and negateGrowingModes returns A itself when
+% nothing is negated, so every check here is at 1e-12 or better (it was
+% ~4e-9 with unbalanced modes alone). Tests 1, 6, 8 and 9 allow 1e-10.
 %
 % No dependency outside I2EC_2d; no absolute paths.
 %
@@ -90,7 +90,7 @@ err_u = max(vecnorm(U - Uref) ./ vecnorm(Uref));
 [Yr, Ur] = solveAnalyticIvp(A, c, y0_per, tvec);
 err_raw = max([vecnorm(Yr - Y) ./ vecnorm(Y), vecnorm(Ur - U) ./ vecnorm(U)]);
 
-tol1 = 1e-8;    % unbalanced eigendecomposition: ~4e-9 (see header)
+tol1 = 1e-10;   % ~2e-13 (see header)
 pass1 = max([err_y, err_u, err_raw]) < tol1;
 report(pass1, sprintf('max rel err: y %.2e, u %.2e; raw vs negated input %.2e (tol %.0e)', ...
     err_y, err_u, err_raw, tol1));
@@ -223,7 +223,7 @@ catch err
     err6c = double(~strcmp(err.identifier, 'I2EC:neutralModes'));
 end
 
-tol6 = 1e-8;
+tol6 = 1e-10;
 pass6 = max([err6a, err6b, err6b_rest, err6c]) < tol6;
 report(pass6, sprintf(['egh %.1e; IVP integrator %.1e, rest %.1e; ' ...
     'periodic integrator rejected %d (tol %.0e)'], ...
@@ -282,7 +282,7 @@ err8b = norm(y08 - y_pl) / norm(y_pl);
 Y8raw = solveAnalyticIvp(A, -A * y_pl, y_pl, tvec(end));
 drift_raw = norm(Y8raw(imant) - y_pl(imant)) / norm(y_pl(imant));
 
-tol8 = 1e-8;
+tol8 = 1e-10;
 pass8 = max(err8a, err8b) < tol8;
 report(pass8, sprintf(['IVP %.1e, periodic %.1e (tol %.0e); ' ...
     'with raw-operator forcing the mantle strain rate drifts by %.1f%% in 500 yr'], ...
@@ -309,7 +309,7 @@ y0b = computePeriodicInitialCondition(A, c, b, Trecur);
 err9 = max([vecnorm(Yb - Yu) ./ vecnorm(Yu), vecnorm(Ub - Uu) ./ vecnorm(Uu), ...
             norm(y0b - y0u) / norm(y0u)]);
 
-tol9 = 1e-8;
+tol9 = 1e-10;
 pass9 = err9 < tol9;
 report(pass9, sprintf('max rel diff (y, u, periodic y0) %.2e (tol %.0e)', err9, tol9));
 [npass, nfail] = tally(pass9, npass, nfail);
