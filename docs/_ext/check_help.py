@@ -73,6 +73,9 @@ def main() -> int:
             n = text.count(pat)
             if n:
                 leaks.append(f"{page.name}: {n} x {pat!r}")
+        # an ALL-CAPS section header that was not recognised stays as text
+        for hdr in re.findall(r"(?<!see )\b(?:INPUTS|OUTPUTS|OPTIONS|NOTES|EXAMPLES?|SEE ALSO|AUTHORS)\b(?:\s*\([^)]*\))?", text):
+            leaks.append(f"{page.name}: header {hdr!r} rendered as text")
 
     with_params = sum(1 for e in entries if any(l.startswith(":param ") for l in e["rst"]))
     with_returns = sum(1 for e in entries if any(l.startswith(":returns:") for l in e["rst"]))

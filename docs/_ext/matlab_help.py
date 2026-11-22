@@ -113,6 +113,8 @@ def _parse_header(line: str, prev_blank: bool = True):
             return kind, _title(kw), rest.strip()
         elif kind == "seealso" and _IDENT_LIST_RE.fullmatch(rest.strip()):
             return kind, _title(kw), rest.strip()
+        elif is_caps and re.fullmatch(r"\s+\([^()]*\)\s*", rest):
+            return kind, _title(kw), ""  # "OPTIONS (name-value)"
         elif is_caps and indent <= 1 and rest.startswith("  "):
             return kind, _title(kw), rest.strip()
         else:
@@ -216,7 +218,7 @@ def _drop_usage(lines, names):
 # Parameter / return entries
 # ==========================================================================
 
-_NAME = r"[A-Za-z_][\w.]*(?:\([^()]*\))?"
+_NAME = r"(?:'[A-Za-z_]\w*'|[A-Za-z_][\w.]*(?:\([^()]*\))?)"  # 'Name': a name-value option
 _NAMES = rf"{_NAME}(?:\s*(?:,|&|\band\b)\s*{_NAME})*"
 _ENTRY_RE = re.compile(
     rf"^(?P<names>{_NAMES})(?P<opt>\s*\(optional\))?"
@@ -248,7 +250,7 @@ class Node:
 
 
 def _split_names(names: str) -> list[str]:
-    return [n.strip() for n in re.split(r"\s*(?:,|&|\band\b)\s*", names) if n.strip()]
+    return [n.strip().strip("'") for n in re.split(r"\s*(?:,|&|\band\b)\s*", names) if n.strip()]
 
 
 def _fmt_dims(d: str) -> str:
