@@ -18,7 +18,7 @@ modes (see [Kernel options](../inputs.md#kernel-options) and
 | {doc}`example2` | Newtonian mantle ($n = 1$), linear viscous fault | semi-analytical | 1–2 min |
 | {doc}`example3` | as example 2, on three mantle meshes | semi-analytical | about 1 min (2 min the first time) |
 | {doc}`example4` | as example 2 | both, compared | 1–2 min |
-| {doc}`example5` | Maxwell, Burgers and Andrade mantles | semi-analytical | about 2 min |
+| {doc}`example5` | Maxwell, Burgers and Andrade mantles | semi-analytical | about 10 min |
 
 The figures in these pages are made by `docs/figures/make_examples.m`, which
 runs the scripts and saves what they draw.
@@ -43,7 +43,8 @@ that releases the slip deficit of the locked zone. The mantle is loaded by the
 corner-flow strain rates of {mat:func}`computeLongTermStrainRates`, and the fault
 by the plate rate.
 
-Two helper functions in `examples/` set this up:
+To set up your own model step by step, see {doc}`../rheology`. Two helper
+functions in `examples/` set up the example model:
 
 - `exampleModel` loads the earth model, the megathrust, the model boundary,
   the kinematic hinge fault and a mantle mesh (`'ShearZone'`, default
