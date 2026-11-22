@@ -17,6 +17,11 @@ classdef shearZoneReceiver < geometry.shzpatch
 %   e22pl, e23pl  [M x 1] long-term deviatoric strain rates (1/s)
 %   n             [M x 1] power-law stress exponent (1: Newtonian)
 %   alpha         [M x 1] fluidity, 1/viscosity for n = 1 (1/(MPa s))
+%   etaK, muK     [M x p] Kelvin elements in series with the power law
+%                 (transient creep: Burgers p = 1, Andrade a Prony series):
+%                 viscosity (MPa s) and modulus (MPa) of each; etaK = Inf
+%                 means no element. Default zeros(M, 0): Maxwell. See
+%                 extractKelvinElements and computeAndradePronySeries.
 %   dgf           [1 x 1] degrees of freedom per triangle in the state
 %                 vector of the numerical integration (2: sigma22', sigma23)
 %   plus the geometry inherited from geometry.shzpatch (N, xc, tri, vert,
@@ -35,6 +40,10 @@ classdef shearZoneReceiver < geometry.shzpatch
         % |sigma| = sqrt(sigma22'^2 + sigma23^2): stress exponent n and
         % fluidity alpha (1/(MPa s)), [M x 1] each
         n;alpha;
+        % transient creep: p Kelvin elements in series with the power law,
+        % sigma = muK*epsK + etaK*depsK/dt, [M x p] each; viscosity etaK
+        % (MPa s, Inf: no element) and modulus muK (MPa). [M x 0]: Maxwell
+        etaK;muK;
         % degrees of freedom per triangle in the numerical integration [1 x 1]
         dgf;
     end
@@ -53,7 +62,8 @@ classdef shearZoneReceiver < geometry.shzpatch
             %   Reads <filename>_vertices.dat and <filename>_triangulation.dat
             %   with geometry.shzpatch.loadshztri, then computes the vertices
             %   A, B, C, the areas and the centroids of the triangles. Sets
-            %   alpha, n, e22pl and e23pl to zero and dgf = 2.
+            %   alpha, n, e22pl and e23pl to zero, etaK and muK to
+            %   zeros(M, 0) (Maxwell) and dgf = 2.
             %
             % INPUTS
             %   filename    mesh prefix, e.g. 'examples/inputs/shearzone' for
@@ -117,6 +127,9 @@ classdef shearZoneReceiver < geometry.shzpatch
             % rheological properties
             obj.alpha = zeros(obj.N,1);
             obj.n     = zeros(obj.N,1);
+            % no Kelvin elements: Maxwell (steady-state) rheology
+            obj.etaK  = zeros(obj.N,0);
+            obj.muK   = zeros(obj.N,0);
 
             % long-term deviatoric strain rates
             obj.e22pl = zeros(obj.N,1);

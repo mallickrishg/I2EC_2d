@@ -1,8 +1,9 @@
-function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_change,nreps,Trecur)
+function [t,V,e22dot,e23dot,Y] = runImposedEarthquakeCycles(rcv,shz,evl,stress_change,nreps,Trecur,odeSolver)
 % RUNIMPOSEDEARTHQUAKECYCLES  Spin up and integrate imposed earthquake cycles.
 %
 %   [t, V, e22dot, e23dot] = runImposedEarthquakeCycles(rcv, shz, evl, ...
 %                                         stress_change, nreps, Trecur)
+%   [t, V, e22dot, e23dot, Y] = runImposedEarthquakeCycles(..., odeSolver)
 %
 %   Integrates the coupled fault and mantle equations (odeViscoelastic)
 %   through nreps repeats of a cycle of length Trecur, with the coseismic
@@ -10,7 +11,7 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %   (integrateImposedCycles). Each cycle starts from the final state
 %   of the previous one; the first starts from the long-term state
 %   (v = rcv.Vpl and the mantle stresses that give the long-term strain
-%   rates). The last cycle is returned. This is the numerical path for
+%   rates, and relaxed Kelvin elements). The last cycle is returned. This is the numerical path for
 %   general (power-law) rheology.
 %
 % INPUTS
@@ -27,6 +28,9 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %                  .alpha           [M x 1] fluidity, 1/viscosity
 %                                   (1/(MPa s))
 %                  .n               [M x 1] power-law exponent
+%                  .etaK, .muK      [M x p] Kelvin elements in series
+%                                   (transient creep; optional, see
+%                                   extractKelvinElements)
 %                  .e22pl, .e23pl   [M x 1] long-term strain rates (1/s)
 %                  .dgf             degrees of freedom per cell (2)
 %   evl            struct of stress kernels (.KK, .KL, .LK, .LL) from
@@ -41,12 +45,15 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %                  .dsigma23        [M x Nevents] change in s23 (MPa)
 %   nreps          number of cycles to run (spin-up plus the returned one)
 %   Trecur         cycle (supercycle) length (s)
+%   odeSolver      ODE solver handle  [@ode45]; @ode15s suits short
+%                  Kelvin relaxation times (stiff)
 %
 % OUTPUTS
 %   t              [Nt x 1] times within the last cycle (s)
 %   V              [Nt x N] fault slip rate (m/s); zero on locked patches
 %   e22dot         [Nt x M] deviatoric strain rate e22 (1/s)
 %   e23dot         [Nt x M] shear strain rate e23 (1/s)
+%   Y              [Nt x n] ODE states (layout in odeViscoelastic)
 %
 % NOTES
 %   - Stability: pass the default kernels of computeAllStressKernelsBem
@@ -55,6 +62,8 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 %     spurious growing modes and need 'kernelmodify' 1 or 2.
 %   - Spin-up is by brute force: nreps must be large enough for the cycle
 %     to become periodic; compare successive cycles to check.
+%   - Strain rates are totals: Maxwell (power law) plus Kelvin elements.
+%     The Kelvin elements start relaxed: spring stress = sigma_0.
 %   - nreps = 1 runs and returns a single cycle from the long-term state,
 %     with no spin-up.
 %
@@ -65,8 +74,13 @@ function [t,V,e22dot,e23dot] = runImposedEarthquakeCycles(rcv,shz,evl,stress_cha
 % AUTHORS
 %   Rishav Mallick (Caltech Seismolab), 2023
 
+if nargin < 7
+    odeSolver = [];
+end
+[~, muK, p] = extractKelvinElements(shz);
+
 % create initial values as perturbations about steady-state values
-Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf,1);
+Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf + 2*shz.N*p,1);
 % fault state: log(v), or v for the linear viscous fault law
 if isLinearFaultLaw(rcv)
     logV_0 = rcv.Vpl;
@@ -82,11 +96,20 @@ s23_0 = (edot_pl./shz.alpha).^(1./shz.n-1).*shz.e23pl./shz.alpha;
 Y0(1 : rcv.dgf : rcv.dgf*rcv.N) = logV_0;
 Y0(rcv.dgf*rcv.N+1 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s22_0;
 Y0(rcv.dgf*rcv.N+2 : shz.dgf : rcv.dgf*rcv.N+shz.dgf*shz.N) = s23_0;
+% Kelvin elements relaxed under the long-term stress: spring stress
+% muK*epsK = s (0 where a cell has no element)
+if p > 0
+    sK0 = zeros(shz.N, 2, p);
+    has = muK > 0;
+    sK0(:,1,:) = reshape(has .* s22_0, shz.N, 1, p);
+    sK0(:,2,:) = reshape(has .* s23_0, shz.N, 1, p);
+    Y0(rcv.dgf*rcv.N + shz.dgf*shz.N + 1:end) = sK0(:);
+end
 
 
 % nreps-1 spin-up cycles, then the returned one
 [t,Y] = integrateImposedCycles(@(t,y) odeViscoelastic(t,y,rcv,shz,evl), ...
-    Y0,rcv,shz,stress_change,Trecur,nreps);
+    Y0,rcv,shz,stress_change,Trecur,nreps,odeSolver);
 
 % extract important quantities from state vector
 [V,e22dot,e23dot] = extractRatesFromOdeState(Y,rcv,shz);

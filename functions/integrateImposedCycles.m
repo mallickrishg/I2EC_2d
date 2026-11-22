@@ -1,11 +1,12 @@
-function [tfull,Yfull] = integrateImposedCycles(y_odefunction,Y0,rcv,shz,stress_change,Trecur,nreps)
+function [tfull,Yfull] = integrateImposedCycles(y_odefunction,Y0,rcv,shz,stress_change,Trecur,nreps,odeSolver)
 % INTEGRATEIMPOSEDCYCLES  Integrate cycles with imposed earthquakes.
 %
 %   [tfull, Yfull] = integrateImposedCycles(y_odefunction, Y0, rcv, ...
 %                                                shz, stress_change, Trecur)
 %   [tfull, Yfull] = integrateImposedCycles(..., nreps)
+%   [tfull, Yfull] = integrateImposedCycles(..., nreps, odeSolver)
 %
-%   Integrates the state from Y0 with ode45 through nreps cycles of length
+%   Integrates the state from Y0 with ode45 (or odeSolver) through nreps cycles of length
 %   Trecur. A cycle with K imposed events at times T1 < ... < TK has K+1
 %   segments, [0,T1], [T1,T2], ..., [TK,Trecur]; each segment after the
 %   first starts by applying the stress change of the event at its start.
@@ -32,15 +33,20 @@ function [tfull,Yfull] = integrateImposedCycles(y_odefunction,Y0,rcv,shz,stress_
 %   Trecur         cycle length (s)
 %   nreps          number of cycles to integrate; only the last one is
 %                  returned  [1]
+%   odeSolver      MATLAB ODE solver handle, e.g. @ode15s for the stiff
+%                  systems that short Kelvin (transient) relaxation times
+%                  give  [@ode45]
 %
 % OUTPUTS
 %   tfull          [Nt x 1] times from the start of the last cycle (s)
 %   Yfull          [Nt x n] states at those times
 %
 % NOTES
-%   - Uses ode45 (adaptive Runge-Kutta 4(5)) with AbsTol = RelTol = 1e-10,
+%   - Uses ode45 (adaptive Runge-Kutta 4(5)) by default, with AbsTol = RelTol = 1e-10,
 %     InitialStep = 1e-6 s and MaxStep = 1e8 s, restarted on each segment.
 %     The system is autonomous, so each segment is integrated from t = 0.
+%   - Kelvin spring stresses (states after the mantle stresses, see
+%     odeViscoelastic) are continuous: events do not change them.
 %   - Each event time appears twice in tfull: the states just before and
 %     just after the stress step (an event at t = 0 appears once, after
 %     the step).
@@ -54,8 +60,11 @@ function [tfull,Yfull] = integrateImposedCycles(y_odefunction,Y0,rcv,shz,stress_
 % AUTHORS
 %   Rishav Mallick, 2023
 
-if nargin < 7
+if nargin < 7 || isempty(nreps)
     nreps = 1;
+end
+if nargin < 8 || isempty(odeSolver)
+    odeSolver = @ode45;
 end
 Tk = stress_change.Timing(:);
 if numel(Tk) ~= stress_change.Nevents
@@ -86,7 +95,7 @@ for s = 1:numel(seg)
     if tb(j+1) == tb(j)                        % event at t = 0: no segment
         continue
     end
-    [t, Y] = ode45(y_odefunction, [0 tb(j+1)-tb(j)], y, options);
+    [t, Y] = odeSolver(y_odefunction, [0 tb(j+1)-tb(j)], y, options);
     y = Y(end,:)';
     if rep(s) == nreps                         % keep the last cycle only
         tfull = [tfull; t + tb(j)]; %#ok<AGROW>

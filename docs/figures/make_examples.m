@@ -17,7 +17,8 @@ if ~exist(outdir, 'dir'), mkdir(outdir); end
 if ~exist(logdir, 'dir'), mkdir(logdir); end
 
 scripts = {'plotLongtermVelocity', 'example2_analyticNewtonian', ...
-           'example4_analyticVsNumerical', 'example1_numericalPowerLaw'};
+           'example4_analyticVsNumerical', 'example1_numericalPowerLaw', ...
+           'example5_transientRheology'};
 cache = fullfile(root, 'examples', 'kernels', 'meshconvergence');
 if all(cellfun(@(h) exist(fullfile(cache, sprintf('evl_shearzone_h%d.h5', h)), 'file') > 0, {10, 20, 40}))
     scripts{end+1} = 'example3_meshConvergence';

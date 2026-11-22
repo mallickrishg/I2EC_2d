@@ -32,6 +32,16 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
             tc.verifyLessThan([d e], 1e-6, out);
         end
 
+        function transientRheologyExampleRuns(tc)
+            % example 5 prints the cycle-mean departure from the long-term
+            % rates for each rheology; it must be at round-off
+            [msg, out] = ExampleScriptsTest.runScript(ExampleScriptsTest.example('example5_transientRheology'));
+            tc.verifyEmpty(msg);
+            d = str2double(regexp(out, '(?<=slip |strain )[0-9.e+-]+', 'match'));
+            tc.verifyNumElements(d, 6, out);
+            tc.verifyLessThan(d, 1e-6, out);
+        end
+
         function numericalPowerLawExampleRuns(tc)
             % five n = 3 cycles with ode45 (several minutes)
             tc.verifyEmpty(ExampleScriptsTest.runScript(ExampleScriptsTest.example('example1_numericalPowerLaw')));
