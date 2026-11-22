@@ -189,10 +189,18 @@ divided by the viscosity of its own element, $K$ acts on the total rates, and
 Kelvin rows decay at $\mu_K/\eta_K$, so $A$, $c$ and $b$ go unchanged into
 the periodic solver; {mat:func}`computePeriodicInitialCondition` gives the
 periodic state and {mat:func}`solveAnalyticIvp` evaluates it at any time.
-$A$ is eigendecomposed without balancing ({mat:func}`eigOperator`): its
-eigenvectors are conditioned by the geometry, not by the viscosities, and
-balancing would work against that. {mat:func}`computeModalIntegrals` switches to a Taylor
-series for small $|\lambda t|$, where the closed forms lose digits.
+The fault rows of $A$ are about $10^6$ times larger than the mantle rows, so
+no single eigendecomposition is accurate for every mantle: with balancing the
+slow modes of a strong mantle lose digits, without it the mantle part of a
+weak or moderate one does. {mat:func}`computePeriodicInitialCondition`
+therefore solves the periodic condition directly, with one matrix exponential
+of $\begin{bmatrix} A & I \\ 0 & 0 \end{bmatrix} T$, and uses the
+eigendecomposition ({mat:func}`eigOperator`) only to check for growing and
+neutral modes. {mat:func}`solveAnalyticIvp` eigendecomposes $A$ with and
+without balancing and keeps the one that propagates the state more accurately,
+checked against the matrix exponential. {mat:func}`computeModalIntegrals`
+switches to a Taylor series for small $|\lambda t|$, where the closed forms
+lose digits.
 :::
 
 (kernels)=
@@ -276,7 +284,7 @@ example 2 model with a uniform mantle:
 | $t_M/T$ | $10^{-5}$ | $0.02$ (example 2) | $10^{2}$ | $10^{4}$ | $10^{6}$ | $10^{8}$ | $10^{9}$ | $10^{10}$ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | slowest $\lvert\lambda\rvert\,T$ | $3\times10^{2}$ | $0.14$ | $3\times10^{-5}$ | $3\times10^{-7}$ | $3\times10^{-9}$ | $3\times10^{-11}$ | $3\times10^{-12}$ | $3\times10^{-13}$ |
-| relative difference, mantle state | $5\times10^{-11}$ | $2\times10^{-9}$ | $5\times10^{-10}$ | $7\times10^{-10}$ | $8\times10^{-10}$ | $10^{-9}$ | $6\times10^{-10}$ | error |
+| relative difference, mantle state | $7\times10^{-11}$ | $4\times10^{-12}$ | $2\times10^{-10}$ | $5\times10^{-10}$ | $10^{-9}$ | $2\times10^{-9}$ | $6\times10^{-10}$ | error |
 
 In the strong-mantle limit the mantle simply follows its long-term strain
 rate, and the solver reproduces that.
@@ -296,13 +304,15 @@ fastest timescale and so the numbers above.
 :::{admonition} In the code
 :class: in-code
 
-the table compares {mat:func}`computePeriodicInitialCondition` with an
-independent direct solve of the periodic condition (example 2 fault, locked
-above 30 km, $T = 500$ yr). The direct solve becomes ill-conditioned itself
-(condition number $5\times10^{15}$ at $t_M/T = 10^{6}$), so beyond that the
-agreement is a consistency check rather than an error bound. Until 2026-11-21
-the operator was balanced before the eigendecomposition; that lost digits for
-strong mantles ($10^{-8}$ at $t_M/T = 10^{4}$, $10^{-6}$ at $10^{6}$). Modes that relax by less than $10^{-12}$ per cycle
+the table compares {mat:func}`computePeriodicInitialCondition` with the more
+accurate of two independent eigendecomposition solves, balanced for weak
+mantles and unbalanced for strong ones (example 2 fault, locked above 30 km,
+$T = 500$ yr). For $t_M/T \gtrsim 10^{6}$ MATLAB may warn that a matrix is
+close to singular; the result still agrees to about $10^{-9}$. Before
+2026-11-22 the periodic state came from a single eigendecomposition: balanced
+(until 2026-11-21) it lost digits for strong mantles ($10^{-8}$ at
+$t_M/T = 10^{4}$, $10^{-6}$ at $10^{6}$), unbalanced it lost them for the
+example model ($3\times10^{-9}$ in the mantle state). Modes that relax by less than $10^{-12}$ per cycle
 ($|\mathrm{Re}\,\lambda|\,T \le 10^{-12}$) raise `I2EC:neutralModes`, since
 their periodic state is not determined. Before 2026-11-21 the solver instead
 set modes with $|\lambda| < 10^{-16}$ s$^{-1}$ to zero, which for
