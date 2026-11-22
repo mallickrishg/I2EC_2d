@@ -15,7 +15,7 @@ addpath tests; runTests('all')   % + kernel rebuild and MAIN scripts
 
 Tests tagged `KnownIssue` check the *correct* behaviour of the bugs listed in §0. They fail today. When one starts passing, remove its tag.
 
-## Still open (2026-11-21, checked against `main` after PR #31)
+## Still open (2026-11-22, checked against `main` at 714b5b1)
 
 Everything not listed here is done; details are in the sections named.
 
@@ -36,12 +36,12 @@ Everything not listed here is done; details are in the sections named.
 
 Each feature gets its own branch from `main`, its own worktree outside Dropbox, and one agent. Its plan and checklist live in `docs/dev/<feature>.md` on that branch; this list keeps only one line per feature. Features never merge into each other: each starts from (or merges) `main` once the features before it have landed. Do not check out, commit to, merge or rebase another feature's branch.
 
-1. - [ ] **Burgers/Andrade transient rheology** as an option in both the semi-analytical solver (extra transient-strain state per cell; Andrade as a Prony series of Kelvin elements) and the numerical solver. *Built on branch `transient-rheology`, awaiting review and merge;* notes in `docs/dev/transient-rheology.md`.
-2. - [ ] **Gravity as a restoring force (buoyancy)**, for Maxwell and Burgers/Andrade. Buoyancy depends on displacement, so the state gains accumulated displacement and the linear periodic solve still applies. It must act on departures from the long-term topography. *Starts after 1 is merged.*
+1. - [x] ~~**Burgers/Andrade transient rheology** in both solvers.~~ *Merged in #32 (2026-11-22): Kelvin elements in series with the Maxwell dashpot, Andrade as a Prony series; notes in `docs/dev/transient-rheology.md`; example 5.*
+2. - [ ] **Gravity as a restoring force (buoyancy)**, for Maxwell and Burgers/Andrade. Buoyancy depends on displacement, so the state gains accumulated displacement and the linear periodic solve still applies. It must act on departures from the long-term topography. *Next: can start now that 1 is merged.*
 3. - [ ] **Adjoint operator/ODE for inverse problems** (e.g. estimating η(x) from surface velocities), including the adjoint of the periodicity condition. It covers every rheology built by then, plus gravity. *Starts after 2 is merged.*
 4. - [ ] **Nonlinear (power-law) spin-up without brute force** (§10): Newton shooting on the post-earthquake state. Lowest priority, *paused*. Lives only on branch `nonlin-spinup-solve` (plan committed, `main` merged in), which is reserved for one agent.
 
-**Done since 2026-11-20** (details in the sections): eigensolve accuracy regression from #29 fixed (§0a); deviatoric `LL`/`LK` construction verified (§1); example 3 figures and caches; HDF5 kernel files; analytic triangle stress (§11, #14/#15); coupled fault-mantle check, closed with no code change (§0a); both safeguards raise errors instead of fixing quietly, and the solvers eigendecompose without balancing (§0a); legacy bugs and unused functions deleted (§0, §3); one corner-flow implementation (§1); naming rules, renames and third-party credits (§2, §4, #30/#31); example inputs, kernels and the mesher moved under `examples/` and `functions/`; help-block format (§9).
+**Done since 2026-11-20** (details in the sections): eigensolve accuracy regression from #29 fixed (§0a); deviatoric `LL`/`LK` construction verified (§1); example 3 figures and caches; HDF5 kernel files; analytic triangle stress (§11, #14/#15); coupled fault-mantle check, closed with no code change (§0a); both safeguards raise errors instead of fixing quietly, and the eigensolve accuracy work: unbalanced eigensolve (#29), then a direct periodic solve with the more accurate modes for the evolution (§0a); Burgers/Andrade transient rheology (#32); legacy bugs and unused functions deleted (§0, §3); one corner-flow implementation (§1); naming rules, renames and third-party credits (§2, §4, #30/#31); example inputs, kernels and the mesher moved under `examples/` and `functions/`; help-block format (§9).
 
 ---
 
