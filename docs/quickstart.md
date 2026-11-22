@@ -38,8 +38,9 @@ walks through the script step by step.
 | {doc}`examples/example2` | Newtonian mantle, cycle solved exactly (fastest) |
 | {doc}`examples/example3` | How the answer depends on the mesh |
 | {doc}`examples/example4` | The two solvers agree on the same model |
+| {doc}`examples/example5` | Burgers and Andrade transient creep compared with Maxwell |
 
-All four use the same geometry and cached kernels; see {doc}`examples/index`.
+All five use the same geometry and cached kernels; see {doc}`examples/index`.
 
 ## Build your own model
 

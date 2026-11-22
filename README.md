@@ -56,6 +56,7 @@ run I2EC_2d/examples/example2_analyticNewtonian
 | [`example2_analyticNewtonian`](https://mallickrishg.github.io/I2EC_2d/examples/example2.html) | Newtonian mantle, periodic cycle solved semi-analytically |
 | [`example3_meshConvergence`](https://mallickrishg.github.io/I2EC_2d/examples/example3.html) | The example 2 cycle on three mantle meshes |
 | [`example4_analyticVsNumerical`](https://mallickrishg.github.io/I2EC_2d/examples/example4.html) | Both solvers on the same cycle |
+| [`example5_transientRheology`](https://mallickrishg.github.io/I2EC_2d/examples/example5.html) | Burgers and Andrade transient creep compared with Maxwell |
 
 Each takes 1–2 minutes (example 3 about 2 minutes the first time, while it
 computes and caches its kernels). To build your own model, start from the
@@ -68,7 +69,7 @@ description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.h
 | --- | --- |
 | `functions/` | Solvers, kernel assembly, long-term loading, mesh generation, plotting helpers |
 | `+geometry/` | Earth model, fault and shear-zone classes, Green's functions |
-| `examples/` | The four examples and their shared model setup |
+| `examples/` | The five examples and their shared model setup |
 | `examples/inputs/` | Geometry of the example subduction zone |
 | `examples/kernels/` | Pre-computed kernels of the example model (HDF5) |
 | `tests/` | `matlab.unittest` test suite |

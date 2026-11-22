@@ -22,7 +22,7 @@ oceanic mantle and mantle wedge.
 
 - **{doc}`Examples <examples/index>`**
 
-  Four worked models with figures, from power-law flow to mesh convergence.
+  Five worked models with figures, from power-law flow and transient creep to mesh convergence.
 
 - **{doc}`Theory and methods <theory>`**
 
