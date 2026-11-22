@@ -58,10 +58,12 @@ run I2EC_2d/examples/example2_analyticNewtonian
 | [`example4_analyticVsNumerical`](https://mallickrishg.github.io/I2EC_2d/examples/example4.html) | Both solvers on the same cycle |
 | [`example5_transientRheology`](https://mallickrishg.github.io/I2EC_2d/examples/example5.html) | Burgers and Andrade transient creep compared with Maxwell |
 
-Each takes 1–2 minutes (example 3 about 2 minutes the first time, while it
-computes and caches its kernels). To build your own model, start from the
-[quick start](https://mallickrishg.github.io/I2EC_2d/quickstart.html) and the
-description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.html).
+Examples 1–4 take 1–2 minutes each (example 3 about 2 minutes the first time,
+while it computes and caches its kernels); example 5 takes about 10 minutes,
+nearly all of it for the Andrade mantle. To build your own model, start from
+the [quick start](https://mallickrishg.github.io/I2EC_2d/quickstart.html), the
+description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.html)
+and the guide to [setting up the rheology](https://mallickrishg.github.io/I2EC_2d/rheology.html).
 
 ## Repository layout
 
@@ -81,6 +83,7 @@ description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.h
 | I want to… | Go to |
 | --- | --- |
 | Understand the equations and the method | [Theory](https://mallickrishg.github.io/I2EC_2d/theory.html) |
+| Set the rheology and call a solver | [Set up the rheology](https://mallickrishg.github.io/I2EC_2d/rheology.html) |
 | Set up my own fault, mesh or kernels | [Inputs](https://mallickrishg.github.io/I2EC_2d/inputs.html) |
 | Choose kernel options | [Kernel options](https://mallickrishg.github.io/I2EC_2d/inputs.html#kernel-options) |
 | Look up a function | [API reference](https://mallickrishg.github.io/I2EC_2d/api/solvers.html) |
