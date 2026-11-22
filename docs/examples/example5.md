@@ -16,7 +16,7 @@ without spin-up (see [Rheology](../theory.md#rheology)). Run it with
 run examples/example5_transientRheology
 ```
 
-It takes about 2 minutes, nearly all of it for Andrade (see step 3).
+It takes about 10 minutes, nearly all of it for Andrade (see step 3).
 
 ## 1. Kelvin elements per cell
 
@@ -86,9 +86,9 @@ strain rates integrate to zero. The script checks this from the integrated
 slip and strain over a whole cycle:
 
 ```text
-Maxwell   1061 states, cycle-mean departure from the long-term rates: slip 4.4e-10, strain 1.2e-08  (1 s)
-Burgers   2103 states, cycle-mean departure from the long-term rates: slip 2.5e-09, strain 2.2e-08  (3 s)
-Andrade   8355 states, cycle-mean departure from the long-term rates: slip 1.7e-10, strain 7.5e-10  (111 s)
+Maxwell   1061 states, cycle-mean departure from the long-term rates: slip 1.3e-13, strain 1.9e-12  (2 s)
+Burgers   2103 states, cycle-mean departure from the long-term rates: slip 1.3e-12, strain 4.7e-12  (10 s)
+Andrade   8355 states, cycle-mean departure from the long-term rates: slip 1.3e-12, strain 1.5e-11  (573 s)
 ```
 
 Each Kelvin element adds $2M$ states, and the eigendecomposition costs

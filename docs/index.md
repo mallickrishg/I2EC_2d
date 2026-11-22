@@ -20,6 +20,10 @@ oceanic mantle and mantle wedge.
 
   Install, run the semi-analytical and numerical solvers, choose kernels.
 
+- **{doc}`Set up the rheology <rheology>`**
+
+  Put Maxwell, power-law, Burgers or Andrade rheology on the mesh and call a solver.
+
 - **{doc}`Examples <examples/index>`**
 
   Five worked models with figures, from power-law flow and transient creep to mesh convergence.
@@ -48,6 +52,7 @@ oceanic mantle and mantle wedge.
 :hidden:
 
 quickstart
+rheology
 examples/index
 theory
 inputs

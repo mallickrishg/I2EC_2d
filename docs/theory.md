@@ -113,8 +113,9 @@ $v^{\infty} T$, and its stress change is applied as an instantaneous step.
 the mantle takes `shz.alpha` and `shz.n`, and Kelvin elements in
 `shz.etaK` (MPa s; `Inf` for none) and `shz.muK` (MPa), $M \times p$ each
 (default $M \times 0$: Maxwell). {mat:func}`computeAndradePronySeries`
-returns them for Andrade creep; {doc}`examples/example5` compares the three
-rheologies. The fault takes
+returns them for Andrade creep; {doc}`rheology` shows how to set each
+rheology and call the solvers, and {doc}`examples/example5` compares the three.
+The fault takes
 `rcv.faultLaw` (`'ratestrengthening'` or `'linear'`, read by
 {mat:func}`isLinearFaultLaw`) and `rcv.Asigma`, which holds $(a-b)\sigma$ (MPa)
 or $\eta'$, a viscosity per unit length (MPa s/m). Locked patches are
@@ -307,8 +308,7 @@ fastest timescale and so the numbers above.
 the table compares {mat:func}`computePeriodicInitialCondition` with the more
 accurate of two independent eigendecomposition solves, balanced for weak
 mantles and unbalanced for strong ones (example 2 fault, locked above 30 km,
-$T = 500$ yr). For $t_M/T \gtrsim 10^{6}$ MATLAB may warn that a matrix is
-close to singular; the result still agrees to about $10^{-9}$. Before
+$T = 500$ yr). Before
 2026-11-22 the periodic state came from a single eigendecomposition: balanced
 (until 2026-11-21) it lost digits for strong mantles ($10^{-8}$ at
 $t_M/T = 10^{4}$, $10^{-6}$ at $10^{6}$), unbalanced it lost them for the
