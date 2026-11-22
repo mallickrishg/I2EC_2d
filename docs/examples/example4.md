@@ -62,8 +62,8 @@ The script prints the largest difference over the cycle and whether the
 numerical run ends where it started:
 
 ```text
-largest difference over the cycle: slip rate 4.0e-09, strain rate 3.4e-11 (relative)
-numerical end state vs start state: 3.2e-11 (relative)
+largest difference over the cycle: slip rate 3.8e-09, strain rate 3.6e-11 (relative)
+numerical end state vs start state: 2.2e-11 (relative)
 ```
 
 ## 4. Plot the results
