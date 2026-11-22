@@ -109,17 +109,17 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) SolversTest < matlab.unittest.
 
         function exampleOperatorIsAccurateForWeakAndStrongMantles(tc)
             % The example 2 operator with a moderate (t_M/T = 0.1) and a
-            % strong (1e7) mantle. Fault and mantle rates differ by ~1e7 in
+            % strong (1e8) mantle; no warning from the periodic solve. Fault and mantle rates differ by ~1e7 in
             % size, so each eigendecomposition alone loses digits in one of
             % the two regimes (unbalanced: mantle 1e-9 at 0.1; balanced:
             % fault 2e-9 for strong mantles). The periodic state is solved
             % directly and the evolution keeps the more accurate modes.
             ex = loadExampleModel(true);
             yr = 3.15e7; T = 500*yr;
-            for ratio = [0.1 1e7]
+            for ratio = [0.1 1e8]
                 [A, c, b, Nc] = SolversTest.exampleSystem(ex, ratio*T*30e3, T);
                 n = size(A, 1); f = 1:Nc; mt = Nc+1:n;
-                y0 = computePeriodicInitialCondition(A, c, b, T);
+                y0 = tc.verifyWarningFree(@() computePeriodicInitialCondition(A, c, b, T));
                 % one cycle from y0 returns to y0 - b
                 yT = solveAnalyticIvp(A, c, y0, T);
                 tc.verifyLessThan(norm(yT(f) + b(f) - y0(f)) / norm(y0(f)), 1e-10, sprintf('fault, t_M/T = %g', ratio));

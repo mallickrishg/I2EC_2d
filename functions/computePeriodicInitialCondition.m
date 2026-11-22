@@ -55,6 +55,9 @@ function y0 = computePeriodicInitialCondition(A, c, b, T)
 %     from an (n+1) exponential, loses digits for strong mantles.
 %   - Cost: an expm of size 2n, about twice the eigendecomposition
 %     (0.7 s against 0.3 s for n = 1061).
+%   - The linear solve is equilibrated (MATLAB equilibrate): without it,
+%     strong mantles (t_M/T >= 1e6) gave a "close to singular" warning
+%     from the fault/mantle scale difference alone.
 %   - The periodic state is consistent with solveAnalyticIvp (an IVP
 %     started from y0 returns to y0 - b after one period).
 %
@@ -91,9 +94,15 @@ end
 %      y0 = -(A*G) \ (G*c + b),
 %  which avoids forming I - Phi (cancellation for slow modes). G comes from
 %  one matrix exponential of the augmented 2n x 2n matrix [A I; 0 0]*T.
+%  A*G inherits the ~1e6 scale difference between fault and mantle rows
+%  (rcond down to 4e-19 for strong mantles, with MATLAB's "close to
+%  singular" warning), so it is equilibrated (row and column scaling)
+%  first: rcond ~1e-4 in every regime, same solution to 1e-15.
 n = size(A, 1);
 X = expm([A, eye(n); zeros(n, 2*n)] * T);
 G = X(1:n, n+1:end);
-y0 = -(A*G) \ (G*c + b);
+M = A*G;
+[P, R, C] = equilibrate(M);
+y0 = -C * ((R*P*M*C) \ (R*P*(G*c + b)));
 
 end
