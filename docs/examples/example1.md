@@ -54,7 +54,7 @@ long-term strain rate; faster-deforming cells are weaker. The script prints the
 resulting range:
 
 ```text
-long-term effective viscosity: 2.7e+17 to 7e+19 Pa s (1e19 at 3e-16 1/s)
+long-term effective viscosity: 2.5e+17 to 7e+19 Pa s (1e19 at 3e-16 1/s)
 ```
 
 ## 3. Impose the earthquake
@@ -84,7 +84,7 @@ cells, 1/s). Fifteen cycles bring it close to periodic; the script checks by
 comparing the start and end of the last cycle:
 
 ```text
-change over the last cycle: strain rate median 2.2e-07, max 3.4e-05; slip rate max 3.7e-09 (relative, per cell/patch)
+change over the last cycle: strain rate median 1.4e-07, max 7.6e-05; slip rate max 4.2e-09 (relative, per cell/patch)
 ```
 
 ## 5. Plot the results
@@ -121,7 +121,7 @@ vx = G(1)*dstate - m.Ghx*(m.hinge.Vpl*Vpl);     % j = 2 for vz
 Five years after the earthquake the surface velocity alternates along the
 profile. This comes from the power-law mantle (the Newtonian {doc}`example2`
 has none of it): the same pattern, with amplitudes within about 0.6 of the
-plate rate, appears on the meshes of {doc}`example3` with 495 and 1955 cells.
+plate rate, appears on the meshes of {doc}`example3` with 497 and 1953 cells.
 
 ```{figure} ../_static/examples/example1_numericalPowerLaw_3.png
 :alt: Surface velocity at three times in the last cycle

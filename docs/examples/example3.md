@@ -64,12 +64,12 @@ contains each point), and the coarse and regular solutions are compared with
 the fine one:
 
 ```text
-Difference from the fine mesh, 21566 points on a 2 km grid
+Difference from the fine mesh, 21605 points on a 2 km grid
                             t/T = 0.01    t/T = 0.10    t/T = 0.99
-coarse   relative L2              28.1 %        53.5 %        57.6 %
-         median |log10 ratio|        0.033         0.151         0.107
-regular  relative L2              20.8 %        38.9 %        38.9 %
-         median |log10 ratio|        0.016         0.068         0.045
+coarse   relative L2              28.6 %        54.2 %        57.7 %
+         median |log10 ratio|        0.033         0.152         0.109
+regular  relative L2              20.1 %        36.3 %        39.1 %
+         median |log10 ratio|        0.016         0.068         0.046
 ```
 
 The typical (median) difference roughly halves with each refinement. The L2

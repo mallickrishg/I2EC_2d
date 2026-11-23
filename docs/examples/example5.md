@@ -86,9 +86,9 @@ strain rates integrate to zero. The script checks this from the integrated
 slip and strain over a whole cycle:
 
 ```text
-Maxwell   1061 states, cycle-mean departure from the long-term rates: slip 1.3e-13, strain 1.9e-12  (2 s)
-Burgers   2103 states, cycle-mean departure from the long-term rates: slip 1.3e-12, strain 4.7e-12  (10 s)
-Andrade   8355 states, cycle-mean departure from the long-term rates: slip 1.3e-12, strain 1.5e-11  (573 s)
+Maxwell   1061 states, cycle-mean departure from the long-term rates: slip 2.7e-13, strain 1.3e-12  (2 s)
+Burgers   2103 states, cycle-mean departure from the long-term rates: slip 2.3e-13, strain 3.4e-12  (10 s)
+Andrade   8355 states, cycle-mean departure from the long-term rates: slip 2.9e-12, strain 9.9e-12  (491 s)
 ```
 
 Each Kelvin element adds $2M$ states, and the eigendecomposition costs
@@ -111,7 +111,7 @@ Just after the earthquake the transient elements make the mantle respond 10×
 (Burgers) to 100× (Andrade) faster than the Maxwell mantle:
 
 ```text
-mean mantle strain rate / long-term at 0.01 yr: [10.6 114 978]; at 500 yr: [1.32 1.32 1.32]
+mean mantle strain rate / long-term at 0.01 yr: [10.5 113 967]; at 500 yr: [1.3 1.3 1.29]
 ```
 
 Burgers releases its transient within a few years (its Kelvin time is about
