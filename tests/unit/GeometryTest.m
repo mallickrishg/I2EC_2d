@@ -95,7 +95,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) GeometryTest < matlab.unittest
             tc.verifyGreaterThan(min(shz.area), 0, 'no degenerate triangles');
             % default outline: same as the example mesh in examples/inputs/
             oc = [-100 -20; -100 -200; 450 -200; 450 -132.5; 0 -20];
-            we = [201 -50; 450 -112.5; 450 -35; 201 -35];
+            we = [200 -50; 450 -112.5; 450 -35; 200 -35];
             outline = (polyarea(oc(:,1), oc(:,2)) + polyarea(we(:,1), we(:,2))) * 1e6;
             tc.verifyEqual(sum(shz.area), outline, 'RelTol', 1e-10, 'mesh fills the polygons');
             tc.verifyEqual(sum(tc.Ex.shz.area), outline, 'RelTol', 1e-10, 'default outline = example mesh');

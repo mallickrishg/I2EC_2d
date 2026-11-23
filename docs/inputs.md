@@ -65,8 +65,15 @@ createShearZoneMesh('Hmax', [15 10], 'Name', 'shearzone_fine');   % examples/inp
 
 Its default polygons are the outline of the example mesh. The example mesh was
 made with the PDE Toolbox, but its exact settings were not recorded, so
-`'Hmax', 20` gives a similar mesh (495 triangles instead of 521), not the same
+`'Hmax', 20` gives a similar mesh (497 triangles instead of 521), not the same
 one. Rebuild the cached kernels below after changing the mesh.
+
+The wedge polygon starts at (200, −50) km, the down-dip end of the megathrust,
+so the fault ends on the corner vertex of the wedge mesh, and the base of the
+wedge continues the fault at the same dip. Closing this junction keeps the
+mantle kernel certified and the coupled fault–mantle operator free of growing
+modes. Elsewhere, keep mantle cells about one cell size away from the fault:
+cells lying along the fault over many patches make the kernels inaccurate.
 
 ## Pre-computed kernels
 

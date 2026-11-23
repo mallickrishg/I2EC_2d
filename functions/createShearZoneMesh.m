@@ -31,9 +31,11 @@ function [vert, tri] = createShearZoneMesh(varargin)
 % NOTES
 %   - The default polygons are the outline of the example mesh in examples/inputs/
 %     (slab dip atan(0.25) = 14.04 deg, oceanic plate 20 km and upper
-%     plate 35 km thick, domain to x = 450 km and z = -200 km).
+%     plate 35 km thick, domain to x = 450 km and z = -200 km). The wedge
+%     starts at (200, -50) km, the down-dip end of the example megathrust,
+%     so the fault ends on the corner vertex of the wedge.
 %   - The example mesh in examples/inputs/ was made with the PDE Toolbox, but the
-%     exact settings were not recorded: 'Hmax' = 20 gives 495 triangles,
+%     exact settings were not recorded: 'Hmax' = 20 gives 497 triangles,
 %     close to its 521 but not the same mesh. Rebuild the cached kernels
 %     in examples/kernels/ after replacing it.
 %   - Requires the PDE Toolbox. It is needed only to make meshes, not to
@@ -50,7 +52,7 @@ function [vert, tri] = createShearZoneMesh(varargin)
 p = inputParser;
 p.addParameter('Hmax', 20, @(h) isnumeric(h) && any(numel(h) == [1 2]) && all(h > 0));
 p.addParameter('Oceanic', [-100 -20; -100 -200; 450 -200; 450 -132.5; 0 -20], @isPolygon);
-p.addParameter('Wedge', [201 -50; 450 -112.5; 450 -35; 201 -35], @isPolygon);
+p.addParameter('Wedge', [200 -50; 450 -112.5; 450 -35; 200 -35], @isPolygon);
 p.addParameter('OutputFolder', fullfile(fileparts(fileparts(mfilename('fullpath'))), 'examples', 'inputs'), ...
     @(s) ischar(s) || isstring(s));
 p.addParameter('Name', 'shearzone', @(s) ischar(s) || isstring(s));
