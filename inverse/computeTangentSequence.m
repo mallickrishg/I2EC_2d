@@ -31,6 +31,9 @@ function dU = computeTangentSequence(fwd, dTheta, dPhi)
 %     sweep through the segments is then O(n) per segment.
 %   - Cost per direction: B = Vi*diag(dTheta)*V (two n x n products) plus
 %     O(n^2) per distinct segment length.
+%   - Directions are processed 12 at a time, so memory stays bounded for
+%     hundreds of directions (e.g. a full Jacobian for a resolution
+%     analysis); the divided differences are recomputed per chunk.
 %   - Adjoint of computeAdjointGradient: for any S,
 %     sum(S.*dU) = g.eta'*dTheta + g.muK'*dPhi (tests/unit/AdjointTest).
 %
@@ -46,6 +49,17 @@ n = numel(lam);
 r = size(dTheta, 2);
 if nargin < 3 || isempty(dPhi)
     dPhi = zeros(n, r);
+end
+% directions in chunks: each holds one or two n x n coupling matrices
+% (35 MB each for n = 2103), so hundreds at once would not fit in memory
+chunk = 12;
+if r > chunk
+    dU = zeros(n, numel(fwd.seq.tObs), r);
+    for k0 = 1:chunk:r
+        kk = k0:min(k0 + chunk - 1, r);
+        dU(:, :, kk) = computeTangentSequence(fwd, dTheta(:, kk), dPhi(:, kk));
+    end
+    return
 end
 sys = fwd.sys; seq = fwd.seq;
 decay = sys.decay;

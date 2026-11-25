@@ -166,6 +166,45 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             end
         end
 
+        function tangentInChunksMatchesOneAtATime(tc)
+            % computeTangentSequence processes directions 12 at a time
+            tc.setKelvin("burgers");
+            sys = tc.system();
+            fwd = solveLinearSequence(sys, tc.sequence(sys));
+            rng(9);
+            n = numel(sys.eta);
+            dTheta = randn(n, 15); dPhi = randn(n, 15) .* (sys.decay ~= 0);
+            dU = computeTangentSequence(fwd, dTheta, dPhi);
+            for k = [1 12 13 15]
+                dUk = computeTangentSequence(fwd, dTheta(:, k), dPhi(:, k));
+                tc.verifyEqual(dU(:, :, k), dUk, 'AbsTol', 1e-12*max(abs(dUk), [], 'all'), sprintf('direction %d', k));
+            end
+        end
+
+        function balancedModesAreAccurateForSpreadViscosity(tc)
+            % viscosities spread over several decades: the balanced modes
+            % (Vi from the balanced eigenvectors, not from inverting V)
+            % match the matrix exponential; both variants agree with each
+            % other on the default model
+            sys = tc.system();
+            seq = tc.sequence(sys);
+            fU = solveLinearSequence(sys, seq, 'Balance', false);
+            fB = solveLinearSequence(sys, seq, 'Balance', true);
+            tc.verifyEqual(fB.U, fU.U, 'AbsTol', 1e-8*max(abs(fU.U), [], 'all'));
+
+            rng(4);
+            shz = tc.M.shz;
+            shz.alpha = 1./(1e-6*10.^(19 + 1.5*randn(shz.N, 1)));
+            shz.etaK = 1e-6*10.^(18 + 1.5*randn(shz.N, 1)); shz.muK = 1.5e4*ones(shz.N, 1);
+            sys = tc.system();
+            seq = tc.sequence(sys);
+            fB = solveLinearSequence(sys, seq, 'Balance', true);
+            n = size(sys.A, 1);
+            X = expm([sys.A, sys.c; zeros(1, n+1)] * seq.T);
+            yT = X(1:n, 1:n)*fB.y0 + X(1:n, end);            % one cycle from the periodic state
+            tc.verifyEqual(yT + seq.b0, fB.y0, 'AbsTol', 1e-6*max(abs(fB.y0)));
+        end
+
         function rowsWithoutViscosityGetNoGradient(tc)
             % gravity readiness: a row with eta = NaN (no viscosity) is
             % carried by the solve but is not a parameter

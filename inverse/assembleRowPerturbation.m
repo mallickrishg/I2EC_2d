@@ -12,6 +12,12 @@ function [dTheta, dPhi] = assembleRowPerturbation(sys, dp, varargin)
 %   For any g: sum of gp.(f).*dp.(f) over the fields equals
 %   g.eta'*dTheta + g.muK'*dPhi.
 %
+%   To hold a parameter fixed, leave its field out (or zero): it is then
+%   not perturbed. With the default parameters, leaving out .muKrel holds
+%   muK fixed while .tauK still moves etaK (etaK = tauK*muK), which is how
+%   to invert eta_M and eta_K with muK known; inverting raw etaK and muK
+%   instead trades them off almost perfectly (example 6).
+%
 % INPUTS
 %   sys    struct from assembleLinearSystem
 %   dp     struct with any of the fields (missing fields are zero; r

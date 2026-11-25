@@ -33,7 +33,9 @@ function fwd = solveLinearSequence(sys, seq, varargin)
 %              'auto' (default) picks the variant whose modal
 %              propagation over one cycle is closer to the matrix
 %              exponential, as solveAnalyticIvp does. Pass fwd.balance of
-%              a first solve to skip the check in later solves.
+%              a first solve to skip the check in later solves. For
+%              viscosities that vary over several decades (inversions),
+%              balancing is the accurate choice.
 %
 % OUTPUTS
 %   fwd    struct with fields
@@ -59,6 +61,11 @@ function fwd = solveLinearSequence(sys, seq, varargin)
 %     accuracy (tests/unit/AdjointTest).
 %   - Growing and neutral modes are errors, as in
 %     computePeriodicInitialCondition.
+%   - With balancing, V\I is never formed: Vi is built from the balanced
+%     eigenvectors and the scaling (V itself can have rcond ~ 1e-26). For
+%     a mantle with log10(eta) spread by 3 decades, the modal state after
+%     one cycle agrees with expm to 8e-6 balanced, against 2e-2 unbalanced
+%     (2026-11-25).
 %   - Events at the same time add their jumps; an event at t = 0 acts after
 %     the start state.
 %
@@ -88,24 +95,24 @@ T = seq.T;
 
 % ---- eigendecomposition (one variant) ----
 if ischar(balance) || isstring(balance)
-    [V, lam, nGrowing] = eigOperator(A);
-    checkModes(lam, nGrowing, T);
-    [Vb, lamb] = eigOperator(A, [], true);
+    [V, Vi, lam] = computeModes(A, false);
+    checkModes(lam, T);
+    [Vb, Vib, lamb] = computeModes(A, true);
     ytest = seq.b0;
     if ~any(ytest), ytest = c; end
     X = expm([A, c; zeros(1, n+1)] * T);
     yref = X(1:n, 1:n)*ytest + X(1:n, end);
     scale = abs(yref) + 1e-12*max(abs(yref)) + realmin;
-    balance = propagationError(Vb, lamb, ytest, c, T, yref, scale) < ...
-              propagationError(V, lam, ytest, c, T, yref, scale);
+    balance = propagationError(Vb, Vib, lamb, ytest, c, T, yref, scale) < ...
+              propagationError(V, Vi, lam, ytest, c, T, yref, scale);
     if balance
-        V = Vb; lam = lamb;
+        V = Vb; Vi = Vib; lam = lamb;
     end
 else
-    [V, lam, nGrowing] = eigOperator(A, [], logical(balance));
-    checkModes(lam, nGrowing, T);
+    balance = logical(balance);
+    [V, Vi, lam] = computeModes(A, balance);
+    checkModes(lam, T);
 end
-Vi = V \ eye(n);
 ch = Vi * c;
 
 % ---- periodic spin-up, in modal form ----
@@ -173,7 +180,28 @@ if size(seq.b0, 1) ~= n || size(seq.bEvents, 1) ~= n || size(seq.bEvents, 2) ~= 
 end
 end
 
-function checkModes(lam, nGrowing, T)
+function [V, Vi, lam] = computeModes(A, doBalance)
+% A = V*diag(lam)*Vi. With balancing (diagonal scaling t, no permutation),
+% B = diag(1./t)*A*diag(t) = Vb*diag(lam)/Vb and V = t.*Vb, Vi = (Vb\I)./t':
+% Vi comes from the well-conditioned Vb, not from inverting V, whose
+% columns carry the scaling (rcond(V) ~ 1e-26 for viscosities spread over
+% many decades).
+n = size(A, 1);
+if doBalance
+    [Tb, B] = balance(A, 'noperm');
+    t = diag(Tb);
+    [Vb, D] = eig(B);
+    V = t .* Vb;
+    Vi = (Vb \ eye(n)) ./ t.';
+else
+    [V, D] = eig(A, 'nobalance');
+    Vi = V \ eye(n);
+end
+lam = diag(D);
+end
+
+function checkModes(lam, T)
+nGrowing = sum(real(lam) > 1e-10 * max(abs(lam)));
 if nGrowing > 0
     error('I2EC:growingModes', ['solveLinearSequence: the operator has %d growing modes ' ...
         '(largest Re(lambda) = %.3g 1/s).'], nGrowing, max(real(lam)));
@@ -184,8 +212,8 @@ if any(abs(real(lam)) * T <= 1e-12)
 end
 end
 
-function err = propagationError(V, lambda, y0, c, t, yref, scale)
+function err = propagationError(V, Vi, lambda, y0, c, t, yref, scale)
 [e, g] = computeModalIntegrals(lambda, t);
-y = real(V * (e .* (V \ y0) + g .* (V \ c)));
+y = real(V * (e .* (Vi * y0) + g .* (Vi * c)));
 err = norm((y - yref) ./ scale) / sqrt(numel(y));
 end

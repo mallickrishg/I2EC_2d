@@ -13,7 +13,10 @@ function gp = extractViscosityGradient(g, sys, varargin)
 %   combinations surface data resolve), or with 'raw' log eta_M, log etaK,
 %   log muK. Both are linear maps of the raw logs, so
 %       dJ/dlog tauK = gEtaK,   dJ/dlog(muK/G) = gEtaK + gMuK.
-%   G is any fixed modulus; it does not enter the gradient.
+%   G is any fixed modulus; it does not enter the gradient. To hold muK
+%   fixed and invert eta_M and eta_K, use .etaM and .tauK and ignore
+%   .muKrel (with muK fixed, a change of log tauK is the same change of
+%   log etaK).
 %   assembleRowPerturbation is the transpose map (directions).
 %
 % INPUTS
