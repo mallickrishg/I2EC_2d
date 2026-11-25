@@ -145,6 +145,80 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             tc.verifyGreaterThan(rate(end), 1.5, [msg ' (second order expected)']);
         end
 
+        function messySamplingMatchesGroupedMethod(tc)
+            % GNSS-like epochs: log-spaced, a daily burst, two long gaps,
+            % near-duplicate epochs (1 s, 1 ms and 1 us apart): separable
+            % adjoint and tangent against the per-length method
+            for kind = ["maxwell", "burgers"]
+                tc.setKelvin(kind);
+                sys = tc.system();
+                seq = tc.sequence(sys);
+                seq.tObs = tc.messyEpochs(); seq.tRef = seq.tObs(1);
+                fwd = solveLinearSequence(sys, seq);
+                rng(17);
+                n = numel(sys.eta);
+                S = randn(size(fwd.U));
+                gs = computeAdjointGradient(fwd, S);
+                gg = computeAdjointGradient(fwd, S, 'Method', 'grouped');
+                tc.verifyTrue(all(isfinite([gs.eta; gs.muK])), char(kind));
+                tc.verifyEqual(gs.eta, gg.eta, 'AbsTol', 1e-10*max(abs(gg.eta)), char(kind));
+                tc.verifyEqual(gs.muK, gg.muK, 'AbsTol', 1e-10*max([abs(gg.muK); realmin]), char(kind));
+                dTheta = randn(n, 2); dPhi = randn(n, 2) .* (sys.decay ~= 0);
+                dUs = computeTangentSequence(fwd, dTheta, dPhi);
+                dUg = computeTangentSequence(fwd, dTheta, dPhi, 'Method', 'grouped');
+                tc.verifyEqual(dUs, dUg, 'AbsTol', 1e-10*max(abs(dUg), [], 'all'), char(kind));
+                % and the tangent stays the adjoint of the gradient
+                tc.verifyEqual(sum(S .* dUs(:, :, 1), 'all'), gs.eta'*dTheta(:, 1) + gs.muK'*dPhi(:, 1), ...
+                    'RelTol', 1e-10, char(kind));
+            end
+        end
+
+        function messySamplingAndMissingStationsMatchFiniteDifferences(tc)
+            % messy epochs plus stations that start late, stop early, have
+            % no data at all, and random dropouts
+            tc.setKelvin("burgers");
+            sys = tc.system();
+            seq = tc.sequence(sys);
+            seq.tObs = tc.messyEpochs(); seq.tRef = seq.tObs(1);
+            tc.verifyGradient("burgers", 'default', seq, tc.missingPattern(seq.tObs));
+        end
+
+        function missingDataCarryNoMisfit(tc)
+            % the misfit with NaN entries equals the misfit of the observed
+            % entries alone (offsets refitted per row); a row with no data
+            % gives no NaN, no misfit and zero Jacobian rows; the adjoint
+            % gradient equals Jw'*rw from the tangents
+            tc.setKelvin("burgers");
+            sys = tc.system();
+            seq = tc.sequence(sys);
+            seq.tObs = tc.messyEpochs(); seq.tRef = seq.tObs(1);
+            fwd = solveLinearSequence(sys, seq);
+            obs = tc.observations(sys, fwd);
+            miss = tc.missingPattern(seq.tObs);
+            obs.d(miss) = NaN;
+            n = numel(sys.eta);
+            rng(19);
+            dTheta = randn(n, 3); dPhi = randn(n, 3) .* (sys.decay ~= 0);
+            [J, res] = computeDisplacementMisfit(obs, fwd, computeTangentSequence(fwd, dTheta, dPhi));
+            u = obs.H * fwd.U; Jref = 0;
+            for i = 1:size(u, 1)
+                k = ~miss(i, :);
+                if ~any(k), continue, end
+                ri = u(i, k) - obs.d(i, k);
+                ri = ri - mean(ri);                         % optimal offset (equal weights)
+                Jref = Jref + 0.5*obs.W*sum(ri.^2);
+            end
+            tc.verifyEqual(J, Jref, 'RelTol', 1e-12);
+            tc.verifyTrue(all(isfinite(res.S(:))) && all(isfinite(res.Jw(:))));
+            dead = all(miss, 2);
+            tc.assertTrue(any(dead), 'the pattern has a station with no data');
+            Jw = reshape(res.Jw, size(u, 1), [], 3);
+            tc.verifyEqual(Jw(dead, :, :), zeros(nnz(dead), size(u, 2), 3));
+            tc.verifyEqual(res.offset(dead), zeros(nnz(dead), 1));
+            g = computeAdjointGradient(fwd, res.S);
+            tc.verifyEqual(res.Jw'*res.rw, dTheta'*g.eta + dPhi'*g.muK, 'RelTol', 1e-10);
+        end
+
         function periodicStateMatchesDirectSolve(tc)
             % modal periodic state of solveLinearSequence against
             % computePeriodicInitialCondition, and the observed window
@@ -337,6 +411,30 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
                 'tObs', linspace(0.3, 15, 14)*yr, 'tRef', 0.1*yr);
         end
 
+        function t = messyEpochs(tc)
+            % log-spaced epochs over 15 yr with a daily burst for 30 days
+            % at 0.5 yr, gaps over 2-6 yr and 9-11 yr, near-duplicates 1 s,
+            % 1 ms and 1 us after three epochs, and a last lone epoch
+            yr = tc.yr;
+            t = logspace(-2, log10(12), 60)*yr;
+            t = t(~(t > 2*yr & t < 6*yr) & ~(t > 9*yr & t < 11*yr));
+            t = [t, 0.5*yr + (0:29)*yr/365, t(10) + 1, t(20) + 1e-3, t(30) + 1e-6, 15*yr];
+            t = unique(t);
+        end
+
+        function miss = missingPattern(tc, t)
+            % 7 stations x 2 components: stations 1-2 start at 5 yr,
+            % station 3 stops at 3 yr, station 4 has no data, 10% random
+            % dropouts elsewhere
+            rng(23);
+            ns = size(tc.M.obs, 1);
+            m1 = rand(ns, numel(t)) < 0.1;
+            m1(1:2, :) = m1(1:2, :) | t < 5*tc.yr;
+            m1(3, :) = m1(3, :) | t > 3*tc.yr;
+            m1(4, :) = true;
+            miss = [m1; m1];                                 % both components
+        end
+
         function g = quadratureGradient(tc, sys, h, t)
             % gradient of J = 1/2*sum_j w_j*(h*U_j)^2, trapezoid weights w on t
             seq = tc.sequence(sys);
@@ -402,7 +500,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             fwd = solveLinearSequence(sys, seq, 'Balance', balance);
         end
 
-        function verifyGradient(tc, kind, parameters, seq)
+        function verifyGradient(tc, kind, parameters, seq, missing)
             % adjoint gradient against central differences, per parameter
             % (all of them: the small model has a few dozen)
             if nargin < 4, seq = []; end
@@ -410,6 +508,9 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             p0 = tc.parameters();
             fwd = tc.forwardAt(p0, 'auto', seq);
             obs = tc.observations(fwd.sys, fwd);
+            if nargin > 4 && ~isempty(missing)
+                obs.d(missing) = NaN;
+            end
             [~, res] = computeDisplacementMisfit(obs, fwd);
             g = computeAdjointGradient(fwd, res.S);
             gp = extractViscosityGradient(g, fwd.sys, 'Parameters', parameters);

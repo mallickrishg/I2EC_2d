@@ -15,10 +15,17 @@ function [J, res] = computeDisplacementMisfit(obs, fwd, dU)
 %   exactly (envelope theorem), and the Gauss-Newton Jacobian is the
 %   tangent projected the same way.
 %
+%   Missing data: NaN in obs.d (or zero weight) marks an entry with no
+%   observation, e.g. a station that starts recording midway, stops, or
+%   has gaps. Missing entries carry no misfit and no adjoint source; each
+%   row's offset is fitted to the entries it has, and a row with none
+%   gets offset 0 and contributes nothing.
+%
 % INPUTS
 %   obs    struct with fields
 %          .H        [nd x n] station operator (assembleStationKernels)
-%          .d        [nd x nObs] data, one column per fwd.seq.tObs
+%          .d        [nd x nObs] data, one column per fwd.seq.tObs;
+%                    NaN where a station has no observation
 %          .W        weights (inverse variances): scalar or [nd x nObs]
 %                    [1]
 %          .fixed    [nd x nObs] displacement that does not depend on
@@ -31,7 +38,9 @@ function [J, res] = computeDisplacementMisfit(obs, fwd, dU)
 % OUTPUTS
 %   J      misfit
 %   res    struct with fields
-%          .r        [nd x nObs] residuals (with the optimal offsets)
+%          .r        [nd x nObs] residuals (with the optimal offsets);
+%                    0 where data are missing
+%          .mask     [nd x nObs] true where an observation is used
 %          .u        [nd x nObs] predicted displacement (with offsets)
 %          .offset   [nd x 1] optimal offsets (0 without)
 %          .S        [n x nObs] adjoint source dJ/dU
@@ -52,20 +61,28 @@ nObs = size(fwd.U, 2);
 nd = size(H, 1);
 W = 1; if isfield(obs, 'W') && ~isempty(obs.W), W = obs.W; end
 W = W .* ones(nd, nObs);
+d = obs.d;
+mask = ~isnan(d) & W > 0;                     % observed entries
+W(~mask) = 0;
+d(~mask) = 0;
+den = sum(W, 2);                              % per row; 0 for a row with no data
+den(den == 0) = Inf;                          % its offset and projection are 0
 fixed = 0; if isfield(obs, 'fixed') && ~isempty(obs.fixed), fixed = obs.fixed; end
 useOffsets = ~isfield(obs, 'offsets') || isempty(obs.offsets) || obs.offsets;
 
 u = H * fwd.U + fixed;
-r = u - obs.d;
+r = u - d;
 offset = zeros(nd, 1);
 if useOffsets
-    offset = -sum(W .* r, 2) ./ sum(W, 2);
+    offset = -sum(W .* r, 2) ./ den;
     r = r + offset;
 end
+r(~mask) = 0;
 J = 0.5 * sum(W .* r.^2, 'all');
 res.r = r;
 res.u = u + offset;
 res.offset = offset;
+res.mask = mask;
 res.S = H' * (W .* r);
 res.rw = reshape(sqrt(W) .* r, [], 1);
 if nargin > 2 && ~isempty(dU)
@@ -74,7 +91,7 @@ if nargin > 2 && ~isempty(dU)
     for k = 1:nr
         du = H * dU(:, :, k);
         if useOffsets
-            du = du - sum(W .* du, 2) ./ sum(W, 2);
+            du = du - sum(W .* du, 2) ./ den;
         end
         res.Jw(:, k) = reshape(sqrt(W) .* du, [], 1);
     end
