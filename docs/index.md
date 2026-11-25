@@ -26,7 +26,7 @@ oceanic mantle and mantle wedge.
 
 - **{doc}`Examples <examples/index>`**
 
-  Five worked models with figures, from power-law flow and transient creep to mesh convergence.
+  Six worked models with figures, from power-law flow and transient creep to mesh convergence and a viscosity inversion.
 
 - **{doc}`Theory and methods <theory>`**
 
@@ -67,6 +67,7 @@ api/solvers
 api/integration
 api/longterm
 api/kernels
+api/inverse
 api/geometry
 api/utilities
 ```

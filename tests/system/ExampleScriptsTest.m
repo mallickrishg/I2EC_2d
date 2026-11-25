@@ -42,6 +42,19 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
             tc.verifyLessThan(d, 1e-6, out);
         end
 
+        function adjointInversionExampleRecoversModel(tc)
+            % example 6 checks the adjoint gradient against the tangent
+            % Jacobian and recovers the KL coefficients at the noise level
+            [msg, out] = ExampleScriptsTest.runScript(ExampleScriptsTest.example('example6_adjointInversion'));
+            tc.verifyEmpty(msg);
+            d = str2double(regexp(out, '(?<=relative difference )[0-9.e+-]+', 'match', 'once'));
+            tc.verifyLessThan(d, 1e-10, out);
+            chi = str2double(string(regexp(out, 'chi\^2/N = +([0-9.]+)', 'tokens')));
+            err = str2double(string(regexp(out, 'xi_true\| = ([0-9.]+)', 'tokens')));
+            tc.verifyLessThan(chi(end), 1.2, out);
+            tc.verifyLessThan(err(end), 0.1, out);
+        end
+
         function numericalPowerLawExampleRuns(tc)
             % five n = 3 cycles with ode45 (several minutes)
             tc.verifyEmpty(ExampleScriptsTest.runScript(ExampleScriptsTest.example('example1_numericalPowerLaw')));

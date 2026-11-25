@@ -19,6 +19,7 @@ modes (see [Kernel options](../inputs.md#kernel-options) and
 | {doc}`example3` | as example 2, on three mantle meshes | semi-analytical | about 1 min (2 min the first time) |
 | {doc}`example4` | as example 2 | both, compared | 1–2 min |
 | {doc}`example5` | Maxwell, Burgers and Andrade mantles | semi-analytical | about 10 min |
+| {doc}`example6` | Maxwell mantle, viscosity inverted from surface displacement | semi-analytical, adjoint and tangent | under 1 min |
 
 The figures in these pages are made by `docs/figures/make_examples.m`, which
 runs the scripts and saves what they draw.
@@ -32,6 +33,7 @@ example2
 example3
 example4
 example5
+example6
 ```
 
 ## The model

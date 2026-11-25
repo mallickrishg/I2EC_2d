@@ -2,7 +2,7 @@ classdef I2ECPathFixture < matlab.unittest.fixtures.Fixture
     %I2ECPATHFIXTURE  Put the I2EC code on the path for a test class.
     %
     % Adds, in this order (last added is searched first):
-    %   <root>/functions, <root> (for the +geometry package)
+    %   <root>/functions, <root>/inverse, <root> (for the +geometry package)
     % and restores the previous path on teardown.  Also hides figures and
     % starts no parallel pool (parfor runs serially without one).
     %
@@ -19,6 +19,7 @@ classdef I2ECPathFixture < matlab.unittest.fixtures.Fixture
             fixture.OldPath = path;
             root = i2ecRoot();
             addpath(fullfile(root, 'functions'));
+            addpath(fullfile(root, 'inverse'));
             addpath(root);
             addpath(fullfile(root, 'tests', 'helpers'));
             fixture.OldFigVisible = get(groot, 'DefaultFigureVisible');

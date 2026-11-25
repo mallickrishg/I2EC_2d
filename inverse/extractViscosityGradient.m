@@ -1,0 +1,66 @@
+function gp = extractViscosityGradient(g, sys, varargin)
+% EXTRACTVISCOSITYGRADIENT  Map row gradients to fault and mantle parameters.
+%
+%   gp = extractViscosityGradient(g, sys)
+%   gp = extractViscosityGradient(g, sys, 'Parameters', 'raw')
+%
+%   Sums the per-row gradients of computeAdjointGradient into gradients
+%   with respect to the physical parameters of each fault patch and
+%   mantle cell. Maxwell: log eta_M per cell. Burgers (Kelvin elements,
+%   sys.p >= 1) has three per cell and Kelvin column, which by default are
+%       log eta_M,  log tauK = log(etaK/muK),  log(muK/G)
+%   (relaxation time and relative strength of the Kelvin element: the
+%   combinations surface data resolve), or with 'raw' log eta_M, log etaK,
+%   log muK. Both are linear maps of the raw logs, so
+%       dJ/dlog tauK = gEtaK,   dJ/dlog(muK/G) = gEtaK + gMuK.
+%   G is any fixed modulus; it does not enter the gradient.
+%   assembleRowPerturbation is the transpose map (directions).
+%
+% INPUTS
+%   g      struct from computeAdjointGradient (.eta, .muK) [n x r]
+%   sys    struct from assembleLinearSystem
+%   'Parameters'  'default' (log eta_M, log tauK, log muK/G) or 'raw'
+%                 (log eta_M, log etaK, log muK)  ['default']
+%
+% OUTPUTS
+%   gp     struct with fields ([.. x r] for r columns of g)
+%          .fault   [N x r] dJ/dlog(eta') per fault patch (0 on locked)
+%          .etaM    [M x r] dJ/dlog(eta_M) per cell
+%          .tauK, .muKrel  [M x p x r] ('default', Kelvin only)
+%          .etaK, .muK     [M x p x r] ('raw', Kelvin only)
+%          Kelvin entries are 0 for cells without that element.
+%
+% SEE ALSO
+%   computeAdjointGradient, assembleRowPerturbation, assembleLinearSystem
+%
+% AUTHORS
+%   Rishav Mallick (EOS), 2026
+
+kind = parseKind(varargin{:});
+r = size(g.eta, 2);
+N = sys.N; M = sys.M; Nc = sys.Nc; p = sys.p;
+gp.fault = zeros(N, r);
+gp.fault(~sys.locked, :) = g.eta(1:Nc, :);
+gp.etaM = g.eta(Nc + (1:M), :) + g.eta(Nc + M + (1:M), :);
+if p == 0
+    return
+end
+gEtaK = zeros(M, p, r); gMuK = zeros(M, p, r);
+for k = 1:p
+    kv = sys.kelvin(k);
+    gEtaK(kv.cells, k, :) = reshape(g.eta(kv.rows22, :) + g.eta(kv.rows23, :), [], 1, r);
+    gMuK(kv.cells, k, :) = reshape(g.muK(kv.rows22, :) + g.muK(kv.rows23, :), [], 1, r);
+end
+if strcmp(kind, 'raw')
+    gp.etaK = gEtaK; gp.muK = gMuK;
+else
+    gp.tauK = gEtaK; gp.muKrel = gEtaK + gMuK;
+end
+end
+
+function kind = parseKind(varargin)
+ip = inputParser;
+ip.addParameter('Parameters', 'default', @(s) any(strcmpi(s, {'default', 'raw'})));
+ip.parse(varargin{:});
+kind = lower(char(ip.Results.Parameters));
+end
