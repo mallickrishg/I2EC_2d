@@ -27,6 +27,64 @@ one-line entry in the Features list, updated once when the branch merges
 - [x] Example 6 (synthetic Gauss–Newton inversion in KL modes) and docs page
 - [x] `inverse/` folder wired into the test fixture, `exampleModel`, Sphinx and the docs workflow
 
+## Done since the first merge-ready commit (pushed to `adjoint-inverse`)
+
+- [x] `89b884f`: balanced eigenvectors without inverting V (accurate when
+      viscosity spans decades); tangent directions in chunks of 12.
+- [x] `2b8cd15`: separable pairwise time integrals
+      (`computePairIntegralSums`): adjoint and tangent cost no longer
+      depends on the time sampling (80 log-spaced epochs: 0.86 s, was 61 s;
+      log-spaced converges to dense uniform at second order).
+- [x] `dabe09e`: missing data (NaN / zero weight) in
+      `computeDisplacementMisfit`; tests for GNSS-like messy sampling and
+      stations switching on/off; example-mesh stress test (119 epochs,
+      69 distinct gaps, 27% missing) matches FD to 7e-7.
+
+## Next (start 2026-11-26): rework example 6
+
+Uncommitted in the working tree: `examples/example6_adjointInversion.m`
+(thermal truth, SVD resolution), its docs page and figures, README/docs
+tables, `ExampleScriptsTest` and the example-6 notes on this page. None of
+it is pushed (user's request).
+
+- [ ] Truth as now: thermal model (20 Myr plate, wedge, Arrhenius with
+      V* = 12 cm^3/mol: high-low-high eta_M, 1e18.9-1e22 Pa s),
+      eta_K = eta_M/10, one mu_K = G/2. Recurrence 500 yr.
+- [ ] Parameterisation with different scales per field (user): most
+      modes for log tauK, fewer for log eta_M, a single value (0th mode)
+      for log(mu_K/G). Isotropic Matern KL modes (least-biased prior).
+- [ ] Data: GNSS-like daily series, log-downsampled, with messy gaps and
+      stations that start late / stop early (NaN in obs.d).
+- [ ] Resolution analysis (prior-preconditioned whitened Jacobian, SVD,
+      lambda > 1, effective parameters), split of resolved directions
+      between the fields; leading directions on the mesh.
+- [ ] Keep it cheap (the 37-min and 45-min runs were too long); show the
+      stations and use axis equal on mesh plots.
+- [ ] Known issues to keep in mind: with tauK as a free field the
+      optimizer drove tauK to seconds (below the first epoch, invisible
+      to data) in an earlier run; Levenberg-Marquardt now uses Marquardt
+      scaling.
+- [ ] Possibly add a reusable resolution tool to inverse/ (full prior
+      square root by default, matrix-free randomized SVD via tangent
+      J*v and adjoint J'*u for big meshes).
+- [ ] Make the adjoint the workhorse of the example (user, 2026-11-25:
+      the explicit-Jacobian Gauss-Newton used so far never calls
+      computeAdjointGradient). Show (a) a gradient-only quasi-Newton
+      (fminunc / L-BFGS) with the adjoint gradient, one forward + one
+      adjoint per iteration at any number of parameters, including
+      mesh-scale; (b) matrix-free Gauss-Newton-CG, Hessian-vector
+      products from one tangent (J*v) + one adjoint (J'*u) per CG step;
+      and compare cost and convergence with the explicit-Jacobian GN.
+- [ ] State the regularisation explicitly (user, 2026-11-25): the unit
+      Gaussian prior on the KL coefficients is Tikhonov with the
+      Matern precision; its strength sits in the prior std (sigma =
+      1 decade for eta_M and tauK, 0.5 for mu_K/G), the length 60 km and
+      nu = 3/2, all chosen ad hoc so far. Show the sensitivity to sigma,
+      and/or choose it from the data (discrepancy chi^2/N ~ 1, L-curve, or
+      the marginal likelihood). Note the LM damping is step control only.
+- [ ] Then: update docs page, slow test, this page; commit and push
+      example 6 only when the user says so.
+
 ## Results (2026-11-25)
 
 - `tests/unit/AdjointTest` (small model, n = 55 Maxwell / 103 Burgers):
@@ -37,10 +95,15 @@ one-line entry in the Features list, updated once when the branch merges
   tangent/adjoint to 1e-10; tangent vs FD 1e-6; modal periodic state vs
   `computePeriodicInitialCondition` 1e-9; divided differences vs Opitz
   `expm` 1e-13, including equal, near-equal, zero and complex nodes.
-- Example 6 (example mesh, Maxwell, n = 1061, 21 stations × 2 components ×
-  40 epochs, 6 KL modes): forward + 6 tangents 0.6 s per iteration; adjoint
-  gradient equals Jᵀr from the tangents to 3e-16; χ²/N = 1.03 and
-  |ξ − ξ_true| = 0.02 after 3 Gauss–Newton iterations.
+- Example 6 (example mesh, Burgers, n = 2103, 21 stations × 2 components ×
+  80 epochs): all three fields vary in space, parameterised as log η_M,
+  log τ_K, log μ_K/G with 5, 4, 3 Matérn KL modes. Case A inverts all three
+  (12 coefficients), case B holds μ_K fixed and inverts η_M and η_K through
+  τ_K (9). Forward + 12 tangents ≈ 5 s per iteration; adjoint gradient
+  equals Jᵀr from the tangents to 1e-15; χ²/N = 1.02 after 3 Gauss–Newton
+  iterations in both cases, |ξ − ξ_true| = 0.08 (A) and 0.05 (B). (The
+  first version, 2026-11-25, was a Maxwell-only inversion; the user asked
+  for Burgers with spatially variable η_M, η_K, μ_K and the fixed-μ_K case.)
 - Not done: Andrade (deferred by the user); the adjoint is written for any
   number of Kelvin columns but tested with one.
 
@@ -189,6 +252,10 @@ parameters:
   ratios held fixed — are just a different L; `extractViscosityGradient`
   and `assembleRowPerturbation` take L as an option, with the above as the
   default and 'raw' (log η_M, log η_K, log μ_K) available.
+- **Holding one fixed** (user, 2026-11-25): to invert η_M and η_K with μ_K
+  known, keep the default parameters and leave `.muKrel` out of the
+  directions. With μ_K fixed, log τ_K moves log η_K one-for-one, so the
+  ratio parameterisation still holds. Example 6, case B.
 
 ## 4. API (three layers)
 
@@ -274,6 +341,9 @@ Slow tier (`ExampleScriptsTest`): example 6 runs and recovers ξ within its
 noise level.
 
 ## 6. Example 6: `examples/example6_adjointInversion.m`
+
+*As built: Burgers, see "Results" above. The plan below was the first
+(Maxwell) version.*
 
 Example mesh, Maxwell. True log η(x) = 1e19 Pa s background with a smooth
 low-viscosity wedge anomaly built from 6 Matérn KL modes; one characteristic
