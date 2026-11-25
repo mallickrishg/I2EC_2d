@@ -1,8 +1,9 @@
-function dU = computeTangentSequence(fwd, dTheta, dPhi)
+function dU = computeTangentSequence(fwd, dTheta, dPhi, varargin)
 % COMPUTETANGENTSEQUENCE  Tangent (forward sensitivity) of the integrated states to log viscosity.
 %
 %   dU = computeTangentSequence(fwd, dTheta)
 %   dU = computeTangentSequence(fwd, dTheta, dPhi)
+%   dU = computeTangentSequence(fwd, dTheta, dPhi, 'Method', 'grouped')
 %
 %   Directional derivatives of fwd.U (solveLinearSequence) for r
 %   directions at once, reusing the forward's eigendecomposition. Column k
@@ -17,6 +18,9 @@ function dU = computeTangentSequence(fwd, dTheta, dPhi)
 %   dTheta  [n x r] perturbations of log(eta) per state row
 %   dPhi    [n x r] perturbations of log(muK) per state row (only Kelvin
 %           rows matter)  [zeros]
+%   'Method'  'separable' (default) or 'grouped', as in
+%             computeAdjointGradient: the cost of 'separable' does not
+%             depend on the time sampling
 %
 % OUTPUTS
 %   dU      [n x nObs x r] derivative of fwd.U along each direction
@@ -25,12 +29,15 @@ function dU = computeTangentSequence(fwd, dTheta, dPhi)
 %   - Tangent equations: d(dy)/dt = A*dy - dTheta.*ydot - dPhi.*decay.*y,
 %     jumps -dTheta.*b at every event (observed and characteristic), and
 %     the periodicity condition, solved in modal form like the forward.
-%   - The sources depend only on the forward states, so for each distinct
-%     segment length they are formed with one divided-difference matrix
-%     (computeExpDividedDifferences) and one product per direction; the
-%     sweep through the segments is then O(n) per segment.
+%   - The sources depend only on the forward states, so they are formed
+%     for all segments at once: with the separable form of the pairwise
+%     integrals (computePairIntegralSums),
+%       sum_j B_ij D_k(lam_i, lam_j, tau_s) y_js
+%         = [(B.*C)*(F_k.*Y)](i,s) - F_k(i,s)*[(B.*C)*Y](i,s),
+%     plus the close eigenvalue pairs summed directly. The sweep through
+%     the segments is then O(n) per segment.
 %   - Cost per direction: B = Vi*diag(dTheta)*V (two n x n products) plus
-%     O(n^2) per distinct segment length.
+%     a few n x n x (segments) products, whatever the time sampling.
 %   - Directions are processed 12 at a time, so memory stays bounded for
 %     hundreds of directions (e.g. a full Jacobian for a resolution
 %     analysis); the divided differences are recomputed per chunk.
@@ -57,10 +64,14 @@ if r > chunk
     dU = zeros(n, numel(fwd.seq.tObs), r);
     for k0 = 1:chunk:r
         kk = k0:min(k0 + chunk - 1, r);
-        dU(:, :, kk) = computeTangentSequence(fwd, dTheta(:, kk), dPhi(:, kk));
+        dU(:, :, kk) = computeTangentSequence(fwd, dTheta(:, kk), dPhi(:, kk), varargin{:});
     end
     return
 end
+ip = inputParser;
+ip.addParameter('Method', 'separable', @(m) any(strcmpi(m, {'separable', 'grouped'})));
+ip.parse(varargin{:});
+separable = strcmpi(ip.Results.Method, 'separable');
 sys = fwd.sys; seq = fwd.seq;
 decay = sys.decay;
 dTheta(~isfinite(sys.eta), :) = 0;
@@ -85,18 +96,44 @@ segZ = [fwd.zs(:, 1:nseg), fwd.z0, fwd.z0];
 nall = numel(segTau);
 srcEnd = zeros(n, nall, r) + 0*lam(1);
 srcInt = srcEnd;
-[ut, grp] = groupLengths(segTau);
-for u = 1:numel(ut)
-    kk = find(grp == u);
-    if ut(u) == 0, continue, end
-    [E1, E2, E3] = computeExpDividedDifferences(lam, lam.', ut(u));
-    W = lam .* segZ(:, kk) + ch;
+if separable
+    % all segments at once: separable pairs in two products, close pairs
+    % (computeExpDividedDifferences) through a sparse sum
+    [C, I, J] = separablePairs(lam, 1e-4);
+    F = {shiftedModalIntegrals(lam, segTau, 1), shiftedModalIntegrals(lam, segTau, 2), ...
+         shiftedModalIntegrals(lam, segTau, 3)};
+    nc = numel(I);
+    Psel = sparse(I, (1:nc)', 1, n, nc);
+    idx = sub2ind([n n], I, J);
+    Dc = {zeros(nc, nall) + 0*lam(1), zeros(nc, nall) + 0*lam(1), zeros(nc, nall) + 0*lam(1)};
+    for s = 1:nall
+        if segTau(s) == 0, continue, end
+        [Dc{1}(:, s), Dc{2}(:, s), Dc{3}(:, s)] = computeExpDividedDifferences(lam(I), lam(J), segTau(s));
+    end
+    W = lam .* segZ + ch;
+    Ch = repmat(ch, 1, nall);
     for k = 1:r
-        srcEnd(:, kk, k) = -(B{k} .* E1) * W;
-        srcInt(:, kk, k) = -(B{k} .* E2) * W;
+        srcEnd(:, :, k) = -applyPairs(B{k}, W, 1);
+        srcInt(:, :, k) = -applyPairs(B{k}, W, 2);
         if doMu
-            srcEnd(:, kk, k) = srcEnd(:, kk, k) - (Bm{k} .* E1) * segZ(:, kk) - (Bm{k} .* E2) * ch;
-            srcInt(:, kk, k) = srcInt(:, kk, k) - (Bm{k} .* E2) * segZ(:, kk) - (Bm{k} .* E3) * ch;
+            srcEnd(:, :, k) = srcEnd(:, :, k) - applyPairs(Bm{k}, segZ, 1) - applyPairs(Bm{k}, Ch, 2);
+            srcInt(:, :, k) = srcInt(:, :, k) - applyPairs(Bm{k}, segZ, 2) - applyPairs(Bm{k}, Ch, 3);
+        end
+    end
+else
+    [ut, grp] = groupLengths(segTau);
+    for u = 1:numel(ut)
+        kk = find(grp == u);
+        if ut(u) == 0, continue, end
+        [E1, E2, E3] = computeExpDividedDifferences(lam, lam.', ut(u));
+        W = lam .* segZ(:, kk) + ch;
+        for k = 1:r
+            srcEnd(:, kk, k) = -(B{k} .* E1) * W;
+            srcInt(:, kk, k) = -(B{k} .* E2) * W;
+            if doMu
+                srcEnd(:, kk, k) = srcEnd(:, kk, k) - (Bm{k} .* E1) * segZ(:, kk) - (Bm{k} .* E2) * ch;
+                srcInt(:, kk, k) = srcInt(:, kk, k) - (Bm{k} .* E2) * segZ(:, kk) - (Bm{k} .* E3) * ch;
+            end
         end
     end
 end
@@ -124,4 +161,10 @@ for k = 1:r
     end
     dU(:, :, k) = real(V * (DUZ(:, fwd.iObs) - DUZ(:, fwd.iRef)));
 end
+
+    function src = applyPairs(Mx, Y, k)
+        % sum_j Mx(i,j)*D_k(lam_i, lam_j, tau_s)*Y(j,s) for all i, s
+        MC = Mx .* C;
+        src = MC * (F{k} .* Y) - F{k} .* (MC * Y) + Psel * (Mx(idx) .* Dc{k} .* Y(J, :));
+    end
 end

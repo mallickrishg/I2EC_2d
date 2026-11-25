@@ -22,6 +22,8 @@ Forward, adjoint and tangent
 
 .. mat:autofunction:: computeExpDividedDifferences
 
+.. mat:autofunction:: computePairIntegralSums
+
 Parameters
 ----------
 

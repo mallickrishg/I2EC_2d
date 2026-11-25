@@ -1,7 +1,8 @@
-function g = computeAdjointGradient(fwd, S)
+function g = computeAdjointGradient(fwd, S, varargin)
 % COMPUTEADJOINTGRADIENT  Adjoint gradient of a misfit with respect to log viscosity per state row.
 %
 %   g = computeAdjointGradient(fwd, S)
+%   g = computeAdjointGradient(fwd, S, 'Method', 'grouped')
 %
 %   Vector-Jacobian product of the forward model of solveLinearSequence.
 %   For a misfit J whose derivative with respect to the integrated states
@@ -14,6 +15,12 @@ function g = computeAdjointGradient(fwd, S)
 % INPUTS
 %   fwd   struct from solveLinearSequence
 %   S     [n x nObs] dJ/dU, one column per observation time
+%   'Method'  'separable' (default): the pairwise time integrals of all
+%             segments are summed in factored form
+%             (computePairIntegralSums), so the cost does not depend on
+%             the time sampling; 'grouped': one divided-difference matrix
+%             per distinct segment length (the earlier method, cheap only
+%             for uniform sampling; kept for verification)
 %
 % OUTPUTS
 %   g     struct with fields
@@ -37,10 +44,12 @@ function g = computeAdjointGradient(fwd, S)
 %     pairwise divided differences (computeExpDividedDifferences). They
 %     are summed into one n x n matrix Q, and dJ/dlog(eta) =
 %     -rowsum((Vi.'*Q) .* V): the cost is one n x n product on top of the
-%     forward's eigendecomposition, plus O(n^2) per distinct segment
-%     length.
-%   - Segment lengths equal to 1e-12 (relative) are grouped and share their
-%     divided differences (uniform epochs: one group).
+%     forward's eigendecomposition, plus two n x n x (segments) products
+%     to form Q (computePairIntegralSums).
+%   - Cost (n = 2103, Burgers, example mesh): about 1 s for 20 to 320
+%     epochs, uniform or log-spaced ('separable'); 'grouped' costs about
+%     0.7 s more per distinct segment length (57 s for 80 log-spaced
+%     epochs). Segment lengths equal to 1e-12 (relative) share one group.
 %   - Rows with a non-finite sys.eta (no viscosity) get 0.
 %   - Checked against central finite differences and, through the
 %     dot-product test, against computeTangentSequence
@@ -54,10 +63,16 @@ function g = computeAdjointGradient(fwd, S)
 %
 % SEE ALSO
 %   solveLinearSequence, computeTangentSequence, extractViscosityGradient,
-%   computeDisplacementMisfit, computeExpDividedDifferences
+%   computeDisplacementMisfit, computePairIntegralSums,
+%   computeExpDividedDifferences
 %
 % AUTHORS
 %   Rishav Mallick (EOS), 2026
+
+ip = inputParser;
+ip.addParameter('Method', 'separable', @(m) any(strcmpi(m, {'separable', 'grouped'})));
+ip.parse(varargin{:});
+separable = strcmpi(ip.Results.Method, 'separable');
 
 V = fwd.V; Vi = fwd.Vi; lam = fwd.lam; ch = fwd.ch;
 n = numel(lam);
@@ -99,17 +114,30 @@ segTau = [tau, a, T];
 segA = [aend, mu, nu];
 segS = [shat, zeros(n, 2)];
 segZ = [fwd.zs(:, 1:nseg), fwd.z0, fwd.z0];
-[ut, grp] = groupLengths(segTau);
-for u = 1:numel(ut)
-    k = grp == u;
-    if ut(u) == 0, continue, end
-    [E1, E2, E3] = computeExpDividedDifferences(lam, lam.', ut(u));
-    W = lam .* segZ(:, k) + ch;                     % zdot(t0 + s) = exp(lam*s).*w
-    Q = Q + E1 .* (segA(:, k) * W.') + E2 .* (segS(:, k) * W.');
+if separable
+    % all segments at once, in factored form
+    nall = numel(segTau);
+    W = lam .* segZ + ch;                           % zdot(t0 + s) = exp(lam*s).*w
+    Q = Q + computePairIntegralSums(lam, segTau, ...
+        struct('k', {1, 2}, 'X', {segA, segS}, 'Y', {W, W}));
     if doMu
-        Qy = Qy + E1 .* (segA(:, k) * segZ(:, k).') ...
-                + E2 .* (sum(segA(:, k), 2) * ch.' + segS(:, k) * segZ(:, k).') ...
-                + E3 .* (sum(segS(:, k), 2) * ch.');
+        Ch = repmat(ch, 1, nall);
+        Qy = computePairIntegralSums(lam, segTau, struct('k', {1, 2, 2, 3}, ...
+            'X', {segA, segA, segS, segS}, 'Y', {segZ, Ch, segZ, Ch}));
+    end
+else
+    [ut, grp] = groupLengths(segTau);
+    for u = 1:numel(ut)
+        k = grp == u;
+        if ut(u) == 0, continue, end
+        [E1, E2, E3] = computeExpDividedDifferences(lam, lam.', ut(u));
+        W = lam .* segZ(:, k) + ch;                 % zdot(t0 + s) = exp(lam*s).*w
+        Q = Q + E1 .* (segA(:, k) * W.') + E2 .* (segS(:, k) * W.');
+        if doMu
+            Qy = Qy + E1 .* (segA(:, k) * segZ(:, k).') ...
+                    + E2 .* (sum(segA(:, k), 2) * ch.' + segS(:, k) * segZ(:, k).') ...
+                    + E3 .* (sum(segS(:, k), 2) * ch.');
+        end
     end
 end
 

@@ -60,6 +60,91 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             tc.verifyLessThan(err, 1e-13);
         end
 
+        function pairIntegralSumsMatchDirectSum(tc)
+            % separable sums over segments against the per-segment sum of
+            % computeExpDividedDifferences: eigenvalues over 7 decades, a
+            % cluster at every separation (1e-12 to 1e-2 relative), exact
+            % repeats, complex pairs; log-spaced segments, a zero length
+            % and a near-repeated length
+            rng(3);
+            base = -10.^(-12 + 7*rand(40, 1));
+            clu = -3e-9*(1 + [0; 1e-12; 1e-9; 1e-7; 1e-5; 1e-4; 2e-4; 1e-3; 1e-2]);
+            lam = [base; clu; base(1:3); -1e-9 + 2e-10i; -1e-9 - 2e-10i; -5e-7*(1 + 1e-6); -5e-7];
+            n = numel(lam);
+            tau = [logspace(3, 10, 30), 0, 1e3, 1e3*(1 + 1e-14)];
+            ns = numel(tau);
+            terms = struct('k', {1, 2, 3}, 'X', {randn(n, ns) + 1i*randn(n, ns), randn(n, ns), randn(n, ns)}, ...
+                'Y', {randn(n, ns), randn(n, ns) + 1i*randn(n, ns), randn(n, ns)});
+            S = computePairIntegralSums(lam, tau, terms);
+            Sref = zeros(n); Sabs = zeros(n);
+            for s = 1:ns
+                D = cell(1, 3);
+                [D{1}, D{2}, D{3}] = computeExpDividedDifferences(lam, lam.', tau(s));
+                for t = 1:3
+                    P = (terms(t).X(:, s) * terms(t).Y(:, s).') .* D{terms(t).k};
+                    Sref = Sref + P; Sabs = Sabs + abs(P);
+                end
+            end
+            tc.verifyLessThan(max(abs(S - Sref) ./ max(Sabs, realmin), [], 'all'), 1e-10);
+        end
+
+        function separableMatchesGroupedMethod(tc)
+            % adjoint and tangent: the separable sums against one
+            % divided-difference matrix per segment length, with
+            % log-spaced epochs (every segment length different)
+            for kind = ["maxwell", "burgers"]
+                tc.setKelvin(kind);
+                sys = tc.system();
+                seq = tc.sequence(sys);
+                seq.tObs = logspace(-2, log10(15), 25)*tc.yr; seq.tRef = seq.tObs(1);
+                fwd = solveLinearSequence(sys, seq);
+                rng(13);
+                n = numel(sys.eta);
+                S = randn(size(fwd.U));
+                gs = computeAdjointGradient(fwd, S);
+                gg = computeAdjointGradient(fwd, S, 'Method', 'grouped');
+                tc.verifyEqual(gs.eta, gg.eta, 'AbsTol', 1e-10*max(abs(gg.eta)), char(kind));
+                tc.verifyEqual(gs.muK, gg.muK, 'AbsTol', 1e-10*max([abs(gg.muK); realmin]), char(kind));
+                dTheta = randn(n, 2); dPhi = randn(n, 2) .* (sys.decay ~= 0);
+                dUs = computeTangentSequence(fwd, dTheta, dPhi);
+                dUg = computeTangentSequence(fwd, dTheta, dPhi, 'Method', 'grouped');
+                tc.verifyEqual(dUs, dUg, 'AbsTol', 1e-10*max(abs(dUg), [], 'all'), char(kind));
+            end
+        end
+
+        function logSpacedGradientMatchesFiniteDifferences(tc)
+            % Burgers, 25 log-spaced epochs from 0.01 yr
+            tc.setKelvin("burgers");
+            sys = tc.system();
+            seq = tc.sequence(sys);
+            seq.tObs = logspace(-2, log10(15), 25)*tc.yr; seq.tRef = seq.tObs(1);
+            tc.verifyGradient("burgers", 'default', seq);
+        end
+
+        function logSpacedGradientConvergesToDenseUniform(tc)
+            % a misfit that is an integral over time, J = 1/2*int (h'*U)^2 dt,
+            % by the trapezoid rule: on log-spaced epochs (every segment a
+            % different length) the gradient converges, at second order,
+            % to the one on 4000 uniform epochs
+            tc.setKelvin("burgers");
+            sys = tc.system();
+            rng(21);
+            h = randn(1, numel(sys.eta)) * sys.P' * sys.P;   % any fixed functional of the state
+            t0 = 0.01*tc.yr; t1 = 15*tc.yr;
+            gRef = tc.quadratureGradient(sys, h, linspace(t0, t1, 4000));
+            nList = [50 100 200 400 800];
+            err = zeros(size(nList));
+            for i = 1:numel(nList)
+                g = tc.quadratureGradient(sys, h, logspace(log10(t0), log10(t1), nList(i)));
+                err(i) = norm(g - gRef)/norm(gRef);
+            end
+            msg = sprintf('relative error for %s log-spaced epochs: %s', mat2str(nList), mat2str(err, 2));
+            tc.verifyLessThan(diff(err), 0, msg);
+            tc.verifyLessThan(err(end), 2e-4, msg);
+            rate = -diff(log(err))/log(2);
+            tc.verifyGreaterThan(rate(end), 1.5, [msg ' (second order expected)']);
+        end
+
         function periodicStateMatchesDirectSolve(tc)
             % modal periodic state of solveLinearSequence against
             % computePeriodicInitialCondition, and the observed window
@@ -250,6 +335,17 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             seq = struct('T', 200*yr, 'b0', sys.b(:,1), 'age', 200*yr, ...
                 'tEvents', [0 6*yr], 'bEvents', sys.b(:, [1 2]), ...
                 'tObs', linspace(0.3, 15, 14)*yr, 'tRef', 0.1*yr);
+        end
+
+        function g = quadratureGradient(tc, sys, h, t)
+            % gradient of J = 1/2*sum_j w_j*(h*U_j)^2, trapezoid weights w on t
+            seq = tc.sequence(sys);
+            seq.tObs = t; seq.tRef = t(1);
+            fwd = solveLinearSequence(sys, seq);
+            wq = [diff(t), 0]/2 + [0, diff(t)]/2;
+            u = h * fwd.U;
+            gr = computeAdjointGradient(fwd, h' * (wq .* u));
+            g = gr.eta;
         end
 
         function obs = observations(tc, sys, fwd)
