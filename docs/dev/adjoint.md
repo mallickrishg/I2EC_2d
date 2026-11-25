@@ -69,12 +69,13 @@ it is pushed (user's request).
       J*v and adjoint J'*u for big meshes).
 - [ ] Make the adjoint the workhorse of the example (user, 2026-11-25:
       the explicit-Jacobian Gauss-Newton used so far never calls
-      computeAdjointGradient). Show (a) a gradient-only quasi-Newton
-      (fminunc / L-BFGS) with the adjoint gradient, one forward + one
-      adjoint per iteration at any number of parameters, including
-      mesh-scale; (b) matrix-free Gauss-Newton-CG, Hessian-vector
-      products from one tangent (J*v) + one adjoint (J'*u) per CG step;
-      and compare cost and convergence with the explicit-Jacobian GN.
+      computeAdjointGradient). Decided: fminunc with the adjoint gradient
+      ('SpecifyObjectiveGradient', true; quasi-Newton / 'lbfgs'): one
+      forward + one adjoint per iteration at any number of parameters,
+      including mesh-scale. Objective = data misfit + prior term, gradient
+      = Phi' * (adjoint gradient per cell) + prior gradient. Not
+      lsqnonlin. Compare cost and convergence with the explicit-Jacobian
+      Gauss-Newton only as a reference.
 - [ ] State the regularisation explicitly (user, 2026-11-25): the unit
       Gaussian prior on the KL coefficients is Tikhonov with the
       Matern precision; its strength sits in the prior std (sigma =
