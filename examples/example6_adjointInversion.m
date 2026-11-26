@@ -161,9 +161,12 @@ for c = 1:2
     for j = 1:numel(show)
         row = show(j) + (c - 1)*ns;
         col = st.series(j,:);
-        plot((tObs - tEq)/yr, 1e2*obs.d(row,:), '.', 'Color', col, 'HandleVisibility', 'off')
+        % data and fits less the known terms (coseismic step, long-term
+        % motion, hinge) and the fitted offset: the mantle and afterslip signal
+        known = obs.fixed(row,:) + res{end}.offset(row);
+        plot((tObs - tEq)/yr, 1e2*(obs.d(row,:) - known), '.', 'Color', col, 'HandleVisibility', 'off')
         for i = [1 numel(kList)]
-            plot((tObs - tEq)/yr, 1e2*res{i}.u(row,:), ifelse(i == 1, ':', '-'), 'Color', col, ...
+            plot((tObs - tEq)/yr, 1e2*(res{i}.u(row,:) - known), ifelse(i == 1, ':', '-'), 'Color', col, ...
                 'LineWidth', ifelse(i == 1, 1.2, 2), ...
                 'DisplayName', sprintf('x = %.0f km, k = %d', xsta(show(j))/1e3, kList(i)))
         end
@@ -173,7 +176,7 @@ for c = 1:2
     if c == 1, legend('Location', 'best', 'Box', 'off', 'FontSize', 8), end
     xlabel('time since the earthquake (yr)')
     ylabel(sprintf('%s displacement (cm)', ifelse(c == 1, 'horizontal', 'vertical')))
-    title('Data (dots) and fits: k = 0 dotted, k = 3 solid')
+    title('Data and fits without the coseismic step and long-term motion')
 end
 nexttile
 imagesc((tObs - tEq)/yr, 1:ns, ~miss(1:ns, :)), colormap(gca, [1 1 1; st.series(1,:)])
@@ -236,7 +239,7 @@ t0 = tic;
     [], [], par.lb, par.ub, [], opts);
 fwd = solveFields(par.fields(p), ctx);
 [J, r] = computeDisplacementMisfit(obs, fwd);
-out = struct('p', p, 'chi', 2*J/nd, 'u', r.u, 'nfun', info.funcCount, 'time', toc(t0));
+out = struct('p', p, 'chi', 2*J/nd, 'u', r.u, 'offset', r.offset, 'nfun', info.funcCount, 'time', toc(t0));
 end
 
 function checkGradient(p, par, obs, ctx, nd)
