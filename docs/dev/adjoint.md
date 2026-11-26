@@ -86,6 +86,24 @@ it is pushed (user's request).
 - [ ] Then: update docs page, slow test, this page; commit and push
       example 6 only when the user says so.
 
+## On hold (user, 2026-11-26; pick up when the user is back)
+
+- [ ] Burgers fault: a Kelvin element in series with the creeping-fault
+      dashpot (today the fault is one dashpot, eta' per patch, no Kelvin
+      rows). New fault Kelvin rows in assembleLinearSystem and the
+      numerical solver, parameterised as the mantle (log eta', log tauK,
+      log muK/mu), with tests. The adjoint is row-wise, so it mostly
+      carries over; extend extractViscosityGradient /
+      assembleRowPerturbation to the fault Kelvin rows.
+- [ ] Then invert uniform fault Burgers parameters on the creeping section
+      in example 6 (afterslip vs mantle trade-off); coseismic slip stays
+      known (uniform slip deficit on the locked zone, 0-30 km).
+- [ ] Example 6 tweaks still open: fits as data minus known terms, drop
+      the all-cell rms error, cap iterations (~12 min now).
+- [ ] Rename examples/newtonianCycle.m (it also sets up Burgers/Andrade
+      cycles; suggestion linearCycle). About 15 files; rename on main
+      after the merge, not on this branch. Undecided.
+
 ## Results (2026-11-25)
 
 - `tests/unit/AdjointTest` (small model, n = 55 Maxwell / 103 Burgers):
