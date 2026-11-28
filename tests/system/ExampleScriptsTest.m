@@ -43,16 +43,22 @@ classdef (SharedTestFixtures = {I2ECPathFixture}, TestTags = {'Slow'}) ExampleSc
         end
 
         function adjointInversionExampleRecoversModel(tc)
-            % example 6 checks the adjoint gradient against the tangent
-            % Jacobian and recovers the KL coefficients at the noise level
+            % example 6 (Burgers mantle and fault, fmincon with the adjoint
+            % gradient for k = 0, 2, 5, 10, 20 KL modes) checks the adjoint
+            % gradient against a central difference; the fit improves with
+            % k and the uniform fault parameters are recovered
             [msg, out] = ExampleScriptsTest.runScript(ExampleScriptsTest.example('example6_adjointInversion'));
             tc.verifyEmpty(msg);
             d = str2double(regexp(out, '(?<=relative difference )[0-9.e+-]+', 'match', 'once'));
-            tc.verifyLessThan(d, 1e-10, out);
-            chi = str2double(string(regexp(out, 'chi\^2/N = +([0-9.]+)', 'tokens')));
-            err = str2double(string(regexp(out, 'xi_true\| = ([0-9.]+)', 'tokens')));
-            tc.verifyLessThan(chi(end), 1.2, out);
-            tc.verifyLessThan(err(end), 0.1, out);
+            tc.verifyLessThan(d, 1e-6, out);
+            t = regexp(out, ['k = +\d+ \( *\d+ unknowns\): chi\^2/N = +([0-9.]+).*?fault eta'' = ([0-9.e+]+) Pa s, ' ...
+                'tauK = ([0-9.]+) yr, mu_K/G = ([0-9.]+)'], 'tokens');
+            v = str2double(vertcat(t{:}));
+            tc.verifySize(v, [5 4], out);
+            tc.verifyLessThan(diff(v(:, 1)), 0, 'chi^2/N falls with k');
+            tc.verifyLessThan(v(end, 1), 4, out);
+            truth = [1e19, 2.116, 0.5];                % fault eta' (Pa s), tauK (yr), mu_K/G
+            tc.verifyLessThan(abs(log(v(end, 2:4) ./ truth)), log(1.5), out);
         end
 
         function numericalPowerLawExampleRuns(tc)
