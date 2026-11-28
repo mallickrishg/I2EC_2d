@@ -40,51 +40,33 @@ one-line entry in the Features list, updated once when the branch merges
       stations switching on/off; example-mesh stress test (119 epochs,
       69 distinct gaps, 27% missing) matches FD to 7e-7.
 
-## Next (start 2026-11-26): rework example 6
+## Example 6 rework (branch `example6`, done 2026-11-28)
 
-Uncommitted in the working tree: `examples/example6_adjointInversion.m`
-(thermal truth, SVD resolution), its docs page and figures, README/docs
-tables, `ExampleScriptsTest` and the example-6 notes on this page. None of
-it is pushed (user's request).
+As built (`examples/example6_adjointInversion.m`, `docs/examples/example6.md`):
 
-- [ ] Truth as now: thermal model (20 Myr plate, wedge, Arrhenius with
+- [x] Truth: thermal model (20 Myr plate, wedge, Arrhenius with
       V* = 12 cm^3/mol: high-low-high eta_M, 1e18.9-1e22 Pa s),
-      eta_K = eta_M/10, one mu_K = G/2. Recurrence 500 yr.
-- [ ] Parameterisation with different scales per field (user): most
-      modes for log tauK, fewer for log eta_M, a single value (0th mode)
-      for log(mu_K/G). Isotropic Matern KL modes (least-biased prior).
-- [ ] Data: GNSS-like daily series, log-downsampled, with messy gaps and
-      stations that start late / stop early (NaN in obs.d).
-- [ ] Resolution analysis (prior-preconditioned whitened Jacobian, SVD,
-      lambda > 1, effective parameters), split of resolved directions
-      between the fields; leading directions on the mesh.
-- [ ] Keep it cheap (the 37-min and 45-min runs were too long); show the
-      stations and use axis equal on mesh plots.
-- [ ] Known issues to keep in mind: with tauK as a free field the
-      optimizer drove tauK to seconds (below the first epoch, invisible
-      to data) in an earlier run; Levenberg-Marquardt now uses Marquardt
-      scaling.
-- [ ] Possibly add a reusable resolution tool to inverse/ (full prior
-      square root by default, matrix-free randomized SVD via tangent
-      J*v and adjoint J'*u for big meshes).
-- [ ] Make the adjoint the workhorse of the example (user, 2026-11-25:
-      the explicit-Jacobian Gauss-Newton used so far never calls
-      computeAdjointGradient). Decided: fminunc with the adjoint gradient
-      ('SpecifyObjectiveGradient', true; quasi-Newton / 'lbfgs'): one
-      forward + one adjoint per iteration at any number of parameters,
-      including mesh-scale. Objective = data misfit + prior term, gradient
-      = Phi' * (adjoint gradient per cell) + prior gradient. Not
-      lsqnonlin. Compare cost and convergence with the explicit-Jacobian
-      Gauss-Newton only as a reference.
-- [ ] State the regularisation explicitly (user, 2026-11-25): the unit
-      Gaussian prior on the KL coefficients is Tikhonov with the
-      Matern precision; its strength sits in the prior std (sigma =
-      1 decade for eta_M and tauK, 0.5 for mu_K/G), the length 60 km and
-      nu = 3/2, all chosen ad hoc so far. Show the sensitivity to sigma,
-      and/or choose it from the data (discrepancy chi^2/N ~ 1, L-curve, or
-      the marginal likelihood). Note the LM damping is step control only.
-- [ ] Then: update docs page, slow test, this page; commit and push
-      example 6 only when the user says so.
+      eta_K = eta_M/10, one mu_K = G/2; Burgers fault on the creeping
+      section, eta' = 1e19, eta_K = 1e18 Pa s, mu_K = G/2 (per fault
+      width; tauK = 2.1 yr). Recurrence 500 yr; coseismic source known.
+- [x] Data: 21 stations, 5 yr quarterly before and 10 yr log-spaced
+      after the earthquake, late, stopped and gappy stations (NaN).
+- [x] Parameters: mantle uniform log eta_M, log tauK, log(mu_K/G) plus k
+      isotropic Matern KL modes on log eta_M and log tauK, k = 0, 2, 5,
+      10, 20; fault uniform log eta', log tauK, log(mu_K/k0); 6 to 46
+      unknowns.
+- [x] fmincon (interior point) with the adjoint gradient, box bounds, no
+      regularisation (user: show the workflow, not inverse theory). Each
+      evaluation one forward + one adjoint, ~2 s; 16 min in all.
+- [x] Results: chi^2/N 206, 43, 12, 5.0, 2.8; fault recovered from k = 5
+      (within ~20%); mantle fields non-unique (null space; user: no
+      diagnosis needed). Figures: fields per k, interseismic fits (5 cm
+      per station), postseismic fits (log time) with afterslip, thermal
+      model.
+- [x] Docs page, figures, slow test (gradient check, chi^2/N falls with
+      k, final < 4, fault within 1.5x), README and docs tables.
+- Dropped (user, 2026-11-26): SVD resolution analysis, regularisation and
+  its sensitivity, a resolution tool in inverse/, Levenberg-Marquardt.
 
 ## On hold (user, 2026-11-26; pick up when the user is back)
 
@@ -106,11 +88,9 @@ Done 2026-11-28: `adjoint-inverse` merged into main (#39, merge commit);
       maps extended (section 3); tests in TransientRheologyTest and
       AdjointTest; user docs (rheology, theory). Details in section 3
       and docs/dev/transient-rheology.md.
-- [ ] Then invert uniform fault Burgers parameters on the creeping section
-      in example 6 (afterslip vs mantle trade-off); coseismic slip stays
-      known (uniform slip deficit on the locked zone, 0-30 km).
-- [ ] Example 6 tweaks still open: fits as data minus known terms, drop
-      the all-cell rms error, cap iterations (~12 min now).
+- [x] Uniform fault Burgers parameters inverted in example 6 (2026-11-28).
+- [x] Example 6 tweaks: fits as data minus known terms, all-cell rms error
+      dropped, 40 iterations per k.
 - [ ] Rename examples/newtonianCycle.m (it also sets up Burgers/Andrade
       cycles; suggestion linearCycle). About 15 files; rename on main
       after the merge, not on this branch. Undecided.
@@ -394,8 +374,8 @@ noise level.
 
 ## 6. Example 6: `examples/example6_adjointInversion.m`
 
-*As built: Burgers, see "Results" above. The plan below was the first
-(Maxwell) version.*
+*As built: Burgers mantle and fault with fmincon, see "Example 6 rework"
+above. The plan below was the first (Maxwell) version.*
 
 Example mesh, Maxwell. True log η(x) = 1e19 Pa s background with a smooth
 low-viscosity wedge anomaly built from 6 Matérn KL modes; one characteristic
