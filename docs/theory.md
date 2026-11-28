@@ -103,6 +103,13 @@ over a periodic cycle the Kelvin strain rates average to zero.
 | rate-strengthening friction | $\dfrac{d \log v}{dt} = \dfrac{\dot{\tau}}{(a-b)\sigma}$ | numerical solver (default) |
 | linear viscous | $\dfrac{dv}{dt} = \dfrac{\dot\tau}{\eta'}$ | both solvers |
 
+**Burgers fault (transient afterslip).** A creeping patch may also have Kelvin
+elements in series with its dashpot, exactly as a mantle cell: the slip of
+each obeys $\tau = \mu_{K,k} s^K_k + \eta_{K,k} \dot s^K_k$, and the slip rate
+that loads the kernels is $v + \sum_k \dot s^K_k$. The Kelvin slip is
+continuous through an earthquake, so over a periodic cycle the Kelvin slip
+rates average to zero and the long-term slip rate is unchanged.
+
 **Locking and earthquakes.** Locked patches do not slip between earthquakes.
 Every recurrence interval $T$ an earthquake releases their slip deficit,
 $v^{\infty} T$, and its stress change is applied as an instantaneous step.
@@ -118,8 +125,9 @@ rheology and call the solvers, and {doc}`examples/example5` compares the three.
 The fault takes
 `rcv.faultLaw` (`'ratestrengthening'` or `'linear'`, read by
 {mat:func}`isLinearFaultLaw`) and `rcv.Asigma`, which holds $(a-b)\sigma$ (MPa)
-or $\eta'$, a viscosity per unit length (MPa s/m). Locked patches are
-`rcv.pinnedPosition`.
+or $\eta'$, a viscosity per unit length (MPa s/m). Fault Kelvin elements are
+`rcv.etaK` (MPa s/m; `Inf` for none) and `rcv.muK` (MPa/m), $N \times p$
+each (default $N \times 0$). Locked patches are `rcv.pinnedPosition`.
 :::
 
 ## Solvers
@@ -147,7 +155,8 @@ cycle from the long-term state spins the model up until it is periodic.
 {mat:func}`integrateImposedCycles` integrates one sequence of events and
 {mat:func}`odeViscoelastic` is the right-hand side. Spin-up convergence is
 not checked: compare the start and end of the last cycle, as example 1 does.
-Kelvin elements add their spring stresses $\mu_K\epsilon^K$ to the state;
+Kelvin elements add their spring stresses $\mu_K\epsilon^K$ (on the fault
+$\mu_K s^K$) to the state;
 short relaxation times make the system stiff, so both drivers take an
 optional solver such as `@ode15s`.
 :::
@@ -185,7 +194,8 @@ kernels guarantee this ([mantle kernels](#mantle-kernels)).
 
 {mat:func}`assembleStressKernel` builds $K$ without the
 locked patches, and {mat:func}`assembleLinearSystem` builds $A$, $c$ and $b$.
-With Kelvin elements it appends their strain rates to $y$: each row is
+With Kelvin elements it appends their strain rates (and fault Kelvin slip
+rates) to $y$: each row is
 divided by the viscosity of its own element, $K$ acts on the total rates, and
 Kelvin rows decay at $\mu_K/\eta_K$, so $A$, $c$ and $b$ go unchanged into
 the periodic solver; {mat:func}`computePeriodicInitialCondition` gives the

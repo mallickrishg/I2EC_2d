@@ -4,7 +4,8 @@ function [Yp] = odeViscoelastic(~,Y,rcv,shz,evl)
 %   Yp = odeViscoelastic(t, Y, rcv, shz, evl)
 %
 %   Returns dY/dt for the state Y = [fault state on each patch; s22 and
-%   s23 on each mantle cell, interleaved; Kelvin strains, if any]. The
+%   s23 on each mantle cell, interleaved; mantle Kelvin spring stresses,
+%   if any; fault Kelvin spring stresses, if any]. The
 %   mantle follows a power law (the Maxwell, steady-state element),
 %       edotM_ij = alpha * tau^(n-1) * s_ij,   tau = sqrt(s22^2 + s23^2),
 %   in series with the p Kelvin elements of shz.etaK, shz.muK (transient
@@ -24,16 +25,26 @@ function [Yp] = odeViscoelastic(~,Y,rcv,shz,evl)
 %     'linear': linear viscous, tau = Asigma * v (Asigma a viscosity per
 %         unit length, as in the semi-analytical solvers), fault state v,
 %         dv/dt = (dtau/dt) / Asigma
-%   and the stressing rates come from the kernels acting on the departures
+%   The fault may have p_f Kelvin elements in series with its dashpot as
+%   well (rcv.etaK, rcv.muK: a Burgers fault, transient afterslip),
+%       tau = muK*sK + etaK*vK,
+%   stored by their spring stress tK = muK*sK (MPa) after the mantle
+%   Kelvin block, [tK(:,1); tK(:,2); ...] (N*p_f entries), with
+%       vK = (Asigma*zeta - tK)/etaK,   dtK/dt = muK*vK,
+%   where zeta is the fault state (v, or log(v)) and Asigma*zeta the
+%   dashpot stress up to a constant (which the relaxed state absorbs). The
+%   slip rate that loads the kernels is v + sum(vK); it is 0 on locked
+%   patches, whose Kelvin elements do not evolve.
+%   The stressing rates come from the kernels acting on the departures
 %   from the long-term rates (j = 1 for s22, 2 for s23):
 %       dtau/dt = KK*(v-Vpl) + LK1*(e22dot-e22pl) + LK2*(e23dot-e23pl)
 %       dsj/dt  = KLj*(v-Vpl) + LLj1*(e22dot-e22pl) + LLj2*(e23dot-e23pl)
 %
 % INPUTS
 %   t       time (s); unused, the system is autonomous
-%   Y       [n x 1] state, n = N*rcv.dgf + M*shz.dgf + 2*M*p
+%   Y       [n x 1] state, n = N*rcv.dgf + M*shz.dgf + 2*M*p + N*p_f
 %   rcv     geometry.receiver object (uses .N, .dgf, .Vpl, .Asigma,
-%           .pinnedPosition, .faultLaw)
+%           .pinnedPosition, .faultLaw, and optionally .etaK, .muK)
 %   shz     geometry.shearZoneReceiver object (uses .N, .dgf, .alpha, .n,
 %           .e22pl, .e23pl, and optionally .etaK, .muK: see
 %           extractKelvinElements)
@@ -69,12 +80,25 @@ Yp = zeros(size(Y));
 
 % fault slip velocity
 linearFault = isLinearFaultLaw(rcv);
+zeta = Y(1 : rcv.dgf : rcv.dgf*rcv.N);
 if linearFault
-    V = Y(1 : rcv.dgf : rcv.dgf*rcv.N);
+    V = zeta;
 else
-    V = exp(Y(1 : rcv.dgf : rcv.dgf*rcv.N));
+    V = exp(zeta);
 end
-VW = rcv.pinnedPosition;
+VW = logical(rcv.pinnedPosition);
+
+% fault Kelvin elements (transient afterslip) add their slip rates
+[etaKf, muKf, pf] = extractKelvinElements(rcv);
+if pf > 0
+    [~, ~, p] = extractKelvinElements(shz);
+    iKf = rcv.dgf*rcv.N + shz.dgf*shz.N + 2*shz.N*p + (1:rcv.N*pf);
+    tK = reshape(Y(iKf), rcv.N, pf);                   % spring stresses
+    vK = (rcv.Asigma.*zeta - tK) ./ etaKf;
+    vK(VW, :) = 0;
+    Yp(iKf) = reshape(muKf.*vK, [], 1);
+    V = V + sum(vK, 2);
+end
 % locked section of fault has v = 0
 V(VW) = 0;
 

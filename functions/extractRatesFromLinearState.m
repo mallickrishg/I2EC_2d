@@ -11,9 +11,9 @@ function [V,e22dot,e23dot,parts] = extractRatesFromLinearState(sol,locked,N,M)
 %   strain), e.g. the second output of solveAnalyticIvp.
 %
 %   With the system struct of assembleLinearSystem instead of (locked, N,
-%   M), sol may hold Kelvin (transient) rates as well: e22dot and e23dot
-%   are then the total strain rates (Maxwell plus Kelvin), and parts holds
-%   each element's share.
+%   M), sol may hold Kelvin (transient) rates as well: V, e22dot and
+%   e23dot are then the total slip and strain rates (Maxwell plus Kelvin),
+%   and parts holds each element's share.
 %
 % INPUTS
 %   sol     [n x Nt] states, one time per column, n = Nc + 2M (or the
@@ -29,7 +29,9 @@ function [V,e22dot,e23dot,parts] = extractRatesFromLinearState(sol,locked,N,M)
 %   e23dot  [M x Nt] shear strain rate e23 (1/s), total
 %   parts   (with sys) struct: .e22M, .e23M [M x Nt] Maxwell element;
 %           .e22K, .e23K [M x p x Nt] Kelvin elements (0 where a cell has
-%           none)
+%           none); .vM [N x Nt] fault dashpot and .vK [N x pf x Nt] fault
+%           Kelvin elements (0 where a patch has none, and on locked
+%           patches)
 %
 % EXAMPLE
 %   [V, e22dot, e23dot] = ...
@@ -54,6 +56,14 @@ if nargin == 2
             kv = sys.kelvin(k);
             parts.e22K(kv.cells, k, :) = reshape(sol(kv.rows22, :), [], 1, Nt);
             parts.e23K(kv.cells, k, :) = reshape(sol(kv.rows23, :), [], 1, Nt);
+        end
+        parts.vM = zeros(sys.N, Nt);
+        parts.vM(~sys.locked, :) = sol(1:Nc, :);
+        pf = 0; if isfield(sys, 'pf'), pf = sys.pf; end
+        parts.vK = zeros(sys.N, pf, Nt);
+        for k = 1:pf
+            fk = sys.faultKelvin(k);
+            parts.vK(fk.patches, k, :) = reshape(sol(fk.rows, :), [], 1, Nt);
         end
     end
     return

@@ -52,6 +52,8 @@ tests/
     LongTermFlowTest.m        corner flow (n = 1, 3), long-term strain rates and velocity
     SolversTest.m             computeModalIntegrals, negate + modal solvers, periodic state, helpers
     TimeIntegrationTest.m     odeViscoelastic / ode45 path vs the semi-analytical solver
+    TransientRheologyTest.m   Burgers and Andrade (Kelvin elements) in both solvers
+    AdjointTest.m             inverse/: adjoint and tangent vs finite differences, dot-product test
     UtilitiesTest.m           plotting and small helpers
     LegacyCodeTest.m          duplicate copies, dead and broken files, name checks
   system/

@@ -1,5 +1,5 @@
 function sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
-% ASSEMBLELINEARSYSTEM  Linear cycle ODE dy/dt = A*y + c for Maxwell, Burgers or Andrade mantles.
+% ASSEMBLELINEARSYSTEM  Linear cycle ODE dy/dt = A*y + c for Maxwell, Burgers or Andrade mantles and faults.
 %
 %   sys = assembleLinearSystem(evl, rcv, shz, locked)
 %   sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
@@ -7,13 +7,18 @@ function sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
 %   Builds the operator A, the forcing c and the coseismic jump b of the
 %   semi-analytical solver for a linear viscous fault and a linear (n = 1)
 %   mantle whose cells may have Kelvin elements in series with the Maxwell
-%   dashpot (shz.etaK, shz.muK; see extractKelvinElements). A, c and b go
-%   unchanged into computePeriodicInitialCondition and solveAnalyticIvp.
+%   dashpot (shz.etaK, shz.muK; see extractKelvinElements). The creeping
+%   fault patches may have Kelvin elements in series with the fault
+%   dashpot as well (rcv.etaK, rcv.muK: a Burgers fault, transient
+%   afterslip). A, c and b go unchanged into
+%   computePeriodicInitialCondition and solveAnalyticIvp.
 %
 %   The state is made of rates only:
 %       y = [v on creeping patches; edotM22; edotM23;
 %            edotK22, edotK23 of Kelvin column 1 on the cells that have it;
-%            ... of column 2; ...]
+%            ... of column 2; ...;
+%            vK of fault Kelvin column 1 on the creeping patches that
+%            have it; ... of column 2; ...]
 %   Each entry r maps to one entry map(r) of the Maxwell state
 %   x = [v; e22dot; e23dot] (n0 = Nc + 2M entries), and the kernels act on
 %   the total rates x = P*y (Maxwell plus Kelvin):
@@ -32,7 +37,9 @@ function sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
 %   evl            stress kernels (.KK, .KL, .LK, .LL) from
 %                  computeAllStressKernelsBem
 %   rcv            geometry.receiver: .N, .Vpl (m/s), .Asigma (fault
-%                  viscosity per unit length, MPa s/m)
+%                  viscosity per unit length, MPa s/m), and optionally
+%                  .etaK (MPa s/m), .muK (MPa/m); Kelvin elements on
+%                  locked patches are ignored
 %   shz            geometry.shearZoneReceiver: .N, .alpha (1/(MPa s)),
 %                  .n (must be 1), .e22pl, .e23pl (1/s), and optionally
 %                  .etaK, .muK
@@ -54,7 +61,10 @@ function sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
 %         .P       [n0 x n] sparse sum: total rates x = P*y
 %         .kelvin  [1 x p] struct array, per Kelvin column: .cells (cell
 %                  indices that have it), .rows22, .rows23 (their rows in y)
-%         .locked, .N, .M, .Nc, .n0, .p   sizes and the locked mask
+%         .faultKelvin  [1 x pf] struct array, per fault Kelvin column:
+%                  .patches (creeping patch indices, 1..N, that have it),
+%                  .rows (their rows in y)
+%         .locked, .N, .M, .Nc, .n0, .p, .pf   sizes and the locked mask
 %
 % NOTES
 %   - Kelvin strain: epsK = (sigma - etaK*edotK)/muK with sigma = edotM/alpha.
@@ -64,7 +74,11 @@ function sys = assembleLinearSystem(evl, rcv, shz, locked, stress_change)
 %   - Springs and dashpots form a passive network: the spectrum stays real
 %     and negative when the Maxwell operator's is. Cells with etaK = Inf
 %     carry no Kelvin state, so etaK -> Inf reduces to Maxwell.
-%   - Size n = Nc + 2M + 2*(number of finite etaK); eig is O(n^3).
+%   - Size n = Nc + 2M + 2*(number of finite shz.etaK) + (number of finite
+%     rcv.etaK on creeping patches); eig is O(n^3).
+%   - Fault Kelvin slip sK = (tau - etaK*vK)/muK with tau = eta'*v_M is
+%     continuous through an event too, so the cycle-mean slip rate is
+%     unchanged.
 %   - Use extractRatesFromLinearState(Y, sys) to split states into slip
 %     and (total, Maxwell and Kelvin) strain rates.
 %
@@ -87,6 +101,7 @@ end
 locked = logical(locked(:));
 N = rcv.N; M = shz.N; Nc = sum(~locked); n0 = Nc + 2*M;
 [etaK, muK, p] = extractKelvinElements(shz);
+[etaKf, muKf, pf] = extractKelvinElements(rcv);
 
 % ---- rows: Maxwell state, then the Kelvin columns ----
 map = (1:n0)';
@@ -103,13 +118,24 @@ for k = 1:p
     eta = [eta; etaK(cells,k); etaK(cells,k)]; %#ok<AGROW>
     decay = [decay; repmat(muK(cells,k)./etaK(cells,k), 2, 1)]; %#ok<AGROW>
 end
+% fault Kelvin columns: one row per creeping patch that has the element
+creepIndex = zeros(N, 1); creepIndex(~locked) = 1:Nc;
+faultKelvin = struct('patches', cell(1, pf), 'rows', []);
+for k = 1:pf
+    patches = find(isfinite(etaKf(:,k)) & ~locked);
+    faultKelvin(k).patches = patches;
+    faultKelvin(k).rows = numel(map) + (1:numel(patches))';
+    map = [map; creepIndex(patches)]; %#ok<AGROW>
+    eta = [eta; etaKf(patches,k)]; %#ok<AGROW>
+    decay = [decay; muKf(patches,k)./etaKf(patches,k)]; %#ok<AGROW>
+end
 n = numel(map);
 
 % ---- operator, forcing and jump ----
 K = assembleStressKernel(evl, locked);
 Kr = K(map,:) ./ eta;                       % stressing rate per row viscosity
 sys.A = Kr(:,map);
-if p > 0
+if any(decay)
     sys.A = sys.A - diag(decay);
 end
 vlock = rcv.Vpl .* locked;
@@ -128,6 +154,7 @@ sys.decay = decay;
 sys.map = map;
 sys.P = sparse(map, (1:n)', 1, n0, n);
 sys.kelvin = kelvin;
+sys.faultKelvin = faultKelvin;
 sys.locked = locked;
-sys.N = N; sys.M = M; sys.Nc = Nc; sys.n0 = n0; sys.p = p;
+sys.N = N; sys.M = M; sys.Nc = Nc; sys.n0 = n0; sys.p = p; sys.pf = pf;
 end

@@ -23,6 +23,9 @@ function [t,V,e22dot,e23dot,Y] = runImposedEarthquakeCycles(rcv,shz,evl,stress_c
 %                  .pinnedPosition  [N x 1] logical, true for locked
 %                                   patches
 %                  .dgf             degrees of freedom per patch (1)
+%                  .etaK, .muK      [N x pf] Kelvin elements in series
+%                                   with the fault dashpot (Burgers
+%                                   fault; optional, MPa s/m and MPa/m)
 %   shz            geometry.shearZoneReceiver object: mantle cells
 %                  .N               number of cells
 %                  .alpha           [M x 1] fluidity, 1/viscosity
@@ -63,7 +66,8 @@ function [t,V,e22dot,e23dot,Y] = runImposedEarthquakeCycles(rcv,shz,evl,stress_c
 %   - Spin-up is by brute force: nreps must be large enough for the cycle
 %     to become periodic; compare successive cycles to check.
 %   - Strain rates are totals: Maxwell (power law) plus Kelvin elements.
-%     The Kelvin elements start relaxed: spring stress = sigma_0.
+%     The Kelvin elements start relaxed: spring stress = sigma_0 (on the
+%     fault, the dashpot stress of the long-term slip rate).
 %   - nreps = 1 runs and returns a single cycle from the long-term state,
 %     with no spin-up.
 %
@@ -78,9 +82,10 @@ if nargin < 7
     odeSolver = [];
 end
 [~, muK, p] = extractKelvinElements(shz);
+[~, muKf, pf] = extractKelvinElements(rcv);
 
 % create initial values as perturbations about steady-state values
-Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf + 2*shz.N*p,1);
+Y0 = zeros(rcv.N*rcv.dgf + shz.N*shz.dgf + 2*shz.N*p + rcv.N*pf,1);
 % fault state: log(v), or v for the linear viscous fault law
 if isLinearFaultLaw(rcv)
     logV_0 = rcv.Vpl;
@@ -103,7 +108,13 @@ if p > 0
     has = muK > 0;
     sK0(:,1,:) = reshape(has .* s22_0, shz.N, 1, p);
     sK0(:,2,:) = reshape(has .* s23_0, shz.N, 1, p);
-    Y0(rcv.dgf*rcv.N + shz.dgf*shz.N + 1:end) = sK0(:);
+    Y0(rcv.dgf*rcv.N + shz.dgf*shz.N + (1:2*shz.N*p)) = sK0(:);
+end
+% fault Kelvin elements relaxed in the long-term state: spring stress =
+% dashpot stress Asigma*zeta_0 (0 where a patch has no element)
+if pf > 0
+    tK0 = (muKf > 0) .* (rcv.Asigma .* logV_0);
+    Y0(rcv.dgf*rcv.N + shz.dgf*shz.N + 2*shz.N*p + 1:end) = tK0(:);
 end
 
 

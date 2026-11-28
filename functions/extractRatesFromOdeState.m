@@ -1,8 +1,9 @@
-function [V,e22dot,e23dot,sK] = extractRatesFromOdeState(Y,rcv,shz)
+function [V,e22dot,e23dot,sK,tK] = extractRatesFromOdeState(Y,rcv,shz)
 % EXTRACTRATESFROMODESTATE  Slip and strain rates from ODE states.
 %
 %   [V, e22dot, e23dot] = extractRatesFromOdeState(Y, rcv, shz)
 %   [V, e22dot, e23dot, sK] = extractRatesFromOdeState(Y, rcv, shz)
+%   [V, e22dot, e23dot, sK, tK] = extractRatesFromOdeState(Y, rcv, shz)
 %
 %   Converts states of the numerical integration (see odeViscoelastic) to
 %   fault slip rate (v = exp(state), or v = state for rcv.faultLaw =
@@ -11,12 +12,13 @@ function [V,e22dot,e23dot,sK] = extractRatesFromOdeState(Y,rcv,shz)
 %       edot_ij = alpha * tau^(n-1) * s_ij,   tau = sqrt(s22^2 + s23^2)
 %   plus, for cells with Kelvin elements (shz.etaK, shz.muK), their rates
 %   (s_ij - sK_ij)/etaK, sK = muK*epsK the spring stress, so the strain
-%   rates are totals.
+%   rates are totals. Likewise the slip rate includes the fault Kelvin
+%   elements (rcv.etaK, rcv.muK), (Asigma*state - tK)/etaK.
 %
 % INPUTS
 %   Y       [Nt x n] states, one time per row (as returned by ode45)
 %   rcv     geometry.receiver object (uses .N, .dgf, .pinnedPosition,
-%           .faultLaw)
+%           .faultLaw, .Asigma, and .etaK, .muK if set)
 %   shz     geometry.shearZoneReceiver object (uses .N, .dgf, .alpha, .n,
 %           and .etaK, .muK if set)
 %
@@ -26,6 +28,8 @@ function [V,e22dot,e23dot,sK] = extractRatesFromOdeState(Y,rcv,shz)
 %   e23dot  [Nt x M] shear strain rate e23 (1/s)
 %   sK      [Nt x M x 2 x p] Kelvin spring stresses muK*epsK (MPa;
 %           component 22, 23 in dim 3); empty without Kelvin elements
+%   tK      [Nt x N x pf] fault Kelvin spring stresses muK*sK (MPa); empty
+%           without fault Kelvin elements
 %
 % SEE ALSO
 %   runImposedEarthquakeCycles, odeViscoelastic
@@ -34,10 +38,23 @@ function [V,e22dot,e23dot,sK] = extractRatesFromOdeState(Y,rcv,shz)
 %   Rishav Mallick, 2023
 
 % megathrust fault slip rates
+zeta = Y(:,1 : rcv.dgf : rcv.dgf*rcv.N);
 if isLinearFaultLaw(rcv)
-    V = Y(:,1 : rcv.dgf : rcv.dgf*rcv.N);
+    V = zeta;
 else
-    V = exp(Y(:,1 : rcv.dgf : rcv.dgf*rcv.N));
+    V = exp(zeta);
+end
+% fault Kelvin elements (transient afterslip) add their slip rates
+[etaKf, ~, pf] = extractKelvinElements(rcv);
+[~, ~, p] = extractKelvinElements(shz);
+tK = [];
+if pf > 0
+    Nt = size(Y, 1);
+    iKf = rcv.dgf*rcv.N + shz.dgf*shz.N + 2*shz.N*p + (1:rcv.N*pf);
+    tK = reshape(Y(:,iKf), Nt, rcv.N, pf);
+    for k = 1:pf
+        V = V + (rcv.Asigma(:)'.*zeta - tK(:,:,k)) ./ etaKf(:,k)';
+    end
 end
 V(:,logical(rcv.pinnedPosition)) = 0;% locked section of fault has v = 0
 

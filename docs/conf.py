@@ -29,7 +29,7 @@ extensions = [
 ]
 
 # -- MATLAB source (symlinks to the code folders only) -------------------------
-MATLAB_CODE_DIRS = ["functions", "+geometry"]
+MATLAB_CODE_DIRS = ["functions", "inverse", "+geometry"]
 MATLAB_SRC = DOCS / "_build" / "matlab_src"
 
 
