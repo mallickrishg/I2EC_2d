@@ -122,7 +122,7 @@ shz.e23pl = -e23 .* Vpl;
 {mat:func}`computeLongTermStrainRates` gives the corner-flow strain rates per
 unit plate rate; its last argument is the power-law exponent (1 or 3). The two
 translations shift the oceanic and wedge regions into the corner-flow frame
-(see {doc}`theory`). The Kelvin elements do not change the long-term flow.
+(see {doc}`theory/limits`). The Kelvin elements do not change the long-term flow.
 
 ## 5. The earthquake
 

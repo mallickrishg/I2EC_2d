@@ -65,12 +65,13 @@ suppress_warnings = ["myst.header"]
 # -- General -------------------------------------------------------------------
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_ext", "figures", "dev", "README.md", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "_ext", "_extra", "figures", "dev", "README.md", "Thumbs.db", ".DS_Store"]
 
 # -- HTML ----------------------------------------------------------------------
 html_theme = "furo"
 html_title = "I2EC 2D"
 html_static_path = ["_static"]
+html_extra_path = ["_extra"]  # theory.html: redirect to theory/index.html
 html_css_files = ["custom.css"]
 html_baseurl = "https://mallickrishg.github.io/I2EC_2d/"
 html_theme_options = {
