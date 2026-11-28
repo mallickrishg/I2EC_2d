@@ -3,6 +3,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TransientRheologyTest < matlab
     % with the Maxwell dashpot) in both solvers: assembleLinearSystem for
     % the semi-analytical path, odeViscoelastic for the numerical one,
     % computeAndradePronySeries for Andrade. See docs/dev/transient-rheology.md.
+    % Also the Burgers fault (Kelvin elements in series with the fault
+    % dashpot, rcv.etaK, rcv.muK); see docs/dev/adjoint.md.
 
     properties
         M       % small model
@@ -33,6 +35,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TransientRheologyTest < matlab
             shz.e23pl = 2e-15 * ones(shz.N, 1);
             shz.etaK = zeros(shz.N, 0);
             shz.muK = zeros(shz.N, 0);
+            rcv.etaK = zeros(rcv.N, 0);
+            rcv.muK = zeros(rcv.N, 0);
         end
     end
 
@@ -252,7 +256,141 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TransientRheologyTest < matlab
         end
     end
 
+    %% Burgers fault: Kelvin elements in series with the fault dashpot
+    methods (Test)
+        function infiniteFaultKelvinViscosityIsTheDashpot(tc)
+            % rcv.etaK = Inf: no fault Kelvin rows, the same system; the
+            % ODE right-hand side has zero fault Kelvin rate
+            rcv = tc.M.rcv; shz = tc.M.shz; evl = tc.Evl;
+            locked = rcv.pinnedPosition;
+            ref = assembleLinearSystem(evl, rcv, shz, locked, tc.event(locked));
+            Y = tc.someOdeState(0);
+            Yp0 = odeViscoelastic(0, Y, rcv, shz, evl);
+            rcv.etaK = Inf(rcv.N, 1); rcv.muK = ones(rcv.N, 1);
+            sys = assembleLinearSystem(evl, rcv, shz, locked, tc.event(locked));
+            tc.verifyEqual(sys.A, ref.A);
+            tc.verifyEqual(sys.c, ref.c);
+            tc.verifyEqual(sys.b, ref.b);
+            tc.verifyEqual(sys.pf, 1);
+            tc.verifyEmpty(sys.faultKelvin.rows);
+            Yp = odeViscoelastic(0, [Y; randn(rcv.N, 1)], rcv, shz, evl);
+            tc.verifyEqual(Yp(1:numel(Yp0)), Yp0);
+            tc.verifyEqual(Yp(numel(Yp0)+1:end), zeros(rcv.N, 1));
+        end
+
+        function faultKelvinRowsAreOnCreepingPatchesOnly(tc)
+            % finite etaK everywhere: rows only for the creeping patches
+            % (in order, after the mantle Kelvin rows); locked patches'
+            % elements do not evolve in the numerical solver
+            rcv = tc.M.rcv; shz = tc.M.shz; evl = tc.Evl;
+            locked = rcv.pinnedPosition;
+            tc.setKelvin("burgers", 100*tc.yr);
+            tc.setFaultKelvin();
+            sys = assembleLinearSystem(evl, rcv, shz, locked, tc.event(locked));
+            fk = sys.faultKelvin;
+            tc.verifyEqual(fk.patches, find(~locked));
+            tc.verifyEqual(fk.rows, sys.Nc + 4*shz.N + (1:sum(~locked))');
+            tc.verifyEqual(sys.map(fk.rows), (1:sys.Nc)');
+            tc.verifyEqual(sys.decay(fk.rows), rcv.muK(~locked)./rcv.etaK(~locked));
+            Y = [tc.someOdeState(1); randn(rcv.N, 1)];
+            Yp = odeViscoelastic(0, Y, rcv, shz, evl);
+            tc.verifyEqual(Yp(end-rcv.N+find(locked)), zeros(nnz(locked), 1));
+        end
+
+        function singlePatchBurgersFaultRelaxation(tc)
+            % one creeping patch with self-stiffness k and no loading:
+            % dtau/dt = -k*(vM + vK), tau = eta'*vM = muK*sK + etaK*vK, so
+            % tau relaxes like the single-cell Burgers stress (two
+            % exponentials); both solvers, slip rate and Kelvin slip
+            k = 3e4; etaF = 1e13; etaK = 1e12; muK = 3e4; tau0 = 1;
+            rcv = struct('N', 1, 'dgf', 1, 'Vpl', 0, 'Asigma', etaF, 'pinnedPosition', false, ...
+                'faultLaw', 'linear', 'etaK', etaK, 'muK', muK);
+            shz = struct('N', 1, 'dgf', 2, 'alpha', 1e-13, 'n', 1, 'e22pl', 0, 'e23pl', 0);
+            evl = struct('KK', -k, 'KL', zeros(1,1,2), 'LK', zeros(1,1,2), 'LL', zeros(1,1,2,2));
+            bq = k/etaF + (k + muK)/etaK; cq = k*muK/(etaF*etaK);
+            r = (-bq + [1 -1]*sqrt(bq^2 - 4*cq))/2;
+            ds0 = -k*tau0*(1/etaF + 1/etaK);
+            a1 = (ds0 - r(2)*tau0)/(r(1) - r(2)); a2 = tau0 - a1;
+            t = [0.01 0.3 1 3 10 30]*tc.yr;
+            tauAn = a1*exp(r(1)*t) + a2*exp(r(2)*t);
+            sKAn = (a1/(etaK*r(1) + muK))*(exp(r(1)*t) - exp(-muK/etaK*t)) + ...
+                   (a2/(etaK*r(2) + muK))*(exp(r(2)*t) - exp(-muK/etaK*t));
+            vAn = -[r(1)*a1*exp(r(1)*t) + r(2)*a2*exp(r(2)*t)]/k;   % v = -(dtau/dt)/k
+
+            % semi-analytical: rows [vM; e22M; e23M; vK]
+            sys = assembleLinearSystem(evl, rcv, shz, false);
+            tc.verifyEqual(sys.A([1 4],[1 4]), -[k/etaF, k/etaF; k/etaK, k/etaK + muK/etaK], 'RelTol', 1e-14);
+            Y = solveAnalyticIvp(sys.A, sys.c, [tau0/etaF; 0; 0; tau0/etaK], t);
+            V = extractRatesFromLinearState(Y, sys);
+            tc.verifyEqual(etaF*Y(1,:), tauAn, 'RelTol', 1e-9, 'stress, semi-analytical');
+            tc.verifyEqual((etaF*Y(1,:) - etaK*Y(4,:))/muK, sKAn, 'RelTol', 1e-8, 'Kelvin slip, semi-analytical');
+            tc.verifyEqual(V, vAn, 'RelTol', 1e-8, 'total slip rate, semi-analytical');
+
+            % numerical: state [v; s22; s23; tK], tK = muK*sK
+            opt = odeset('AbsTol', 1e-14, 'RelTol', 1e-10);
+            [~, Ynum] = ode45(@(tt, y) odeViscoelastic(tt, y, rcv, shz, evl), [0 t], [tau0/etaF; 0; 0; 0], opt);
+            Ynum = Ynum(2:end, :);
+            [Vnum, ~, ~, ~, tK] = extractRatesFromOdeState(Ynum, rcv, shz);
+            tc.verifyEqual(etaF*Ynum(:,1)', tauAn, 'RelTol', 1e-7, 'stress, numerical');
+            tc.verifyEqual(tK'/muK, sKAn, 'RelTol', 1e-7, 'Kelvin slip, numerical');
+            tc.verifyEqual(Vnum', vAn, 'RelTol', 1e-7, 'total slip rate, numerical');
+        end
+
+        function burgersFaultHasNoGrowingModes(tc)
+            % Burgers fault and mantle: real, negative spectrum; the cycle
+            % mean of the slip rate is the long-term rate and the fault
+            % Kelvin rates integrate to zero
+            rcv = tc.M.rcv; shz = tc.M.shz; evl = tc.Evl;
+            locked = rcv.pinnedPosition; T = 100*tc.yr;
+            slip = tc.Vpl*T*locked;
+            sc = struct('Nevents', 1, 'Timing', 0, 'dtau', evl.KK*slip, ...
+                'dsigma22', evl.KL(:,:,1)*slip, 'dsigma23', evl.KL(:,:,2)*slip);
+            tc.setKelvin("burgers", T);
+            tc.setFaultKelvin();
+            sys = assembleLinearSystem(evl, rcv, shz, locked, sc);
+            lam = eig(sys.A);
+            tc.verifyLessThan(max(real(lam)), 0, 'no growing modes');
+            tc.verifyLessThan(max(abs(imag(lam))), 1e-6*max(abs(lam)), 'real spectrum');
+            y0 = computePeriodicInitialCondition(sys.A, sys.c, sys.b, T);
+            [~, U] = solveAnalyticIvp(sys.A, sys.c, y0, T);
+            [Vm, ~, ~, parts] = extractRatesFromLinearState(U/T, sys);
+            tc.verifyEqual(Vm(~locked), rcv.Vpl(~locked), 'RelTol', 1e-7, 'mean slip rate');
+            tc.verifyEqual(parts.vK(~locked), zeros(nnz(~locked), 1), 'AbsTol', 1e-7*tc.Vpl, ...
+                'fault Kelvin rates integrate to zero');
+            tc.verifyEqual(parts.vM + sum(parts.vK, 2), Vm, 'AbsTol', 1e-12*tc.Vpl, 'parts add up');
+        end
+
+        function burgersFaultPeriodicCycleMatchesSpunUpNumericalCycle(tc)
+            tc.setKelvin("burgers", 100*tc.yr);
+            tc.setFaultKelvin();
+            tc.verifySpinUpMatchesPeriodicCycle(100*tc.yr);
+        end
+
+        function rateStrengtheningBurgersFaultStartsInSteadyState(tc)
+            % numerical solver only: rate-strengthening fault dashpot with
+            % a Kelvin element; the long-term state (relaxed elements) does
+            % not change without earthquakes
+            rcv = tc.M.rcv; shz = tc.M.shz;
+            rcv.faultLaw = 'ratestrengthening'; rcv.Asigma = 0.5 * ones(rcv.N, 1);
+            rcv.pinnedPosition = false(rcv.N, 1);
+            rcv.etaK = 1e-6 * 1e17/1e3 * ones(rcv.N, 1); rcv.muK = rcv.etaK / tc.yr;
+            sc = struct('Nevents', 1, 'Timing', 10*tc.yr, ...
+                'dtau', zeros(rcv.N,1), 'dsigma22', zeros(shz.N,1), 'dsigma23', zeros(shz.N,1));
+            [~, ~, V, ~, ~, Y] = evalc('runImposedEarthquakeCycles(rcv, shz, tc.Evl, sc, 1, 50*tc.yr)');
+            tc.verifySize(Y, [size(V,1), rcv.N + 2*shz.N + rcv.N]);
+            tc.verifyEqual(V, repmat(rcv.Vpl', size(V,1), 1), 'RelTol', 1e-8);
+        end
+    end
+
     methods (Access = private)
+        function setFaultKelvin(tc)
+            % Burgers fault: Kelvin viscosity eta'/10, tauK = 1 yr, on every
+            % patch (the locked ones are ignored)
+            rcv = tc.M.rcv;
+            rcv.etaK = rcv.Asigma / 10;
+            rcv.muK = rcv.etaK / tc.yr;
+        end
+
         function setKelvin(tc, kind, T)
             % Burgers: one element, tauK ~ 1 yr; Andrade: Prony series on
             % [1 yr, 0.3 T] (short enough to spin up in a test)
@@ -326,7 +464,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) TransientRheologyTest < matlab
             tau = t - t1 + Trecur*(t < t1 | (t == t1 & ~post));
             [Van, e22an, e23an] = extractRatesFromLinearState(solveAnalyticIvp(sys.A, sys.c, y0, tau'), sys);
             Vs = max(abs(Van(~locked,:)), [], 'all'); Es = max(abs([e22an; e23an]), [], 'all');
-            msg = sprintf('%d cycles, rho = %.3f, p = %d', nreps, rho, sys.p);
+            msg = sprintf('%d cycles, rho = %.3f, p = %d, pf = %d', nreps, rho, sys.p, sys.pf);
             tc.verifyEqual(V(:,~locked)', Van(~locked,:), 'AbsTol', 1e-6*Vs, ['slip rate: ' msg]);
             tc.verifyEqual([e22'; e23'], [e22an; e23an], 'AbsTol', 1e-6*Es, ['strain rate: ' msg]);
         end

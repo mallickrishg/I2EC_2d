@@ -29,6 +29,13 @@ classdef receiver < geometry.fpatch
 %                   (dtau/dt)/Asigma, state log(v); or 'linear' (linear
 %                   viscous, as in the semi-analytical solvers),
 %                   dv/dt = (dtau/dt)/Asigma, state v
+%   etaK, muK       [N x p] Kelvin elements in series with the fault
+%                   dashpot (transient afterslip: Burgers fault for p = 1),
+%                   tau = muK*sK + etaK*vK with sK the Kelvin slip:
+%                   viscosity per unit length (MPa s/m, as Asigma; Inf
+%                   means no element) and stiffness (MPa/m). Default
+%                   zeros(N, 0): no Kelvin elements. See
+%                   extractKelvinElements
 %   mu0             [N x 1] friction coefficient at Vo; default only
 %   Vpl             [N x 1] long-term slip rate (m/s), or the
 %                   boundary-condition type for the model boundary
@@ -59,6 +66,11 @@ classdef receiver < geometry.fpatch
         % fault law of the numerical integration: 'ratestrengthening'
         % (default; state log(v)) or 'linear' (linear viscous; state v)
         faultLaw = 'ratestrengthening';
+        % transient afterslip: p Kelvin elements in series with the fault
+        % dashpot, tau = muK*sK + etaK*vK, [N x p] each; viscosity etaK
+        % (MPa s/m, Inf: no element) and stiffness muK (MPa/m). [N x 0]: none
+        etaK = zeros(0, 0);
+        muK = zeros(0, 0);
         % friction coefficient at the reference velocity [N x 1]; default
         mu0;
         % long-term slip rate [N x 1] (m/s); boundary-condition type for the
@@ -90,7 +102,8 @@ classdef receiver < geometry.fpatch
             %   vectors and patch centres, and sets default properties:
             %   velocity-strengthening friction (a = 0.01, b = a - 0.004,
             %   Vo = 0.1 m/s, l = 1e-3 m, sigma = 100 MPa, mu0 = 0.6),
-            %   Asigma = 1 MPa, no locked patches and dgf = 1.
+            %   Asigma = 1 MPa, no locked patches, no Kelvin elements
+            %   (etaK, muK = zeros(N, 0)) and dgf = 1.
             %
             % INPUTS
             %   filename    path to a .seg file, or a cell array of paths
@@ -147,6 +160,9 @@ classdef receiver < geometry.fpatch
             obj.Asigma=obj.W*0+1;
             obj.mu0=obj.W*0+0.6;
             obj.pinnedPosition=obj.W*0;
+            % no Kelvin elements: the fault dashpot alone
+            obj.etaK=zeros(obj.N,0);
+            obj.muK=zeros(obj.N,0);
 
             % unit vectors in the dip direction
             obj.dv=[...

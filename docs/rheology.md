@@ -10,6 +10,7 @@ page goes through the steps in order; the code blocks run as one script.
 | --- | --- | --- | --- | --- |
 | `rcv` | `faultLaw` | | | `'ratestrengthening'` (default) or `'linear'` |
 | `rcv` | `Asigma` | N × 1 | MPa, or MPa s/m | $(a-b)\sigma$, or the viscosity per unit length of a linear fault |
+| `rcv` | `etaK`, `muK` | N × p | MPa s/m, MPa/m | fault Kelvin elements (transient afterslip); $N \times 0$ for none |
 | `rcv` | `pinnedPosition` | N × 1 | logical | locked patches |
 | `rcv` | `Vpl` | N × 1 | m/s | long-term slip rate |
 | `shz` | `n` | M × 1 | | power-law exponent (1: linear) |
@@ -46,6 +47,22 @@ rcv.Asigma = 1e-6*(5e17/sum(rcv.W)) .* ones(rcv.N, 1);
 The semi-analytical solver needs the linear fault. The numerical solver also
 takes rate-strengthening friction: `rcv.faultLaw = 'ratestrengthening'` with
 `rcv.Asigma` $= (a-b)\sigma$ in MPa (see {doc}`examples/example1`).
+
+**Burgers fault.** A Kelvin element (spring $\mu_K$ and dashpot $\eta_K$ in
+parallel) in series with the fault dashpot gives fast, transient afterslip on
+top of the steady creep. Its slip $s_K$ obeys $\tau = \mu_K s_K + \eta_K
+\dot s_K$, and the slip rate is the sum of the two elements'. The units are
+those of a fault: $\eta_K$ in MPa s/m like `Asigma`, $\mu_K$ in MPa per metre
+of slip (a patch's own elastic stiffness is about $G/W$):
+
+```matlab
+rcv.etaK = rcv.Asigma / 30;                % MPa s/m, a fast element
+rcv.muK  = m.mu ./ rcv.W;                  % MPa/m, about G/W
+```
+
+Elements on locked patches are ignored; `Inf` in `etaK` means no element. Both
+solvers take it, with either fault law in the numerical one. Reset to
+`zeros(rcv.N, 0)` for the plain dashpot.
 
 ## 3. The mantle
 
@@ -137,9 +154,10 @@ tvec = [0.01 0.1 0.99]*Trecur;             % times after the earthquake
 the jump $b$ of each earthquake, with the Kelvin elements of `shz` included;
 {mat:func}`computePeriodicInitialCondition` finds the periodic cycle with no
 spin-up, and {mat:func}`solveAnalyticIvp` evaluates it exactly at any times.
-`V` is the slip rate (patches × times, 0 on locked patches), `e22dot` and
-`e23dot` the total mantle strain rates (cells × times), and `parts` splits
-them into the Maxwell and Kelvin elements. `U` holds the integrals since the
+`V` is the total slip rate (patches × times, 0 on locked patches), `e22dot`
+and `e23dot` the total mantle strain rates (cells × times), and `parts` splits
+them into the Maxwell and Kelvin elements (`parts.vM` and `parts.vK` for the
+fault). `U` holds the integrals since the
 earthquake, split the same way:
 
 ```matlab

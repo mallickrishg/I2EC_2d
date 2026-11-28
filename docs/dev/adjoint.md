@@ -91,15 +91,19 @@ it is pushed (user's request).
 Branch plan (user, 2026-11-26): build the Burgers fault (forward model,
 then its adjoint) on `adjoint-inverse`, test it and merge to main. Then
 make a new branch `example6` for the example (fault inversion, tweaks,
-docs page, slow test). Nothing is built yet.
+docs page, slow test).
 
-- [ ] Burgers fault: a Kelvin element in series with the creeping-fault
-      dashpot (today the fault is one dashpot, eta' per patch, no Kelvin
-      rows). New fault Kelvin rows in assembleLinearSystem and the
-      numerical solver, parameterised as the mantle (log eta', log tauK,
-      log muK/mu), with tests. The adjoint is row-wise, so it mostly
-      carries over; extend extractViscosityGradient /
-      assembleRowPerturbation to the fault Kelvin rows.
+The example 6 rework (`fa295c0`, `f725760`) had been pushed; it now lives on
+the `example6` branch, and commit "Move the example 6 rework to the example6
+branch" restores example 6 here. **When `example6` is merged after this
+branch, revert that commit on `example6` first**, or the merge keeps the
+old example.
+
+- [x] Burgers fault (2026-11-28): fault Kelvin elements `rcv.etaK`
+      (MPa s/m), `rcv.muK` (MPa/m) in both solvers; adjoint parameter
+      maps extended (section 3); tests in TransientRheologyTest and
+      AdjointTest; user docs (rheology, theory). Details in section 3
+      and docs/dev/transient-rheology.md.
 - [ ] Then invert uniform fault Burgers parameters on the creeping section
       in example 6 (afterslip vs mantle trade-off); coseismic slip stays
       known (uniform slip deficit on the locked zone, 0-30 km).
@@ -281,6 +285,19 @@ parameters:
   directions. With μ_K fixed, log τ_K moves log η_K one-for-one, so the
   ratio parameterisation still holds. Example 6, case B.
 
+- **Burgers fault** (2026-11-28): the creeping patches may have Kelvin
+  elements too (`rcv.etaK`, `rcv.muK`; one row per creeping patch and
+  column, after the mantle Kelvin rows: `sys.faultKelvin(k).patches`,
+  `.rows`, `sys.pf`). The core needs nothing new: the gradient is per row,
+  and the fault Kelvin rows decay at μ_K/η_K like the mantle's. The maps
+  give, per patch and column, the same three parameters as a cell:
+
+      log η′ (.fault),  log τ_K (.faultTauK),  log(μ_K/k0) (.faultMuKrel)
+
+  with k0 any fixed stiffness (G/W is natural), or with 'raw'
+  `.faultEtaK`, `.faultMuK`. Zero on locked patches (their elements are
+  ignored). Uniform fault parameters are sums over the creeping patches.
+
 ## 4. API (three layers)
 
 **Code layout (user, 2026-11-25).** Everything this feature adds lives in a
@@ -360,6 +377,15 @@ parameter); the adjoint stays valid as long as η enters only as a row scaling.
 - Variable projection: gradient of the offset-projected misfit vs FD.
 - Gravity-readiness: a row with η_row = NaN gets no gradient and does not
   break the solve (synthetic extra row).
+- Burgers fault: gradient vs FD per parameter (default and raw), the
+  dot-product test and the parameter-map transposes with fault Kelvin
+  elements; and, because the fault Kelvin parameters move the surface 1e-5
+  as much as the mantle's (so the per-parameter FD check, scaled by the
+  largest component, cannot see them), the tangent along a
+  fault-Kelvin-only direction vs FD of U (≤ 1e-3 of its own size) and the
+  adjoint against it (1e-7). In the small model the default fault dashpot
+  relaxes in weeks, so a slower Kelvin element carries almost no stress:
+  the test uses a 30× stiffer dashpot and a fast, stiff element (μ_K ~ G/W).
 
 Slow tier (`ExampleScriptsTest`): example 6 runs and recovers ξ within its
 noise level.

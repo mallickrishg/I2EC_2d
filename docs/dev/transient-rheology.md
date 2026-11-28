@@ -195,6 +195,36 @@ after the earthquake, over long-term: 11 (Maxwell), 114 (Burgers), 978
 - `ExampleScriptsTest/transientRheologyExampleRuns` (slow tier) runs example 5
   and checks its cycle-mean departures are < 1e-6.
 
+## Burgers fault (2026-11-28, branch `adjoint-inverse`)
+
+Creeping fault patches take Kelvin elements too, in series with the fault
+dashpot: `rcv.etaK` (MPa s/m, the units of `rcv.Asigma`; `Inf`: none) and
+`rcv.muK` (MPa per metre of slip), [N × p_f], default `zeros(N, 0)`, read
+by the same `extractKelvinElements`. Each element obeys
+τ = μ_K s_K + η_K ṡ_K; the slip rate that loads the kernels is the total.
+
+- Semi-analytical: one row per creeping patch and column, after the mantle
+  Kelvin rows (existing indexing unchanged), mapping to that patch's slip
+  rate: dv_K/dt = τ̇/η_K − (μ_K/η_K) v_K. `sys.faultKelvin(k).patches`,
+  `.rows`; `sys.pf`. Elements on locked patches are ignored.
+  `extractRatesFromLinearState(..., sys)` returns the total slip rate and
+  `parts.vM`, `parts.vK`.
+- Numerical: a block of spring stresses t_K = μ_K s_K after the mantle
+  Kelvin block (N·p_f entries), with v_K = (Asigma·ζ − t_K)/η_K, ζ the fault
+  state (v, or log v for rate-strengthening: Asigma·ζ is the dashpot stress
+  up to a constant, which the relaxed start absorbs). Locked patches' elements
+  do not evolve. `runImposedEarthquakeCycles` starts them relaxed (t_K =
+  Asigma·ζ_0); `extractRatesFromOdeState` returns the total slip rate and
+  t_K as a fifth output. Stress steps need no change (Kelvin slip is
+  continuous). `isLinearFaultLaw` now also reads structs.
+- Tests (TransientRheologyTest): Inf η_K is the plain dashpot (system and
+  RHS); rows only on creeping patches; a single patch with self-stiffness
+  relaxes as the closed-form two-exponential Burgers response in both
+  solvers; no growing modes, cycle-mean slip rate = long-term, Kelvin slip
+  rates integrate to zero; the periodic cycle matches the numerical
+  spin-up (with a Burgers mantle too); a rate-strengthening Burgers fault
+  starts and stays in the long-term state.
+
 ## Open / later
 
 - Kelvin elements with a power law (nonlinear transient creep) — numerical

@@ -17,6 +17,10 @@ function gp = extractViscosityGradient(g, sys, varargin)
 %   fixed and invert eta_M and eta_K, use .etaM and .tauK and ignore
 %   .muKrel (with muK fixed, a change of log tauK is the same change of
 %   log etaK).
+%   A Burgers fault (fault Kelvin elements, sys.pf >= 1) has the same
+%   three per creeping patch and column: log eta' (.fault), and
+%   log tauK = log(etaK/muK), log(muK/k0) of the fault element (k0 any
+%   fixed stiffness), or with 'raw' log etaK, log muK.
 %   assembleRowPerturbation is the transpose map (directions).
 %
 % INPUTS
@@ -31,7 +35,12 @@ function gp = extractViscosityGradient(g, sys, varargin)
 %          .etaM    [M x r] dJ/dlog(eta_M) per cell
 %          .tauK, .muKrel  [M x p x r] ('default', Kelvin only)
 %          .etaK, .muK     [M x p x r] ('raw', Kelvin only)
-%          Kelvin entries are 0 for cells without that element.
+%          .faultTauK, .faultMuKrel  [N x pf x r] ('default', fault
+%                   Kelvin only)
+%          .faultEtaK, .faultMuK     [N x pf x r] ('raw', fault Kelvin
+%                   only)
+%          Kelvin entries are 0 for cells (patches) without that element,
+%          and on locked patches.
 %
 % SEE ALSO
 %   computeAdjointGradient, assembleRowPerturbation, assembleLinearSystem
@@ -45,6 +54,20 @@ N = sys.N; M = sys.M; Nc = sys.Nc; p = sys.p;
 gp.fault = zeros(N, r);
 gp.fault(~sys.locked, :) = g.eta(1:Nc, :);
 gp.etaM = g.eta(Nc + (1:M), :) + g.eta(Nc + M + (1:M), :);
+pf = 0; if isfield(sys, 'pf'), pf = sys.pf; end
+if pf > 0
+    gEtaKf = zeros(N, pf, r); gMuKf = zeros(N, pf, r);
+    for k = 1:pf
+        fk = sys.faultKelvin(k);
+        gEtaKf(fk.patches, k, :) = reshape(g.eta(fk.rows, :), [], 1, r);
+        gMuKf(fk.patches, k, :) = reshape(g.muK(fk.rows, :), [], 1, r);
+    end
+    if strcmp(kind, 'raw')
+        gp.faultEtaK = gEtaKf; gp.faultMuK = gMuKf;
+    else
+        gp.faultTauK = gEtaKf; gp.faultMuKrel = gEtaKf + gMuKf;
+    end
+end
 if p == 0
     return
 end

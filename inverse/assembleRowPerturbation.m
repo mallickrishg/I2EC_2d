@@ -7,7 +7,8 @@ function [dTheta, dPhi] = assembleRowPerturbation(sys, dp, varargin)
 %   Transpose of extractViscosityGradient: turns perturbations of the
 %   physical parameters (log eta' per fault patch, log eta_M per cell,
 %   and for Kelvin elements log tauK and log(muK/G), or log etaK and
-%   log muK with 'raw') into the per-row perturbations dTheta of
+%   log muK with 'raw'; the same three for a Burgers fault, with the
+%   fault prefix) into the per-row perturbations dTheta of
 %   log(sys.eta) and dPhi of log(muK) taken by computeTangentSequence.
 %   For any g: sum of gp.(f).*dp.(f) over the fields equals
 %   g.eta'*dTheta + g.muK'*dPhi.
@@ -25,6 +26,8 @@ function [dTheta, dPhi] = assembleRowPerturbation(sys, dp, varargin)
 %          .fault [N x r], .etaM [M x r],
 %          'default': .tauK, .muKrel [M x p x r]
 %          'raw':     .etaK, .muK    [M x p x r]
+%          Burgers fault, 'default': .faultTauK, .faultMuKrel
+%          [N x pf x r]; 'raw': .faultEtaK, .faultMuK
 %   'Parameters'  'default' or 'raw'  ['default']
 %
 % OUTPUTS
@@ -59,6 +62,21 @@ dTheta(1:Nc, :) = df(~sys.locked, :);
 dm = get2('etaM', M);
 dTheta(Nc + (1:M), :) = dm;
 dTheta(Nc + M + (1:M), :) = dm;
+pf = 0; if isfield(sys, 'pf'), pf = sys.pf; end
+if pf > 0
+    get3f = @(name) fieldOr(dp, name, zeros(N, pf, r));
+    if raw
+        dEtaKf = get3f('faultEtaK'); dMuKf = get3f('faultMuK');
+    else
+        dRelf = get3f('faultMuKrel');
+        dEtaKf = get3f('faultTauK') + dRelf; dMuKf = dRelf;
+    end
+    for k = 1:pf
+        fk = sys.faultKelvin(k);
+        dTheta(fk.rows, :) = reshape(dEtaKf(fk.patches, k, :), [], r);
+        dPhi(fk.rows, :) = reshape(dMuKf(fk.patches, k, :), [], r);
+    end
+end
 if p == 0
     return
 end

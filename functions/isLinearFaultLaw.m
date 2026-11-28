@@ -6,10 +6,10 @@ function tf = isLinearFaultLaw(rcv)
 %   Reads rcv.faultLaw: 'linear' (linear viscous fault, state v) gives
 %   true; 'ratestrengthening' (the default, state log(v)) gives false. Any
 %   other value is an error. Objects without the property (older saved
-%   receivers) count as rate-strengthening.
+%   receivers) and structs without the field count as rate-strengthening.
 %
 % INPUTS
-%   rcv     geometry.receiver object
+%   rcv     geometry.receiver object (or struct)
 %
 % OUTPUTS
 %   tf      logical scalar
@@ -18,7 +18,7 @@ function tf = isLinearFaultLaw(rcv)
 %   odeViscoelastic, extractRatesFromOdeState,
 %   runImposedEarthquakeCycles
 
-if ~isprop(rcv, 'faultLaw')
+if ~((isobject(rcv) && isprop(rcv, 'faultLaw')) || (isstruct(rcv) && isfield(rcv, 'faultLaw')))
     tf = false;
     return
 end

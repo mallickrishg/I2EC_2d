@@ -1,7 +1,8 @@
 classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.TestCase
     %ADJOINTTEST  Adjoint and tangent of the linear periodic-plus-sequence
     % forward model (inverse/): gradients of a surface-displacement misfit
-    % with respect to log viscosity, Maxwell and Burgers.
+    % with respect to log viscosity, Maxwell and Burgers mantle, and a
+    % Burgers fault.
     % See docs/dev/adjoint.md.
 
     properties
@@ -10,6 +11,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
         Devl    % displacement kernels at the 7 surface points
         yr = 3.15e7
         Vpl = 1e-9
+        faultStiffness = 3         % fault Kelvin stiffness scale, ~G/W (MPa/m)
     end
 
     methods (TestClassSetup)
@@ -35,6 +37,8 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             shz.e23pl = 2e-15 * ones(shz.N, 1);
             shz.etaK = zeros(shz.N, 0);
             shz.muK = zeros(shz.N, 0);
+            rcv.etaK = zeros(rcv.N, 0);
+            rcv.muK = zeros(rcv.N, 0);
         end
     end
 
@@ -261,6 +265,14 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             tc.verifyGradient("burgers", 'raw');
         end
 
+        function burgersFaultGradientMatchesFiniteDifferences(tc)
+            tc.verifyGradient("burgersFault", 'default');
+        end
+
+        function burgersFaultRawGradientMatchesFiniteDifferences(tc)
+            tc.verifyGradient("burgersFault", 'raw');
+        end
+
         function periodicityAdjointAlone(tc)
             % a misfit that sees only the spin-up: observations before any
             % observed event, sources only from the start state onwards
@@ -275,7 +287,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
     %% tangent
     methods (Test)
         function tangentPassesDotProductTest(tc)
-            for kind = ["maxwell", "burgers"]
+            for kind = ["maxwell", "burgers", "burgersFault"]
                 tc.setKelvin(kind);
                 sys = tc.system();
                 fwd = solveLinearSequence(sys, tc.sequence(sys));
@@ -294,7 +306,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
         end
 
         function tangentMatchesFiniteDifferences(tc)
-            tc.setKelvin("burgers");
+            tc.setKelvin("burgersFault");
             sys = tc.system();
             p0 = tc.parameters();
             rng(11);
@@ -310,8 +322,39 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             tc.verifyEqual(dU, dUfd, 'AbsTol', 1e-6*max(abs(dUfd), [], 'all'));
         end
 
+        function faultKelvinTangentAndAdjointOnTheirOwnScale(tc)
+            % the fault Kelvin parameters move the displacement far less
+            % than the mantle's, so check them alone: tangent along a
+            % fault-Kelvin-only direction against central differences of U,
+            % and the adjoint against that tangent, each relative to its
+            % own size
+            tc.setKelvin("burgersFault");
+            sys = tc.system();
+            p0 = tc.parameters();
+            fwd = solveLinearSequence(sys, tc.sequence(sys));
+            rng(13);
+            S = randn(size(fwd.U));
+            g = extractViscosityGradient(computeAdjointGradient(fwd, S), sys);
+            for f = ["faultTauK", "faultMuKrel"]
+                dp = structfun(@(x) zeros(size(x)), p0, 'UniformOutput', false);
+                dp.(f) = randn(size(p0.(f))) .* ~tc.M.rcv.pinnedPosition;
+                [dTheta, dPhi] = assembleRowPerturbation(sys, dp);
+                dU = computeTangentSequence(fwd, dTheta, dPhi);
+                h = 1e-2;
+                Up = tc.forwardAt(tc.shift(p0, dp, h), fwd.balance);
+                Um = tc.forwardAt(tc.shift(p0, dp, -h), fwd.balance);
+                tc.setParameters(p0);
+                dUfd = (Up.U - Um.U) / (2*h);
+                tc.verifyGreaterThan(max(abs(dUfd), [], 'all'), 1e-9*max(abs(fwd.U), [], 'all'), ...
+                    char(f + ": the fault Kelvin element moves the surface"));
+                tc.verifyEqual(dU, dUfd, 'AbsTol', 1e-3*max(abs(dUfd), [], 'all'), char(f + ": tangent"));
+                tc.verifyEqual(sum(S .* dU, 'all'), sum(g.(f) .* dp.(f), 'all'), 'RelTol', 1e-7, ...
+                    char(f + ": adjoint"));
+            end
+        end
+
         function parameterMapsAreTransposes(tc)
-            tc.setKelvin("burgers");
+            tc.setKelvin("burgersFault");
             sys = tc.system();
             rng(5);
             n = numel(sys.eta);
@@ -378,13 +421,23 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
 
     methods (Access = private)
         function setKelvin(tc, kind)
-            shz = tc.M.shz;
+            shz = tc.M.shz; rcv = tc.M.rcv;
+            rcv.etaK = zeros(rcv.N, 0); rcv.muK = zeros(rcv.N, 0);
             switch kind
                 case "maxwell"
                     shz.etaK = zeros(shz.N, 0); shz.muK = zeros(shz.N, 0);
-                case "burgers"     % tauK ~ 0.3 - 3 yr, varying per cell
+                case {"burgers", "burgersFault"}     % tauK ~ 0.3 - 3 yr, varying per cell
                     shz.etaK = 1e-6 * 1e18 * 10.^linspace(0.5, -0.5, shz.N)';
                     shz.muK = 3e4 * linspace(0.8, 1.2, shz.N)';
+            end
+            if kind == "burgersFault"
+                % a fault dashpot that relaxes over years (30 x the default)
+                % and a fast, stiff Kelvin element (eta'/30 to eta'/10,
+                % muK ~ G/W, tauK ~ weeks), so the Kelvin element carries a
+                % sizeable share of the afterslip
+                rcv.Asigma = 30 * rcv.Asigma;
+                rcv.etaK = rcv.Asigma .* linspace(0.03, 0.1, rcv.N)';
+                rcv.muK = tc.faultStiffness * linspace(0.5, 2, rcv.N)';
             end
         end
 
@@ -466,6 +519,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
                 p.tauK = log(etaK ./ muK);
                 p.muKrel = log(muK / 3e4);
             end
+            [etaKf, muKf] = extractKelvinElements(rcv);
+            if ~isempty(etaKf)
+                p.faultTauK = log(etaKf ./ muKf);
+                p.faultMuKrel = log(muKf / tc.faultStiffness);
+            end
         end
 
         function setParameters(tc, p)
@@ -474,6 +532,10 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             if isfield(p, 'tauK')
                 tc.M.shz.muK = 3e4 * exp(p.muKrel);
                 tc.M.shz.etaK = exp(p.tauK) .* tc.M.shz.muK;
+            end
+            if isfield(p, 'faultTauK')
+                tc.M.rcv.muK = tc.faultStiffness * exp(p.faultMuKrel);
+                tc.M.rcv.etaK = exp(p.faultTauK) .* tc.M.rcv.muK;
             end
         end
 
@@ -529,7 +591,7 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
             for f = fields
                 gfd.(f{1}) = zeros(size(gp.(f{1})));
                 for i = 1:numel(gfd.(f{1}))
-                    if strcmp(f{1}, 'fault') && tc.M.rcv.pinnedPosition(i), continue, end
+                    if startsWith(f{1}, 'fault') && tc.M.rcv.pinnedPosition(i), continue, end
                     qp = q0; qp.(f{1})(i) = qp.(f{1})(i) + h;
                     qm = q0; qm.(f{1})(i) = qm.(f{1})(i) - h;
                     gfd.(f{1})(i) = (Jat(qp) - Jat(qm)) / (2*h);
@@ -551,6 +613,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
                     q.muK = p.muKrel + log(3e4);
                     q.etaK = p.tauK + q.muK;
                 end
+                if isfield(p, 'faultTauK')
+                    q = rmfield(q, {'faultTauK', 'faultMuKrel'});
+                    q.faultMuK = p.faultMuKrel + log(tc.faultStiffness);
+                    q.faultEtaK = p.faultTauK + q.faultMuK;
+                end
             end
             function p = defaultOf(q)
                 p = q;
@@ -558,6 +625,11 @@ classdef (SharedTestFixtures = {I2ECPathFixture}) AdjointTest < matlab.unittest.
                     p = rmfield(p, {'etaK', 'muK'});
                     p.tauK = q.etaK - q.muK;
                     p.muKrel = q.muK - log(3e4);
+                end
+                if isfield(q, 'faultEtaK')
+                    p = rmfield(p, {'faultEtaK', 'faultMuK'});
+                    p.faultTauK = q.faultEtaK - q.faultMuK;
+                    p.faultMuKrel = q.faultMuK - log(tc.faultStiffness);
                 end
             end
         end
