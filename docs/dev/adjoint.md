@@ -98,6 +98,8 @@ the `example6` branch, and commit "Move the example 6 rework to the example6
 branch" restores example 6 here. **When `example6` is merged after this
 branch, revert that commit on `example6` first**, or the merge keeps the
 old example.
+Done 2026-11-28: `adjoint-inverse` merged into main (#39, merge commit);
+`example6` fast-forwarded to main and that commit reverted there.
 
 - [x] Burgers fault (2026-11-28): fault Kelvin elements `rcv.etaK`
       (MPa s/m), `rcv.muK` (MPa/m) in both solvers; adjoint parameter
