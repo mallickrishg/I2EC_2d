@@ -57,11 +57,11 @@ run I2EC_2d/examples/example2_analyticNewtonian
 | [`example3_meshConvergence`](https://mallickrishg.github.io/I2EC_2d/examples/example3.html) | The example 2 cycle on three mantle meshes |
 | [`example4_analyticVsNumerical`](https://mallickrishg.github.io/I2EC_2d/examples/example4.html) | Both solvers on the same cycle |
 | [`example5_transientRheology`](https://mallickrishg.github.io/I2EC_2d/examples/example5.html) | Burgers and Andrade transient creep compared with Maxwell |
-| [`example6_adjointInversion`](https://mallickrishg.github.io/I2EC_2d/examples/example6.html) | Burgers mantle inverted from surface displacement with adjoint gradients |
+| [`example6_adjointInversion`](https://mallickrishg.github.io/I2EC_2d/examples/example6.html) | Mantle viscosity inverted from surface displacement with adjoint gradients |
 
 Examples 1–4 take 1–2 minutes each (example 3 about 2 minutes the first time,
 while it computes and caches its kernels); example 5 takes about 10 minutes,
-nearly all of it for the Andrade mantle; example 6 about 1.5 minutes. To build your own model, start from
+nearly all of it for the Andrade mantle; example 6 under a minute. To build your own model, start from
 the [quick start](https://mallickrishg.github.io/I2EC_2d/quickstart.html), the
 description of the [input files](https://mallickrishg.github.io/I2EC_2d/inputs.html)
 and the guide to [setting up the rheology](https://mallickrishg.github.io/I2EC_2d/rheology.html).

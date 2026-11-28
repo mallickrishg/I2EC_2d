@@ -88,6 +88,11 @@ it is pushed (user's request).
 
 ## On hold (user, 2026-11-26; pick up when the user is back)
 
+Branch plan (user, 2026-11-26): build the Burgers fault (forward model,
+then its adjoint) on `adjoint-inverse`, test it and merge to main. Then
+make a new branch `example6` for the example (fault inversion, tweaks,
+docs page, slow test). Nothing is built yet.
+
 - [ ] Burgers fault: a Kelvin element in series with the creeping-fault
       dashpot (today the fault is one dashpot, eta' per patch, no Kelvin
       rows). New fault Kelvin rows in assembleLinearSystem and the
