@@ -1,7 +1,7 @@
 Semi-analytical solver
 ======================
 
-Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory`).
+Eigenmode solver for linear viscoelastic cycles (see :doc:`../theory/solvers`).
 
 .. mat:module:: functions
 

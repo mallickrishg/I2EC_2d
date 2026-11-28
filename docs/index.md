@@ -28,9 +28,9 @@ oceanic mantle and mantle wedge.
 
   Six worked models with figures, from power-law flow and transient creep to mesh convergence and a viscosity inversion.
 
-- **{doc}`Theory and methods <theory>`**
+- **{doc}`Theory and methods <theory/index>`**
 
-  Governing equations, rheology, solvers and how the kernels are computed.
+  Governing equations, rheology, solvers, kernels and adjoint gradients.
 
 - **{doc}`Model inputs <inputs>`**
 
@@ -54,7 +54,7 @@ oceanic mantle and mantle wedge.
 quickstart
 rheology
 examples/index
-theory
+theory/index
 inputs
 ```
 

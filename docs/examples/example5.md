@@ -10,7 +10,7 @@ steady-state viscosity, $10^{19}$ Pa s, and so the same long-term flow:
 | Andrade | plus transient creep $\beta\sigma t^{1/3}$ (Prony series) | $\beta$: transient strain = elastic strain after 1 yr |
 
 The equations stay linear, so the periodic cycle is still solved directly,
-without spin-up (see [Rheology](../theory.md#rheology)). Run it with
+without spin-up (see {doc}`../theory/rheology`). Run it with
 
 ```matlab
 run examples/example5_transientRheology

@@ -83,7 +83,7 @@ and the guide to [setting up the rheology](https://mallickrishg.github.io/I2EC_2
 
 | I want to… | Go to |
 | --- | --- |
-| Understand the equations and the method | [Theory](https://mallickrishg.github.io/I2EC_2d/theory.html) |
+| Understand the equations and the method | [Theory](https://mallickrishg.github.io/I2EC_2d/theory/index.html) |
 | Set the rheology and call a solver | [Set up the rheology](https://mallickrishg.github.io/I2EC_2d/rheology.html) |
 | Set up my own fault, mesh or kernels | [Inputs](https://mallickrishg.github.io/I2EC_2d/inputs.html) |
 | Choose kernel options | [Kernel options](https://mallickrishg.github.io/I2EC_2d/inputs.html#kernel-options) |

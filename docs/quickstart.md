@@ -54,7 +54,7 @@ All six use the same geometry and cached kernels; see {doc}`examples/index`.
    solver, step by step in {doc}`rheology`. Check that your mantle
    Maxwell time is in the range the solver handles ({ref}`valid-range`).
 
-{doc}`theory` explains the equations behind each step.
+{doc}`theory/index` explains the equations behind each step.
 
 ## Check your installation
 
