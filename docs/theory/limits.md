@@ -53,19 +53,11 @@ fastest timescale and so the numbers above.
 the table compares {mat:func}`computePeriodicInitialCondition` with the more
 accurate of two independent eigendecomposition solves, balanced for weak
 mantles and unbalanced for strong ones (example 2 fault, locked above 30 km,
-$T = 500$ yr). Before
-2026-11-22 the periodic state came from a single eigendecomposition: balanced
-(until 2026-11-21) it lost digits for strong mantles ($10^{-8}$ at
-$t_M/T = 10^{4}$, $10^{-6}$ at $10^{6}$), unbalanced it lost them for the
-example model ($3\times10^{-9}$ in the mantle state). Modes that relax by less than $10^{-12}$ per cycle
+$T = 500$ yr). Modes that relax by less than $10^{-12}$ per cycle
 ($|\mathrm{Re}\,\lambda|\,T \le 10^{-12}$) raise `I2EC:neutralModes`, since
-their periodic state is not determined. Before 2026-11-21 the solver instead
-set modes with $|\lambda| < 10^{-16}$ s$^{-1}$ to zero, which for
-$t_M/T \gtrsim 10^{4}$ (with this fault) dropped real mantle modes and left the
-periodic mantle state 58 % to 100 % wrong: recompute strong-mantle results made
-with earlier versions. `ode45` is explicit, so its steps per cycle also grow
-with the fastest rate, $\max|\lambda|\,T$; with this fault the fault sets it
-down to $t_M/T \approx 10^{-5}$.
+their periodic state is not determined. `ode45` is explicit, so its steps per
+cycle also grow with the fastest rate, $\max|\lambda|\,T$; with this fault the
+fault sets it down to $t_M/T \approx 10^{-5}$.
 :::
 
 ## Practical guidance
