@@ -9,7 +9,9 @@ I2EC is a MATLAB code for viscoelastic earthquake cycles in two-dimensional
 (plane-strain) subduction zones. An extended boundary element method turns the
 governing equations into coupled ordinary differential equations for fault slip
 rate and mantle strain rate. These are loaded by long-term plate motion and
-corner flow and perturbed by periodic imposed earthquakes.
+corner flow and perturbed by periodic imposed earthquakes. For linear
+rheologies, I2EC also gives the gradient of a surface-displacement misfit with
+respect to viscosity, for inversions.
 
 **📖 Documentation: <https://mallickrishg.github.io/I2EC_2d/>**
 
@@ -27,6 +29,11 @@ solvers and every function. This README only gets you started.
   consistent with plate motion over geological time.
 - **Stable kernels by default.** Mantle stress kernels are averaged over each
   cell and certified free of spurious growing modes.
+- **Adjoint gradients for inversion.** For linear rheologies (Maxwell or
+  Burgers mantle, linear viscous or Burgers fault), the gradient of a
+  displacement misfit with respect to the viscosity of every mantle cell and
+  fault patch costs about one forward solve; tangents give the Gauss–Newton
+  Jacobian of a low-rank parameterisation.
 - **Predictions** of fault slip rate, mantle strain rate and stress, and
   surface displacement and velocity.
 
@@ -71,13 +78,14 @@ and the guide to [setting up the rheology](https://mallickrishg.github.io/I2EC_2
 | Path | Contents |
 | --- | --- |
 | `functions/` | Solvers, kernel assembly, long-term loading, mesh generation, plotting helpers |
+| `inverse/` | Adjoint gradients, tangents, station kernels and misfit for viscosity inversions |
 | `+geometry/` | Earth model, fault and shear-zone classes, Green's functions |
 | `examples/` | The five examples and their shared model setup |
 | `examples/inputs/` | Geometry of the example subduction zone |
 | `examples/kernels/` | Pre-computed kernels of the example model (HDF5) |
 | `tests/` | `matlab.unittest` test suite |
 | `docs/` | Source of the documentation website |
-| `*.nb` | Mathematica notebooks for the corner-flow solutions |
+| `derivation/` | Mathematica notebooks for the corner-flow solutions; generator of the triangle stress kernel |
 
 ## Where to find what
 
@@ -87,6 +95,7 @@ and the guide to [setting up the rheology](https://mallickrishg.github.io/I2EC_2
 | Set the rheology and call a solver | [Set up the rheology](https://mallickrishg.github.io/I2EC_2d/rheology.html) |
 | Set up my own fault, mesh or kernels | [Inputs](https://mallickrishg.github.io/I2EC_2d/inputs.html) |
 | Choose kernel options | [Kernel options](https://mallickrishg.github.io/I2EC_2d/inputs.html#kernel-options) |
+| Invert for viscosity with adjoint gradients | [Adjoint gradients](https://mallickrishg.github.io/I2EC_2d/theory/gradients.html), [Inverse API](https://mallickrishg.github.io/I2EC_2d/api/inverse.html) |
 | Look up a function | [API reference](https://mallickrishg.github.io/I2EC_2d/api/solvers.html) |
 | See worked examples with figures | [Examples](https://mallickrishg.github.io/I2EC_2d/examples/index.html) |
 
